@@ -79,9 +79,13 @@ tools/run-tests.ps1 -Filter X  # 클래스 또는 메서드 이름 부분 일치
   챕터를 주파하고 첫 적을 처치하는 것까지 확인했습니다.
 - 남은 런타임 경고 1건: `SpriteFrameAnimator`가 플레이어 프레임을 콜라이더의 136%로 보고합니다.
   Unity에서는 스프라이트 임포트 ppu가 가려주던 콘텐츠 불일치이며 크래시가 아닙니다.
-- **Godot 제작 규칙 준수는 진행 중입니다.** 이식은 Unity의 런타임 생성 구조를 그대로
-  옮겼으므로 "UI는 씬에 배치", "재사용 단위는 씬" 규칙을 아직 어깁니다. 감사와 전환 계획은
-  [docs/migrations/scene-data/](docs/migrations/scene-data/)에 있습니다.
+- **Godot 제작 규칙 전환이 대부분 끝났습니다.** 규칙 3(UI는 씬에 배치)과 규칙 2(재사용 단위는
+  씬)는 제품 코드에서 완결됐습니다 — 런타임 UI 조립이 남아 있지 않고, 씬 22개와 Theme 1개가
+  약 1,000줄의 생성 코드를 대신합니다. 규칙 1(수치 데이터화)은 진행 중이며 남은 단계는
+  [docs/migrations/scene-data/PLAN.md](docs/migrations/scene-data/PLAN.md)에 순서대로 있습니다.
+- **전환이 실제 결함 6건을 찾아냈습니다.** 넉백이 400px 대신 3px로 나가던 것, 챕터 보스 처치
+  보상이 0 소울이던 것 등. 전부 컴파일러도 기존 스위트도 잡지 못하던 것들이며 내역은
+  [PORT_STATUS.md](PORT_STATUS.md)에 있습니다.
 - Windows export template과 배포용 EXE는 없습니다. 다른 PC 검증도 남아 있습니다.
 
 ## 문서
