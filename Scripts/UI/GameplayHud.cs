@@ -925,7 +925,10 @@ namespace MyGame.UI
         private void UpdateResonance()
         {
             if (_sinResonance != null && _resonanceText != null)
-                _resonanceText.Text = $"Resonance: {Mathf.FloorToInt(_sinResonance.CurrentResonance)} / 100";
+                // The denominator was the literal 100. It agreed with SinTuning.json's maxResonance and
+                // would have stopped agreeing the moment a designer retuned it; MaxResonance is the value
+                // ApplyTuning actually took from that file.
+                _resonanceText.Text = $"Resonance: {Mathf.FloorToInt(_sinResonance.CurrentResonance)} / {_sinResonance.MaxResonance}";
         }
 
         private void UpdateActiveSin(SinState sin)

@@ -193,3 +193,32 @@ The projectile pool still parks a shot with `Visible = false`, `ProcessMode = Di
 `Monitoring = false` (deferred, because Godot refuses that write while the area is emitting its own
 signal) and re-arms all three on get. That is recycling, not the defect above; only the redundant
 re-arm on a freshly instanced shot was dropped.
+
+### Tuning defects fixed after the port
+
+- **Knockback shipped at 3 px where 4 metres was authored.** `DamageHitbox2D.knockbackForce` was a
+  literal `3f` sitting between two pre-scaled fields, with no setter and no caller - so the value
+  reaching `DamageRequest` was three pixels rather than 400. It now reads
+  `CombatTuningData.Load().knockbackLight`, authored in metres and converted inside `Load()`, never
+  re-scaled at the use site. It reads the Combat-owned loader rather than `PlayerCombat.json`
+  directly, because `Combat` must not learn about `Player`; both carry the same authored 4 m.
+  Measured before and after through the spawner's own `Configure` path: 3 px, then 400 px.
+  `PlayerController2D.AttackKnockback` (400, x1.4 heavy) exists and has **zero consumers** - that
+  dead property is the shape the bug really had, and it is still dead.
+- **The HUD divided by a literal.** The resonance readout used `/ 100` instead of the tuned maximum.
+  It now reads `SinResonanceController.MaxResonance`, a new accessor beside the existing
+  `ResonancePerHit` / `PerParry` / `PerDamage`. Same number today; it stops lying the moment a
+  designer retunes it.
+- **The fallback table had drifted from the design files on seven values** - every archetype's
+  `maxPoise` and `soulReward`, plus `soulStainPickupDelay`. `Resources/Design/*.json` won; the C#
+  literals moved to match and each now carries a comment naming the field it mirrors. The factories
+  cannot read the JSON, because being reachable only when the file is missing is their whole purpose.
+
+  Worth recording precisely, because the audit overstated it: **no test expectation had to move.**
+  Every fixture that cares about poise or souls reaches the real JSON, and the design files are
+  present in a headless run, so the suite essentially never takes the fallback path. The drift was
+  real and would have bitten the first time a file went missing - but the suite was not asserting it.
+
+  The same value is still drifted in a second place, `PlayerResourceData.soulStainPickupDelay`, along
+  with five more `[Export]` mirrors listed in the numbers audit. Left for the stage that owns
+  `Scripts/Player/`.

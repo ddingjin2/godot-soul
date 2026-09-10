@@ -27,8 +27,9 @@ namespace MyGame.Gameplay
         /// <c>PlayerResourceData.soulStainPickupDelay</c>; this is what a synthetic player built without a
         /// tuning asset gets, which is every player the test runners make.
         /// Seconds, so it is not scaled.
+        /// Mirrors <c>PlayerResources.json</c>'s <c>soulStainPickupDelay</c>; keep the two identical.
         /// </summary>
-        public const float SoulStainPickupDelay = 0.2f;
+        public const float SoulStainPickupDelay = 0.35f;
 
         /// <summary>
         /// Reach of a checkpoint zone's trigger when the component has to build its own collider. Matches
@@ -76,8 +77,10 @@ namespace MyGame.Gameplay
                 patrolIdleTime = 0.8f,
                 attackRadius = 0.7f,
                 // Roughly one light combo, so grunts break to pressure but not to a single poke.
-                maxPoise = 25f,
-                soulReward = 20,
+                // Mirrors MeleeGrunt.json's maxPoise.
+                maxPoise = 35f,
+                // Mirrors MeleeGrunt.json's soulReward.
+                soulReward = 7,
             };
 
             tuning.ScaleToPixels();
@@ -104,8 +107,10 @@ namespace MyGame.Gameplay
                 maintainDistance = 3.5f,
                 landingVulnerabilityTime = 0.6f,
                 leapTelegraphTime = 1.1f,
-                maxPoise = 20f,
-                soulReward = 25,
+                // Mirrors LeapingAttacker.json's maxPoise.
+                maxPoise = 30f,
+                // Mirrors LeapingAttacker.json's soulReward.
+                soulReward = 8,
             };
 
             tuning.ScaleToPixels();
@@ -134,8 +139,10 @@ namespace MyGame.Gameplay
                 castTelegraphTime = 0.8f,
                 strafeSpeed = 1.5f,
                 // The squishiest of the three: one clean hit interrupts a cast.
-                maxPoise = 15f,
-                soulReward = 25,
+                // Mirrors RangedCaster.json's maxPoise.
+                maxPoise = 25f,
+                // Mirrors RangedCaster.json's soulReward.
+                soulReward = 8,
             };
 
             tuning.ScaleToPixels();
@@ -172,6 +179,7 @@ namespace MyGame.Gameplay
                 stunDuration = 1f,
                 // Deep enough that chip damage never staggers it: breaking the boss takes committed heavy
                 // attacks, which is the trade the poise gauge exists to force.
+                // Mirrors WrathMiniBoss.json's maxPoise, poiseRegenDelay and soulReward.
                 maxPoise = 90f,
                 poiseRegenDelay = 3f,
                 soulReward = 300,

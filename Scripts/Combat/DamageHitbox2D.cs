@@ -18,7 +18,20 @@ namespace MyGame.Combat
         [Export] private float radius = World.Ppu * 0.5f;
         [Export] private Vector2 offset = new Vector2(World.Ppu, 0f);
         [Export] private float damage = 10f;
-        [Export] private float knockbackForce = 3f;
+
+        /// <summary>
+        /// Pixels. Authored in Unity metres as <c>CombatTuning.knockbackLight</c> (4 m, the same number
+        /// <c>PlayerCombat.json.attackKnockback</c> authors for the swing this volume belongs to) and
+        /// converted once inside <see cref="CombatTuningData.Load"/> - never re-scale it here. Was a bare
+        /// <c>3f</c>, i.e. 3 px of metres-side value used as a pixel distance, which is effectively no
+        /// knockback at all; nothing writes this field, so that literal was what every hit shipped with.
+        /// Combat cannot read <c>PlayerCombat.json</c> directly: it must not learn about
+        /// <c>MyGame.Player</c> (see CLAUDE.md), and <see cref="CombatTuningData"/> is the Combat-owned
+        /// loader for the same authored number.
+        /// </summary>
+        private static readonly float DefaultKnockbackForce = CombatTuningData.Load().knockbackLight;
+
+        [Export] private float knockbackForce = DefaultKnockbackForce;
         [Export] private DamageType damageType;
         [Export] private bool autoTrigger;
 

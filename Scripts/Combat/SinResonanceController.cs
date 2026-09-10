@@ -40,6 +40,13 @@ namespace MyGame.Combat
         public Action OnResetModifiers;
 
         public float CurrentResonance => currentResonance;
+
+        /// <summary>
+        /// The ceiling <see cref="ApplyTuning"/> takes from <c>SinTuning.json</c>'s <c>maxResonance</c>.
+        /// Exposed so a readout can print the live value instead of a literal, exactly as
+        /// <c>Health.MaxHealth</c> and <c>Poise.MaxPoise</c> already do for their gauges.
+        /// </summary>
+        public float MaxResonance => maxResonance;
         public float NormalizedResonance => maxResonance > 0 ? currentResonance / maxResonance : 0f;
         public SinState CurrentSin => _activeSin;
         public bool IsSinActive => _activeSin != SinState.None;
