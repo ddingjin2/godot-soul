@@ -1,0 +1,5 @@
+{
+    "checkpointZoneRadius": 1.5,
+    "lockOnRange": 8.0,
+    "lockOnBreakRange": 11.0
+}

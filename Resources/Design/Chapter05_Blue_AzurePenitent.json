@@ -1,0 +1,79 @@
+{
+    "chapterColor": 4,
+    "chapterIndex": 5,
+    "chapterName": "Blue Chapter",
+    "bossId": "blue_azure_penitent",
+    "bossName": "Azure Penitent",
+    "designPillar": "Every wave invites you in. The punish lands on whoever answers.",
+
+    "maxHealth": 240.0,
+    "moveSpeed": 2.3,
+    "detectionRange": 9.0,
+    "attackRange": 1.8,
+    "phaseTwoHealthThreshold": 0.5,
+    "phaseTwoSpeedMultiplier": 1.15,
+    "phaseTwoCooldownMultiplier": 0.85,
+
+    "maxPoise": 90.0,
+    "poiseHeavyMultiplier": 2.0,
+    "poiseRegenDelay": 3.0,
+    "poiseRegenRate": 28.0,
+    "soulReward": 815,
+
+    "primaryColor": { "r": 0.12, "g": 0.42, "b": 1.0, "a": 1.0 },
+    "secondaryColor": { "r": 0.04, "g": 0.2, "b": 0.62, "a": 1.0 },
+    "bodySize": { "x": 1.5, "y": 2.3 },
+
+    "attacks": [
+        {
+            "attackId": "tide_in",
+            "displayName": "Tide In",
+            "damage": 14.0,
+            "knockback": 7.0,
+            "telegraphTime": 0.6,
+            "activeTime": 0.25,
+            "recoveryTime": 0.4,
+            "range": 2.2,
+            "telegraphColor": { "r": 0.4, "g": 0.7, "b": 1.0, "a": 1.0 },
+            "damageType": 1,
+            "phaseTwoWeight": 0.4,
+            "forwardOffset": 1.2,
+            "pullsTarget": true,
+            "chainNextAttackId": "tide_out",
+            "chainDelay": 0.3,
+            "chainDelayPhaseTwoScale": 1.0
+        },
+        {
+            "attackId": "tide_out",
+            "displayName": "Tide Out",
+            "damage": 17.0,
+            "knockback": 9.0,
+            "telegraphTime": 0.35,
+            "activeTime": 0.25,
+            "recoveryTime": 0.5,
+            "range": 1.9,
+            "telegraphColor": { "r": 0.25, "g": 0.55, "b": 1.0, "a": 1.0 },
+            "damageType": 1,
+            "phaseTwoWeight": 0.3,
+            "forwardOffset": 0.9,
+            "chainNextAttackId": "undertow",
+            "chainDelay": 0.35,
+            "chainDelayPhaseTwoScale": 2.0
+        },
+        {
+            "attackId": "undertow",
+            "displayName": "Undertow",
+            "damage": 24.0,
+            "knockback": 10.0,
+            "telegraphTime": 0.5,
+            "activeTime": 0.3,
+            "recoveryTime": 0.8,
+            "range": 2.0,
+            "telegraphColor": { "r": 0.1, "g": 0.3, "b": 0.9, "a": 1.0 },
+            "damageType": 2,
+            "phaseTwoWeight": 0.3,
+            "forwardOffset": 0.8,
+            "pullsTarget": true
+        }
+    ]
+}

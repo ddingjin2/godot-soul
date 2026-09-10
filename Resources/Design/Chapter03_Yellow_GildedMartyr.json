@@ -1,0 +1,76 @@
+{
+    "chapterColor": 2,
+    "chapterIndex": 3,
+    "chapterName": "Yellow Chapter",
+    "bossId": "yellow_gilded_martyr",
+    "bossName": "Gilded Martyr",
+    "designPillar": "Every glitter is bait. Read the timing, not the flash.",
+
+    "maxHealth": 230.0,
+    "moveSpeed": 2.6,
+    "detectionRange": 9.0,
+    "attackRange": 1.7,
+    "phaseTwoHealthThreshold": 0.5,
+    "phaseTwoSpeedMultiplier": 1.15,
+    "phaseTwoCooldownMultiplier": 0.8,
+
+    "maxPoise": 90.0,
+    "poiseHeavyMultiplier": 2.0,
+    "poiseRegenDelay": 3.0,
+    "poiseRegenRate": 28.0,
+    "soulReward": 674,
+
+    "primaryColor": { "r": 1.0, "g": 0.82, "b": 0.12, "a": 1.0 },
+    "secondaryColor": { "r": 0.72, "g": 0.52, "b": 0.04, "a": 1.0 },
+    "bodySize": { "x": 1.4, "y": 2.2 },
+
+    "attacks": [
+        {
+            "attackId": "gilded_bait",
+            "displayName": "Gilded Bait",
+            "damage": 16.0,
+            "knockback": 5.0,
+            "telegraphTime": 0.5,
+            "feintPauseTime": 0.4,
+            "activeTime": 0.2,
+            "recoveryTime": 0.5,
+            "range": 1.6,
+            "telegraphColor": { "r": 1.0, "g": 0.9, "b": 0.35, "a": 1.0 },
+            "damageType": 1,
+            "phaseTwoWeight": 0.4,
+            "forwardOffset": 0.7
+        },
+        {
+            "attackId": "offering_lunge",
+            "displayName": "Offering Lunge",
+            "damage": 20.0,
+            "knockback": 7.0,
+            "telegraphTime": 0.7,
+            "feintPauseTime": 0.25,
+            "activeTime": 0.25,
+            "recoveryTime": 0.55,
+            "range": 1.8,
+            "telegraphColor": { "r": 1.0, "g": 0.72, "b": 0.1, "a": 1.0 },
+            "damageType": 2,
+            "phaseTwoWeight": 0.35,
+            "forwardOffset": 1.0
+        },
+        {
+            "attackId": "coin_sweep",
+            "displayName": "Coin Sweep",
+            "damage": 18.0,
+            "knockback": 6.0,
+            "telegraphTime": 0.6,
+            "activeTime": 0.3,
+            "recoveryTime": 0.6,
+            "range": 1.9,
+            "telegraphColor": { "r": 0.95, "g": 0.78, "b": 0.2, "a": 1.0 },
+            "damageType": 2,
+            "phaseTwoWeight": 0.25,
+            "forwardOffset": 0.8,
+            "chainNextAttackId": "gilded_bait",
+            "chainDelay": 0.5,
+            "chainDelayPhaseTwoScale": 1.6
+        }
+    ]
+}

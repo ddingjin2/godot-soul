@@ -1,0 +1,9 @@
+{
+    "arenaLeftOffset": 5.0,
+    "arenaRightOffset": 1.1,
+    "detectionRange": 8.0,
+    "introHoldTimeout": 2.7,
+    "postAttackRecoveryTime": 0.5,
+    "phaseTwoRecoveryMultiplier": 0.8,
+    "victoryPresentationDelay": 1.5
+}

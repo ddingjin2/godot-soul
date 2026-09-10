@@ -1,0 +1,536 @@
+using System;
+using Godot;
+using MyGame.Combat;
+using MyGame.Core;
+
+namespace MyGame.Enemy
+{
+    /// <summary>
+    /// Holds a distance and throws. Its whole answer to being closed on is to back off and keep
+    /// throwing, so its firing band and its retreat band are the fight.
+    /// </summary>
+    public partial class RangedCaster : EnemyStateMachine
+    {
+        [Export] private RangedCasterData tuningData;
+
+        /// <summary>
+        /// The projectile template. Unity handed this class an inactive prefab GameObject; here it is a
+        /// detached node the pool duplicates per shot, which is the same "built in code, never in a
+        /// scene file" arrangement the Unity spawner used.
+        /// </summary>
+        [Export] private Node2D projectilePrefab;
+
+        [Export] private Node2D telegraphIndicator;
+
+        public event Action OnCastStart;
+        public event Action OnShotFired;
+        public event Action OnReposition;
+        public event Action OnParried;
+
+        public bool IsStunned => _isStunned;
+        public bool IsDead => _health.IsDead;
+        public float DetectionRange => tuningData != null ? tuningData.detectionRange : World.U(5f);
+        public float AttackRange => tuningData != null ? tuningData.attackRange : World.U(1.5f);
+
+        public void SetTuningData(RangedCasterData data) => tuningData = data;
+
+        public void SetProjectilePrefab(Node2D prefab) => projectilePrefab = prefab;
+
+        /// <summary>
+        /// Frozen telegraph base: the pre-mood caster body colour. Blending from here instead of
+        /// tuningData.enemyColor keeps the telegraph at #E50FFF after the body is muted.
+        /// See Docs/MoodDirection.md "The lerp trap".
+        /// </summary>
+        private static readonly Color TelegraphBase = new Color(0.5f, 0.3f, 1f);
+
+        private Health _health;
+        private bool _isStunned;
+        private float _stunTimer;
+        private float _attackCooldownTimer;
+        private float _castTelegraphTimer;
+        private float _telegraphPulse;
+        private bool _isCasting;
+        private bool _isStrafing;
+        private float _strafeDir = 1f;
+        private int _facingDir = 1;
+        private Vector2 _startPos;
+        private Vector2 _patrolTarget;
+        private float _idleTimer;
+        private float _lastRepositionTime;
+        private float _recoveryTimer;
+        private float _repositionCooldown = 1.5f;
+        private bool _isRepositioning;
+        private EnemyProjectilePool _projectilePool;
+        private static readonly float PatrolHalfWidth = World.U(3f);
+
+        public override void _Ready()
+        {
+            base._Ready();
+
+            _health = this.FindComponent<Health>();
+            _startPos = GlobalPosition;
+            _patrolTarget = _startPos + (Vector2.Right * PatrolHalfWidth);
+
+            if (tuningData != null)
+            {
+                _health.SetHealth(tuningData.maxHealth);
+                if (_sr != null)
+                {
+                    _sr.Modulate = tuningData.enemyColor;
+                }
+            }
+
+            if (projectilePrefab == null)
+            {
+                projectilePrefab = CreateDefaultProjectile();
+            }
+
+            // Unity's Start.
+            if (this.FindComponent<EnemyGroupCombat>() == null)
+            {
+                AddChild(new EnemyGroupCombat { Name = "EnemyGroupCombat" });
+            }
+
+            if (this.FindComponent<CombatFeedback>() == null)
+            {
+                AddChild(new CombatFeedback { Name = "CombatFeedback" });
+            }
+        }
+
+        /// <summary>
+        /// The fallback shot, for a caster nobody handed a template. The contact area is built by
+        /// <see cref="EnemyProjectile"/> itself, so all this owes it is a body and a colour.
+        /// </summary>
+        /// <remarks>
+        /// Never added to the scene tree, which is what Unity's <c>SetActive(false)</c> bought. Left
+        /// active there, the template sat in the scene as a live trigger collider that damaged the player
+        /// on contact and then destroyed itself - taking every future shot from this caster with it. A
+        /// detached node cannot do that: nothing ticks it and no query can find it.
+        /// </remarks>
+        private Node2D CreateDefaultProjectile()
+        {
+            var projectile = new EnemyProjectile { Name = "DefaultProjectile" };
+            var sprite = new Sprite2D
+            {
+                Name = "Sprite",
+                Modulate = new Color(0.8f, 0.4f, 1f),
+                ZIndex = 1,
+            };
+            projectile.AddChild(sprite);
+            return projectile;
+        }
+
+        public override void _Process(double delta)
+        {
+            if (_health.IsDead)
+            {
+                return;
+            }
+
+            var dt = (float)delta;
+
+            UpdateSensingAndEngagement();
+
+            if (_isStunned)
+            {
+                _stunTimer -= dt;
+                if (_stunTimer <= 0f)
+                {
+                    _isStunned = false;
+                    UpdateVisualColor();
+                }
+
+                return;
+            }
+
+            if (_currentState == EnemyState.Stunned)
+            {
+                return;
+            }
+
+            if (_isCasting)
+            {
+                return;
+            }
+
+            if (_currentState == EnemyState.Recovery)
+            {
+                _recoveryTimer -= dt;
+                if (_recoveryTimer <= 0f)
+                {
+                    TransitionTo(EnemyState.Patrol);
+                }
+
+                return;
+            }
+
+            _attackCooldownTimer -= dt;
+
+            float dist = _player != null ? GlobalPosition.DistanceTo(_player.GlobalPosition) : float.MaxValue;
+            float minDist = tuningData?.minDistance ?? World.U(5f);
+            float repositionDist = tuningData?.repositionDistance ?? World.U(3f);
+
+            if (_currentState == EnemyState.Combat || _currentState == EnemyState.Investigate)
+            {
+                if (dist > disengageDistance)
+                {
+                    TransitionTo(EnemyState.Recovery);
+                }
+                else if (dist < minDist - repositionDist)
+                {
+                    RepositionAway();
+                }
+                else if (_attackCooldownTimer <= 0f && CanShoot())
+                {
+                    StartCast();
+                }
+                else if (dist > AttackRange)
+                {
+                    // Nothing used to close this gap. The fire test was `dist > minDistance +
+                    // repositionDistance` and the cap was detectionRange, so the firing band was the
+                    // one-unit shell 6 < d <= 7 and a caster the player walked up to strafed in silence
+                    // forever - the exact inverse of what a ranged enemy reads as. attackRange was
+                    // exposed the whole time and never read.
+                    MoveTowards(_player.GlobalPosition, tuningData != null ? tuningData.moveSpeed : World.U(1.5f));
+                }
+                else if (_isStrafing)
+                {
+                    Strafe();
+                }
+                else
+                {
+                    FacePlayer();
+                }
+            }
+            else if (_currentState == EnemyState.Patrol)
+            {
+                HandlePatrol();
+            }
+            else if (_currentState == EnemyState.Idle)
+            {
+                _stateTimer -= dt;
+                if (_stateTimer <= 0f)
+                {
+                    TransitionTo(EnemyState.Patrol);
+                }
+            }
+        }
+
+        protected override void DetectPlayer()
+        {
+            if (_player != null)
+            {
+                return;
+            }
+
+            float range = tuningData != null ? tuningData.detectionRange : World.U(5f);
+            GodotObject hit = Phys2D.OverlapCircle(this, GlobalPosition, range, World.Layer.Player);
+            if (hit != null && Phys2D.FindActorInGroup(hit, World.Group.Player) is Node2D player)
+            {
+                _player = player;
+            }
+        }
+
+        protected override void HandlePatrol()
+        {
+            if (_idleTimer > 0f)
+            {
+                _idleTimer -= GameClock.DeltaTime;
+                StopMovement();
+                return;
+            }
+
+            float speed = tuningData != null ? tuningData.moveSpeed : World.U(1.5f);
+            float dir = Mathf.Sign(_patrolTarget.X - GlobalPosition.X);
+            dir = ClampToGroundAhead(ClampHomewardDirection(dir));
+            Velocity = new Vector2(dir * speed, Velocity.Y);
+            if (Mathf.IsZeroApprox(dir))
+            {
+                // Turned at a ledge rather than reached the far end, so the leg has to be re-aimed or
+                // the patrol stands at the edge pushing into it for the rest of the run.
+                TurnPatrolAround();
+                return;
+            }
+
+            _facingDir = (int)Mathf.Sign(dir);
+            if (_sr != null)
+            {
+                _sr.FlipH = dir < 0f;
+            }
+
+            if (Mathf.Abs(GlobalPosition.X - _patrolTarget.X) < World.U(0.3f))
+            {
+                TurnPatrolAround();
+            }
+        }
+
+        private void TurnPatrolAround()
+        {
+            _facingDir *= -1;
+            _patrolTarget = _startPos + (Vector2.Right * PatrolHalfWidth * _facingDir);
+            _idleTimer = 0.5f;
+        }
+
+        /// <summary>
+        /// Within its own attack range, and no closer than the distance it is trying to keep. The
+        /// retreat branch above owns everything nearer than that, so this is the whole firing band:
+        /// <c>minDistance - repositionDistance &lt; d &lt;= attackRange</c>, which on the shipped numbers
+        /// is 2 to 5 metres rather than the 6 to 7 shell it used to be.
+        /// </summary>
+        private bool CanShoot()
+        {
+            if (_player == null)
+            {
+                return false;
+            }
+
+            return GlobalPosition.DistanceTo(_player.GlobalPosition) <= AttackRange;
+        }
+
+        private void FacePlayer()
+        {
+            if (_player == null)
+            {
+                return;
+            }
+
+            _facingDir = _player.GlobalPosition.X > GlobalPosition.X ? 1 : -1;
+            if (_sr != null)
+            {
+                _sr.FlipH = _facingDir < 0;
+            }
+        }
+
+        private void StartCast()
+        {
+            _isCasting = true;
+            _castTelegraphTimer = tuningData != null ? tuningData.castTelegraphTime : 1f;
+            _telegraphPulse = 0f;
+            Velocity = Vector2.Zero;
+            _isStrafing = false;
+            OnCastStart?.Invoke();
+            ShowTelegraphVisuals();
+            UpdateVisualColor();
+        }
+
+        private void ShowTelegraphVisuals()
+        {
+            if (telegraphIndicator != null)
+            {
+                telegraphIndicator.Visible = true;
+            }
+
+            if (_sr != null && tuningData != null)
+            {
+                _sr.Modulate = TelegraphBase.Lerp(Colors.Magenta, 0.8f);
+            }
+        }
+
+        private void StopTelegraphVisuals()
+        {
+            if (telegraphIndicator != null)
+            {
+                telegraphIndicator.Visible = false;
+            }
+        }
+
+        public override void _PhysicsProcess(double delta)
+        {
+            if (_isCasting)
+            {
+                var dt = (float)delta;
+                _castTelegraphTimer -= dt;
+                _telegraphPulse += dt * 6f;
+
+                float pulse = 1f + (Mathf.Sin(_telegraphPulse) * 0.1f);
+                Scale = new Vector2(pulse, pulse);
+
+                if (_castTelegraphTimer <= 0f)
+                {
+                    FireProjectile();
+                }
+            }
+
+            base._PhysicsProcess(delta);
+        }
+
+        private void FireProjectile()
+        {
+            _isCasting = false;
+            _attackCooldownTimer = tuningData != null ? tuningData.attackCooldown : 2f;
+            StopTelegraphVisuals();
+            Scale = Vector2.One;
+
+            if (_player != null && projectilePrefab != null)
+            {
+                Vector2 direction = (_player.GlobalPosition - GlobalPosition).Normalized();
+
+                // Built on the first shot rather than in _Ready, because projectilePrefab can still be
+                // replaced by the spawner between the two.
+                _projectilePool ??= new EnemyProjectilePool(projectilePrefab, SpawnRoot());
+
+                EnemyProjectile projectile = _projectilePool.Spawn(GlobalPosition);
+                if (projectile != null)
+                {
+                    float projSpeed = tuningData != null ? tuningData.projectileSpeed : World.U(5f);
+                    float projDmg = tuningData != null ? tuningData.projectileDamage : 8f;
+                    projectile.Initialize(direction, projSpeed, projDmg, World.U(3f));
+                }
+            }
+
+            TransitionTo(EnemyState.Recovery);
+            _recoveryTimer = recoveryDuration;
+
+            OnShotFired?.Invoke();
+            UpdateVisualColor();
+        }
+
+        private void Strafe()
+        {
+            float strafeSpeed = tuningData != null ? tuningData.strafeSpeed : World.U(1.5f);
+            float dir = ClampToGroundAhead(ClampHomewardDirection(_strafeDir));
+            Velocity = new Vector2(dir * strafeSpeed, Velocity.Y);
+            if (Mathf.IsZeroApprox(dir))
+            {
+                _strafeDir *= -1f;
+            }
+
+            if (GD.Randf() < 0.01f)
+            {
+                _strafeDir *= -1f;
+            }
+        }
+
+        private void RepositionAway()
+        {
+            if (_player == null)
+            {
+                return;
+            }
+
+            if (GameClock.Time - _lastRepositionTime < _repositionCooldown)
+            {
+                return;
+            }
+
+            if (_isRepositioning)
+            {
+                return;
+            }
+
+            _lastRepositionTime = GameClock.Time;
+            _isRepositioning = true;
+            _repositionCooldown = (float)GD.RandRange(1.2f, 2f);
+
+            float dir = Mathf.Sign(GlobalPosition.X - _player.GlobalPosition.X);
+
+            float strafeDir = GD.Randf() < 0.5f ? -1f : 1f;
+            if (Mathf.IsEqualApprox(Mathf.Sign(GlobalPosition.X - _player.GlobalPosition.X), strafeDir))
+            {
+                strafeDir *= -1f;
+            }
+
+            dir = ClampToGroundAhead(ClampHomewardDirection(dir));
+            Velocity = new Vector2(dir * (tuningData?.moveSpeed ?? World.U(2f)), 0f);
+            _strafeDir = Mathf.IsZeroApprox(dir) ? -Mathf.Sign(GlobalPosition.X - _startPos.X) : dir;
+
+            OnReposition?.Invoke();
+            _isStrafing = true;
+
+            EndRepositionAfterDelay();
+        }
+
+        /// <summary>Unity's <c>Invoke(nameof(EndReposition), 0.5f)</c>.</summary>
+        private async void EndRepositionAfterDelay()
+        {
+            await ToSignal(GetTree().CreateTimer(0.5f), SceneTreeTimer.SignalName.Timeout);
+
+            if (GodotObject.IsInstanceValid(this))
+            {
+                EndReposition();
+            }
+        }
+
+        private void EndReposition()
+        {
+            _isRepositioning = false;
+        }
+
+        private float ClampHomewardDirection(float dir)
+        {
+            if (dir > 0f && GlobalPosition.X >= _startPos.X + PatrolHalfWidth)
+            {
+                _facingDir = -1;
+                _patrolTarget = _startPos + (Vector2.Left * PatrolHalfWidth);
+                return 0f;
+            }
+
+            if (dir < 0f && GlobalPosition.X <= _startPos.X - PatrolHalfWidth)
+            {
+                _facingDir = 1;
+                _patrolTarget = _startPos + (Vector2.Right * PatrolHalfWidth);
+                return 0f;
+            }
+
+            return dir;
+        }
+
+        // A broken poise gauge interrupts the cast, same as a parry does.
+        protected override void OnStaggered() => Stun();
+
+        public void Stun()
+        {
+            _isStunned = true;
+            _stunTimer = tuningData != null ? tuningData.stunDuration : 0.8f;
+            _isCasting = false;
+            _isRepositioning = false;
+            Velocity = Vector2.Zero;
+            Scale = Vector2.One;
+            StopTelegraphVisuals();
+            UpdateVisualColor();
+        }
+
+        private void UpdateVisualColor()
+        {
+            if (_sr == null)
+            {
+                return;
+            }
+
+            if (_isStunned)
+            {
+                _sr.Modulate = new Color(0.3529412f, 0.3529412f, 0.34117648f); // ASH_STUN #5A5A57
+            }
+            else if (_isCasting)
+            {
+                _sr.Modulate = Colors.Magenta; // frozen: cast frame is a danger read
+            }
+            else if (_currentState == EnemyState.Recovery)
+            {
+                _sr.Modulate = new Color(0.24705882f, 0.32941177f, 0.34117648f); // COLD_400 #3F5457
+            }
+            else if (tuningData != null)
+            {
+                _sr.Modulate = tuningData.enemyColor;
+            }
+        }
+
+        protected override void OnEnteredDeadState()
+        {
+            _isStunned = false;
+            _isCasting = false;
+            _isStrafing = false;
+            _isRepositioning = false;
+            _castTelegraphTimer = 0f;
+            _recoveryTimer = 0f;
+            Scale = Vector2.One;
+            StopTelegraphVisuals();
+        }
+
+        public void TakeDamage(float damage, Vector2 direction, float knockback)
+        {
+            _health.ApplyDamage(damage, direction, knockback);
+            Velocity = direction * knockback;
+        }
+    }
+}

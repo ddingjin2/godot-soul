@@ -1,0 +1,160 @@
+# Port status
+
+Running log of what has landed, what each agent changed away from the Unity source, and what the
+integration pass still has to reconcile. Written as the port happens; the closing summary is at the
+bottom once everything compiles and runs.
+
+## Landed
+
+| Area | Files | State |
+|---|---|---|
+| Project scaffold | `project.godot`, `MyGame.csproj`, `icon.svg`, `tools/*.ps1` | done |
+| Shared shims | `Scripts/Core/` (World, GameClock, Phys2D, UnityCompat) | done |
+| Test harness | `Tests/Framework/` (attributes, Assert, TestRunner), `Tests/TestMain.tscn` | done |
+| Resources | Design JSON (35), PixelActors + Art PNG (104), Korean font | copied |
+| Input | 20 actions in `project.godot` `[input]` | done |
+| UI | `Scripts/UI/GameplayHud.cs`, `TitleMenuBootstrap.cs` | done |
+| Combat | `Scripts/Combat/` (26 files) | done |
+| Player | `Scripts/Player/` (13 files) | done |
+| Enemy | `Scripts/Enemy/` (22 files) | done |
+| Gameplay | `Scripts/Gameplay/` (45 files) | done |
+| Editor tools | `addons/mygame_tools/` (12 files, dock plugin) | done |
+| Scenes | `Scenes/*.tscn` (9 shells) | done |
+| Tests | `Tests/PlayMode/`, `Tests/Unit/` (32 suites, 208 tests) | done |
+| Agent layer | `Scripts/Testing/` (11 adapters + the agent package) | done |
+
+## Deliberate differences from the Unity source
+
+### UI
+- `UnityAction` parameters are `System.Action` throughout, so `GameplayHud.SetPauseVisible`,
+  `SetGateTravelVisible`, `ShowVictory` and `SetLevelUpVisible` take `Action` / `Action<string>`.
+- `CreateUi(CanvasLayer canvas = null)` defaults to the HUD itself - the HUD *is* the `CanvasLayer`.
+- `LoadUiFont()` returns `Godot.Font`.
+- Unity's `EventSystem` and the HUD's own camera are dropped: Godot's viewport owns focus, and the
+  camera clear colour became a full-rect `ColorRect` backdrop (`#06070A`).
+- The title menu calls `GrabFocus()` on the first button. uGUI leaned on the EventSystem's implicit
+  first selectable; without an explicit focus the menu is unusable on a gamepad.
+- Two `GetComponent<T>()` lookups (`PlayerProgression`->`SoulsWallet`, player->`PlayerActionController`)
+  became a `FindComponent<T>` that checks the node, its children, then its siblings, because Unity
+  components on one GameObject are separate nodes here. **Integration must confirm these two match
+  the node layout the Player agent actually built.**
+- HUD runs with `ProcessMode = Always` so the unscaled warning timer and menus survive a pause; the
+  ghost gauge and hit flash stay on scaled time and freeze at `TimeScale 0`, as before.
+
+### Combat
+- `HitStopManager` no longer writes a physics step: `Engine.TimeScale` already scales physics, so
+  writing `fixedDeltaTime` too would apply the slowdown twice.
+- `GraphicsOptions.RenderScale` has no 2D counterpart in Godot (URP's render scale maps to a 3D-only
+  viewport setting). It is still loaded, clamped, cycled and saved - it just does not reach the
+  renderer. MSAA and VSync do.
+- `AudioFeedback` cuts a ringing cue off instead of layering: Godot has no `PlayOneShot`.
+- `EnemyGroupCombat` adds spacing force to `Velocity` by hand at unit mass - `CharacterBody2D` has no
+  `AddForce`.
+- `CombatFeedback` squash scales the found `Sprite2D`, not its own node, because the sprite is a
+  separate node here; `Invoke`/coroutine became `_Process` countdowns.
+- `DamageHitbox2D` still polls every frame rather than using `Area2D` signals: the sweep moves each
+  frame and has to report everything overlapping, not just new entries.
+- Dropped: `OnDrawGizmosSelected` (no gizmo system) and `SinResonanceController.OnValidate` (its job
+  was repairing an empty inspector table; the table is JSON now).
+
+### Runtime findings from the first headless boot
+
+The arena builds and the game boots. Two real defects surfaced, both invisible to the compiler:
+
+1. **JSON binding collided on every data class that added a Godot-style property over its Unity
+   field.** `RainbowChapterBossData` has `chapterColor` (field, `[Export]`) and `ChapterColor`
+   (get-only property); with case-insensitive matching those fold onto one JSON name and
+   `System.Text.Json` refuses to build the contract at all - `Load()` threw, the boss came back null,
+   and a `NullReferenceException` then fired every frame. Fixed in `JsonData` by matching
+   **case-sensitively**, exactly as Unity's `JsonUtility` did, plus a `FieldsOnly` contract modifier
+   so properties never enter the payload in either direction. The modifier alone was not enough: the
+   collision is thrown while the contract is still being populated, before any modifier runs.
+2. **`SpriteFrameAnimator` reports the player's frames at 136% of its collider** (`anim.json` says
+   ppu 34; a 59px frame wants ppu 46.1). This is the animator's own sanity check firing, not a crash -
+   it means the pixel-art frame size and the authored body size disagree, which in Unity was hidden by
+   sprite-import ppu. Content-level, left as a warning.
+
+### Bugs the port introduced, found by running it
+
+Every one of these compiled clean and would have shipped silently.
+
+1. **Design JSON bound to zeros.** `System.Text.Json` had to be switched to case-sensitive matching to
+   stop each data class's Unity field colliding with the Godot-style property beside it - but Godot's
+   `Vector2`/`Vector3`/`Color` spell their members `X`/`Y` and `R`/`G`, while the design files (written
+   by Unity's `JsonUtility`) spell them lowercase. Every vector and colour in the design folder read as
+   zero: the arena collapsed to a zero-sized floor at the origin and all 33 readability colours became
+   transparent black. Fixed with explicit converters for the three struct shapes
+   (`Scripts/Core/UnityCompat.cs`), leaving everything else case-sensitive as Unity was.
+2. **Enemies parented before they were finished.** `GameplayEnemySpawner` put the grunt, leaper, caster
+   and Wrath boss into the scene and *then* gave them their `Health`. Unity tolerated that - `Awake`
+   fired per `AddComponent` and `Start` came a frame later - but Godot runs `_Ready` the instant a node
+   enters the tree, so `EnemyStateMachine._Ready` found no health and every `_Process` threw a
+   `NullReferenceException`. The four builders now parent last, which is what `PlaceInWorld`'s own
+   comment already claimed the spawner did.
+3. **The player's action controller was never parented.** `PlayerController2D._Ready` called
+   `motor.AddChild(actions)` while the motor was still propagating ready; Godot refuses that outright,
+   leaving a live but orphaned `PlayerActionController` - attacking, parrying, dodging and healing all
+   read false forever, and the node leaked. Now added with `CallDeferred`.
+4. **The test harness freed itself.** `TestRunner` was the boot scene's root, so the first
+   `LoadScene` in any test called `ChangeSceneToFile` and freed the runner mid-test. A `TestBoot` scene
+   now parents the runner to the root window, where it outlives every scene change. The runner also
+   waits one frame before the first test, since its `async void _Ready` otherwise ran fixtures inside
+   the tree's ready propagation, where `AddChild` is refused.
+5. **Fall-death fired at spawn** - a downstream symptom of (1): with the floor at zero size the player
+   fell past the kill line in under a second. The comparison itself was already correctly flipped.
+
+### The one defect only a playthrough could find
+
+`CharacterBody2D` exchanges no impulse on contact. In Unity both the player and every enemy were
+dynamic `Rigidbody2D` at mass 1, so walking into a passive enemy - one mid-telegraph, not writing its
+own X velocity - simply shoved it along at half speed. In Godot that enemy is an immovable wall, and
+it was throttling *every* chapter run-back to roughly enemy walking pace; chapter two's leaper
+happened to stand under a ledge low enough that the player could not hop over it either, so that run
+never finished. `PlayerMotor2D.ShoveBlockingBodies()` now pushes a blocking `CharacterBody2D` by half
+the blocked horizontal remainder after `MoveAndSlide`, through `MoveAndCollide` so it cannot be shoved
+into geometry, and deliberately without stickiness - an enemy that writes its own velocity next step
+overrides it, exactly as it overrode Unity's impulse. Chapter two's run-back went from timing out at
+233.7 of 280 units to arriving in 34.3 s.
+
+### One failure that is not the port's
+
+`GameplayLayoutIntegrityTests.EveryChapterLayout_KeepsItsPlacementsAndBonfires` asserts every chapter
+carries at least 20 enemy placements; every shipped layout carries 7 (4 grunts, 2 leapers, 1 caster).
+The design files here are byte-identical to the Unity project's, and the ported test is a faithful
+copy of the Unity one, so this test was red on the same data before the port. Its own comment says a
+"2026-08-17 density pass rewrote all eight" chapters - that pass is not in the shipped JSON. Filling
+those layouts in is design work, not porting work, so it is left red and named here rather than
+quietly relaxed.
+
+## Open integration questions
+
+- `PlayerProgression.EnsureOn` takes a `Node` here, not a Unity `GameObject`.
+- `PlayerStat`, `PlayerController2D.{IsStaggered, IsGrounded, HealCharges, MaxHealCharges}` and
+  `SinResonanceController.{CurrentResonance, CurrentSin, OnSinStateChanged}` are called by the UI and
+  must exist with those exact names once Player and Combat land.
+
+## Dropped, with the reason
+
+- **Unity Timeline / `.playable` / `PlayableDirector`** - no Godot counterpart; cutscenes are
+  rebuilt over `AnimationPlayer`.
+- **Prefabs and ScriptableObject `.asset` files** - the port keeps the Unity project's own rule that
+  `Resources/Design/*.json` is the source of truth, and the spawners build actors in code.
+- **`.anim` / `.controller`** - replaced by Godot animation resources generated from the same frames.
+- **The `InitTestScene` build-settings workaround** - Godot has no build scene list to inject into,
+  so `ChapterRoute` enumerates `res://Scenes/*.tscn` directly.
+- **UnityMCP, the Unity editor lock, `.meta` files, the two PowerShell Unity suite runners** - all
+  Unity plumbing. A headless Godot test run takes no lock, so runs no longer serialise.
+
+## Where it ended up
+
+- `dotnet build`: 0 errors.
+- `tools/run-tests.ps1`: **206 passed, 1 failed, 1 skipped** in 689s.
+  - The failure is `EveryChapterLayout_KeepsItsPlacementsAndBonfires`, documented above as red on the
+    same data in Unity.
+  - The skip is `ActorPrefabBodyColorsMatchReadabilityDefaults`, which compared two sources of body
+    colour where only one survives the port.
+- `res://Scenes/GameplayScene.tscn` and `res://Scenes/TitleScene.tscn` both boot clean headless. The
+  only runtime warning left is `SpriteFrameAnimator` reporting the player's pixel frames at 136% of
+  its collider - a content mismatch Unity's sprite-import ppu used to hide, not a crash.
+- The scripted agent walks the real player through the real chapter and kills the first grunt through
+  the InputMap, so the synthetic-input path is proven end to end rather than merely compiled.

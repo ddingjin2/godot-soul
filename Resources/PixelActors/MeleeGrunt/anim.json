@@ -1,0 +1,1 @@
+{ "ppu": 52, "states": { "idle": { "fps": 1, "loop": true }, "run": { "fps": 8, "loop": true }, "spawn": { "fps": 8, "loop": false } } }

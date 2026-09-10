@@ -1,0 +1,113 @@
+{
+    "overrideCamera": true,
+    "cameraPosition": { "x": 0.0, "y": 2.0, "z": -10.0 },
+    "cameraOrthographicSize": 6.8,
+    "cameraHorizontalBounds": { "x": 0.0, "y": 288.0 },
+    "cameraVerticalBounds": { "x": 0.5, "y": 7.5 },
+    "fallDeathY": -8.0,
+
+    "overrideSpawn": true,
+    "playerSpawnPosition": { "x": 0.0, "y": 0.5, "z": 0.0 },
+    "checkpointPosition": { "x": 0.0, "y": 0.5, "z": 0.0 },
+    "checkpointPositions": [
+        { "x": 0.0, "y": 0.5, "z": 0.0 },
+        { "x": 70.0, "y": 0.5, "z": 0.0 },
+        { "x": 131.0, "y": 0.5, "z": 0.0 }
+    ],
+
+    "overrideTerrain": true,
+    "backdropPosition": { "x": 148.0, "y": 2.0, "z": 10.0 },
+    "backdropSize": { "x": 312.0, "y": 22.0 },
+    "groundPosition": { "x": 148.0, "y": -1.0, "z": 0.0 },
+    "groundSize": { "x": 304.0, "y": 1.0 },
+    "groundRimPosition": { "x": 148.0, "y": -0.43, "z": -0.02 },
+    "groundRimSize": { "x": 304.0, "y": 0.08 },
+    "leftArenaGatePosition": { "x": -4.6, "y": 1.35, "z": 0.0 },
+    "rightArenaGatePosition": { "x": 299.4, "y": 1.35, "z": 0.0 },
+    "arenaGateSize": { "x": 0.32, "y": 4.6 },
+
+    "overrideMarkers": true,
+    "checkpointLabelPosition": { "x": 0.0, "y": 1.8, "z": 0.0 },
+    "duelFloorLabelPosition": { "x": 281.0, "y": 0.35, "z": 0.0 },
+    "wrathAltarLabelPosition": { "x": 290.0, "y": 3.4, "z": 0.0 },
+    "spiritPlatformPosition": { "x": 196.0, "y": 5.6, "z": 0.0 },
+    "spiritPlatformSize": { "x": 3.0, "y": 0.3 },
+    "spiritPlatformStartsActive": false,
+
+    "overrideEnemyPlacement": true,
+    "spawnApproachEnemies": true,
+    "meleeGruntSpawnPositions": [],
+    "leapingAttackerSpawnPosition": { "x": 52.0, "y": 0.5, "z": 0.0 },
+    "rangedCasterSpawnPosition": { "x": 38.0, "y": 0.5, "z": 0.0 },
+    "meleeGruntSpawns": [
+        { "position": { "x": 34.2, "y": 0.5, "z": 0.0 }, "dataFile": "" },
+        { "position": { "x": 104.5, "y": 0.5, "z": 0.0 }, "dataFile": "" },
+        { "position": { "x": 145.5, "y": 0.5, "z": 0.0 }, "dataFile": "" },
+        { "position": { "x": 206.0, "y": 0.5, "z": 0.0 }, "dataFile": "" }
+    ],
+    "leapingAttackerSpawns": [
+        { "position": { "x": 62.2, "y": 0.5, "z": 0.0 }, "dataFile": "" },
+        { "position": { "x": 211.0, "y": 0.5, "z": 0.0 }, "dataFile": "" }
+    ],
+    "rangedCasterSpawns": [
+        { "position": { "x": 137.2, "y": 0.5, "z": 0.0 }, "dataFile": "" }
+    ],
+    "wrathMiniBossSpawnPosition": { "x": 290.0, "y": 1.0, "z": 0.0 },
+    "bossDataFile": "Chapter04_Green_VerdantConfessor",
+    "bossEncounterFile": "Chapter04_Green_Encounter",
+
+    "hasShortcutGate": false,
+
+    "overridePlatforms": true,
+    "platforms": [
+        { "name": "GateLedge", "position": { "x": -2.6, "y": 1.6, "z": 0.0 }, "size": { "x": 2.6, "y": 0.35 } },
+        { "name": "Trellis1", "position": { "x": 10.0, "y": 1.8, "z": 0.0 }, "size": { "x": 4.0, "y": 0.4 } },
+        { "name": "Trellis2", "position": { "x": 16.0, "y": 3.0, "z": 0.0 }, "size": { "x": 4.0, "y": 0.4 } },
+        { "name": "TrellisCrown", "position": { "x": 22.0, "y": 4.2, "z": 0.0 }, "size": { "x": 4.5, "y": 0.4 } },
+        { "name": "ConfessorStair1", "position": { "x": 30.0, "y": 1.7, "z": 0.0 }, "size": { "x": 4.5, "y": 0.4 } },
+        { "name": "ConfessorStair2", "position": { "x": 35.5, "y": 3.0, "z": 0.0 }, "size": { "x": 4.5, "y": 0.4 } },
+        { "name": "ConfessorStair3", "position": { "x": 41.5, "y": 4.0, "z": 0.0 }, "size": { "x": 4.5, "y": 0.4 } },
+        { "name": "ConfessorSpur", "position": { "x": 46.5, "y": 2.9, "z": 0.0 }, "size": { "x": 4.0, "y": 0.4 } },
+        { "name": "TerraceVault1", "position": { "x": 78.0, "y": 1.8, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "TerraceVault2", "position": { "x": 84.0, "y": 3.2, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "TerraceVault3", "position": { "x": 90.0, "y": 4.1, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "TerraceVault4", "position": { "x": 96.0, "y": 4.5, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "TerraceDrop", "position": { "x": 100.5, "y": 3.0, "z": 0.0 }, "size": { "x": 3.5, "y": 0.4 } },
+        { "name": "ChoirStep1", "position": { "x": 105.0, "y": 1.7, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "ChoirStep2", "position": { "x": 111.0, "y": 3.1, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "ChoirStep3", "position": { "x": 117.0, "y": 4.0, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "ChoirStep4", "position": { "x": 123.0, "y": 3.0, "z": 0.0 }, "size": { "x": 4.5, "y": 0.4 } },
+        { "name": "NaveLedgeA", "position": { "x": 146.0, "y": 1.8, "z": 0.0 }, "size": { "x": 5.5, "y": 0.4 } },
+        { "name": "NaveLedgeB", "position": { "x": 152.5, "y": 3.2, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "NaveLedgeC", "position": { "x": 159.0, "y": 4.5, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "NaveBridge", "position": { "x": 165.0, "y": 4.1, "z": 0.0 }, "size": { "x": 6.0, "y": 0.4 } },
+        { "name": "NaveLedgeD", "position": { "x": 173.0, "y": 3.3, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "NaveLedgeE", "position": { "x": 179.5, "y": 2.0, "z": 0.0 }, "size": { "x": 4.5, "y": 0.4 } },
+        { "name": "GardenStep", "position": { "x": 202.0, "y": 1.6, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "GardenLedge", "position": { "x": 210.0, "y": 2.8, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "GardenSpur", "position": { "x": 217.0, "y": 2.8, "z": 0.0 }, "size": { "x": 4.5, "y": 0.4 } },
+        { "name": "ColonnadeA", "position": { "x": 230.0, "y": 1.8, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "ColonnadeB", "position": { "x": 238.0, "y": 3.2, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "ColonnadeC", "position": { "x": 244.5, "y": 4.1, "z": 0.0 }, "size": { "x": 5.5, "y": 0.4 } },
+        { "name": "ColonnadeD", "position": { "x": 251.0, "y": 3.2, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "AltarStep", "position": { "x": 260.0, "y": 1.7, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "AltarLedge", "position": { "x": 268.0, "y": 3.0, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "AltarCrown", "position": { "x": 275.0, "y": 4.2, "z": 0.0 }, "size": { "x": 5.5, "y": 0.4 } }
+    ],
+
+    "overrideScenery": true,
+    "backdropScenery": [
+        { "name": "Moon", "spriteKind": "Disc", "position": { "x": 58.0, "y": 8.6, "z": 8.0 }, "size": { "x": 2.4, "y": 2.4 } },
+        { "name": "DistantArchNovice", "spriteKind": "Arch", "position": { "x": 8.0, "y": 1.4, "z": 8.0 }, "size": { "x": 2.6, "y": 5.6 } },
+        { "name": "DistantArchTrellis", "spriteKind": "Arch", "position": { "x": 24.0, "y": 1.8, "z": 8.0 }, "size": { "x": 3.4, "y": 6.4 } },
+        { "name": "DistantArchStair", "spriteKind": "Arch", "position": { "x": 44.0, "y": 1.3, "z": 8.0 }, "size": { "x": 2.8, "y": 5.6 } },
+        { "name": "DistantArchTerraceA", "spriteKind": "Arch", "position": { "x": 76.0, "y": 1.7, "z": 8.0 }, "size": { "x": 3.4, "y": 6.4 } },
+        { "name": "DistantArchTerraceB", "spriteKind": "Arch", "position": { "x": 104.0, "y": 1.2, "z": 8.0 }, "size": { "x": 2.8, "y": 5.4 } },
+        { "name": "DistantArchChoir", "spriteKind": "Arch", "position": { "x": 128.0, "y": 1.9, "z": 8.0 }, "size": { "x": 3.8, "y": 6.8 } },
+        { "name": "DistantArchNaveA", "spriteKind": "Arch", "position": { "x": 158.0, "y": 1.4, "z": 8.0 }, "size": { "x": 3.0, "y": 5.8 } },
+        { "name": "DistantArchNaveB", "spriteKind": "Arch", "position": { "x": 188.0, "y": 1.6, "z": 8.0 }, "size": { "x": 3.2, "y": 6.2 } },
+        { "name": "DistantArchGarden", "spriteKind": "Arch", "position": { "x": 214.0, "y": 1.2, "z": 8.0 }, "size": { "x": 2.8, "y": 5.4 } },
+        { "name": "DistantArchColonnade", "spriteKind": "Arch", "position": { "x": 242.0, "y": 1.7, "z": 8.0 }, "size": { "x": 3.4, "y": 6.4 } },
+        { "name": "DistantArchAltar", "spriteKind": "Arch", "position": { "x": 272.0, "y": 1.3, "z": 8.0 }, "size": { "x": 3.0, "y": 5.8 } }
+    ]
+}

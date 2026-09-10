@@ -1,0 +1,59 @@
+{
+    "maxHealth": 50.0,
+    "moveSpeed": 2.0,
+    "attackDamage": 10.0,
+    "attackKnockback": 5.0,
+    "detectionRange": 5.0,
+    "attackRange": 1.5,
+    "telegraphTime": 0.8500000238418579,
+    "attackDuration": 0.3499999940395355,
+    "attackCooldown": 1.5,
+    "stunDuration": 1.0,
+    "maxPoise": 90.0,
+    "poiseHeavyMultiplier": 2.0,
+    "poiseRegenDelay": 3.0,
+    "poiseRegenRate": 25.0,
+    "soulReward": 300,
+    "enemyColor": {
+        "r": 0.54901963,
+        "g": 0.20392157,
+        "b": 0.15686275,
+        "a": 1.0
+    },
+    "bodySize": {
+        "x": 0.6000000238418579,
+        "y": 1.0
+    },
+    "maxHealthBoss": 180.0,
+    "moveSpeedBoss": 2.5,
+    "attackDamageSlash": 18.0,
+    "attackDamageSlam": 22.0,
+    "attackDamageRage": 12.0,
+    "phaseThreshold": 0.5,
+    "phaseSpeedMultiplier": 1.399999976158142,
+    "phaseAttackCooldownMultiplier": 0.6000000238418579,
+    "rageModeDuration": 5.0,
+    "slashTelegraphTime": 0.8500000238418579,
+    "slashDuration": 0.3499999940395355,
+    "slashRange": 1.600000023841858,
+    "slashCooldown": 1.7999999523162842,
+    "slamTelegraphTime": 1.0,
+    "slamDuration": 0.44999998807907107,
+    "slamRange": 2.200000047683716,
+    "slamShockwaveForce": 7.0,
+    "slamCooldown": 2.5,
+    "rushTelegraphTime": 0.800000011920929,
+    "rushSpeed": 11.0,
+    "rushDuration": 0.5,
+    "rushCooldown": 3.0,
+    "bossColor": {
+        "r": 0.54901963,
+        "g": 0.20392157,
+        "b": 0.15686275,
+        "a": 1.0
+    },
+    "bossBodySize": {
+        "x": 1.2000000476837159,
+        "y": 2.0
+    }
+}

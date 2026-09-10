@@ -1,0 +1,1 @@
+{ "ppu": 73.3, "states": { "idle": { "fps": 6, "loop": true }, "attack": { "fps": 10, "loop": false } } }

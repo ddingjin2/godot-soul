@@ -1,0 +1,120 @@
+{
+    "overrideCamera": true,
+    "cameraPosition": { "x": 0.0, "y": 2.0, "z": -10.0 },
+    "cameraOrthographicSize": 6.8,
+    "cameraHorizontalBounds": { "x": 0.0, "y": 288.0 },
+    "cameraVerticalBounds": { "x": 0.5, "y": 7.5 },
+    "fallDeathY": -8.0,
+
+    "overrideSpawn": true,
+    "playerSpawnPosition": { "x": 0.0, "y": 0.5, "z": 0.0 },
+    "checkpointPosition": { "x": 0.0, "y": 0.5, "z": 0.0 },
+    "checkpointPositions": [
+        { "x": 0.0, "y": 0.5, "z": 0.0 },
+        { "x": 76.0, "y": 0.5, "z": 0.0 },
+        { "x": 140.0, "y": 0.5, "z": 0.0 }
+    ],
+
+    "overrideTerrain": true,
+    "backdropPosition": { "x": 148.0, "y": 2.0, "z": 10.0 },
+    "backdropSize": { "x": 312.0, "y": 22.0 },
+    "groundPosition": { "x": 148.0, "y": -1.0, "z": 0.0 },
+    "groundSize": { "x": 304.0, "y": 1.0 },
+    "groundRimPosition": { "x": 148.0, "y": -0.43, "z": -0.02 },
+    "groundRimSize": { "x": 304.0, "y": 0.08 },
+    "leftArenaGatePosition": { "x": -4.6, "y": 1.35, "z": 0.0 },
+    "rightArenaGatePosition": { "x": 299.4, "y": 1.35, "z": 0.0 },
+    "arenaGateSize": { "x": 0.32, "y": 4.6 },
+
+    "overrideMarkers": true,
+    "checkpointLabelPosition": { "x": 0.0, "y": 1.8, "z": 0.0 },
+    "duelFloorLabelPosition": { "x": 281.0, "y": 0.35, "z": 0.0 },
+    "wrathAltarLabelPosition": { "x": 290.0, "y": 3.4, "z": 0.0 },
+    "spiritPlatformPosition": { "x": 192.0, "y": 5.6, "z": 0.0 },
+    "spiritPlatformSize": { "x": 3.0, "y": 0.3 },
+    "spiritPlatformStartsActive": false,
+
+    "overrideEnemyPlacement": true,
+    "spawnApproachEnemies": true,
+    "meleeGruntSpawnPositions": [],
+    "leapingAttackerSpawnPosition": { "x": 32.0, "y": 0.5, "z": 0.0 },
+    "rangedCasterSpawnPosition": { "x": 61.0, "y": 0.5, "z": 0.0 },
+    "meleeGruntSpawns": [
+        { "position": { "x": 33.2, "y": 0.5, "z": 0.0 }, "dataFile": "" },
+        { "position": { "x": 107.0, "y": 0.5, "z": 0.0 }, "dataFile": "" },
+        { "position": { "x": 209.2, "y": 0.5, "z": 0.0 }, "dataFile": "" },
+        { "position": { "x": 271.5, "y": 0.5, "z": 0.0 }, "dataFile": "" }
+    ],
+    "leapingAttackerSpawns": [
+        { "position": { "x": 73.5, "y": 0.5, "z": 0.0 }, "dataFile": "" },
+        { "position": { "x": 216.8, "y": 0.5, "z": 0.0 }, "dataFile": "" }
+    ],
+    "rangedCasterSpawns": [
+        { "position": { "x": 146.2, "y": 0.5, "z": 0.0 }, "dataFile": "" }
+    ],
+    "wrathMiniBossSpawnPosition": { "x": 290.0, "y": 1.0, "z": 0.0 },
+    "bossDataFile": "Chapter07_Violet_VioletSeraph",
+    "bossEncounterFile": "Chapter07_Violet_Encounter",
+
+    "hasShortcutGate": false,
+
+    "overridePlatforms": true,
+    "platforms": [
+        { "name": "SpawnLedge", "position": { "x": -2.4, "y": 1.6, "z": 0.0 }, "size": { "x": 2.6, "y": 0.35 } },
+
+        { "name": "SeizedStep1", "position": { "x": 17.0, "y": 1.6, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "SeizedStep2", "position": { "x": 23.0, "y": 3.1, "z": 0.0 }, "size": { "x": 4.5, "y": 0.4 } },
+        { "name": "SeizedShelf", "position": { "x": 29.0, "y": 4.4, "z": 0.0 }, "size": { "x": 4.0, "y": 0.4 } },
+
+        { "name": "BaitStep1", "position": { "x": 48.0, "y": 1.7, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "BaitStep2", "position": { "x": 54.0, "y": 3.8, "z": 0.0 }, "size": { "x": 4.5, "y": 0.4 } },
+        { "name": "FalseTithe", "position": { "x": 61.0, "y": 6.0, "z": 0.0 }, "size": { "x": 4.5, "y": 0.4 } },
+
+        { "name": "ClaimedStep", "position": { "x": 90.0, "y": 1.7, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "ClaimedLedge", "position": { "x": 96.0, "y": 3.1, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "ClaimedOverlook", "position": { "x": 102.0, "y": 4.4, "z": 0.0 }, "size": { "x": 4.5, "y": 0.4 } },
+
+        { "name": "TideStep1", "position": { "x": 150.0, "y": 1.7, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "TideCrest1", "position": { "x": 156.0, "y": 3.4, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "TideFall1", "position": { "x": 162.0, "y": 2.0, "z": 0.0 }, "size": { "x": 4.5, "y": 0.4 } },
+        { "name": "TideStep2", "position": { "x": 169.0, "y": 1.7, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "TideCrest2", "position": { "x": 175.0, "y": 2.6, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "TideFall2", "position": { "x": 181.0, "y": 1.6, "z": 0.0 }, "size": { "x": 4.5, "y": 0.4 } },
+        { "name": "TideSill", "position": { "x": 187.0, "y": 1.6, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+
+        { "name": "CopyPillarA", "position": { "x": 198.0, "y": 2.4, "z": 0.0 }, "size": { "x": 3.0, "y": 0.4 } },
+        { "name": "CopyPillarB", "position": { "x": 203.0, "y": 2.4, "z": 0.0 }, "size": { "x": 3.0, "y": 0.4 } },
+        { "name": "CopyPillarC", "position": { "x": 208.0, "y": 2.4, "z": 0.0 }, "size": { "x": 3.0, "y": 0.4 } },
+        { "name": "CopyPillarD", "position": { "x": 213.0, "y": 2.4, "z": 0.0 }, "size": { "x": 3.0, "y": 0.4 } },
+        { "name": "CopyPillarE", "position": { "x": 219.5, "y": 2.4, "z": 0.0 }, "size": { "x": 3.0, "y": 0.4 } },
+        { "name": "CopyPillarF", "position": { "x": 224.5, "y": 2.4, "z": 0.0 }, "size": { "x": 3.0, "y": 0.4 } },
+
+        { "name": "SeraphStep", "position": { "x": 244.0, "y": 1.7, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "SeraphClimb", "position": { "x": 250.0, "y": 3.2, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "SeraphCrest", "position": { "x": 256.0, "y": 4.6, "z": 0.0 }, "size": { "x": 5.0, "y": 0.4 } },
+        { "name": "SeraphSpur", "position": { "x": 262.0, "y": 4.6, "z": 0.0 }, "size": { "x": 4.0, "y": 0.4 } }
+    ],
+
+    "overrideScenery": true,
+    "backdropScenery": [
+        { "name": "VioletMoon", "spriteKind": "Disc", "position": { "x": 66.0, "y": 8.8, "z": 8.0 }, "size": { "x": 2.8, "y": 2.8 } },
+        { "name": "ArchVestibule", "spriteKind": "Arch", "position": { "x": 6.0, "y": 1.3, "z": 8.0 }, "size": { "x": 2.6, "y": 5.4 } },
+        { "name": "ArchSeized", "spriteKind": "Arch", "position": { "x": 26.0, "y": 1.8, "z": 8.0 }, "size": { "x": 3.4, "y": 6.4 } },
+        { "name": "ClaimedGateRed", "spriteKind": "Square", "position": { "x": 14.0, "y": 4.6, "z": 8.0 }, "size": { "x": 18.0, "y": 0.16 } },
+        { "name": "ArchTithe", "spriteKind": "Arch", "position": { "x": 50.0, "y": 1.2, "z": 8.0 }, "size": { "x": 2.8, "y": 5.6 } },
+        { "name": "ClaimedGateOrange", "spriteKind": "Square", "position": { "x": 44.0, "y": 5.2, "z": 8.0 }, "size": { "x": 20.0, "y": 0.16 } },
+        { "name": "ArchClaim", "spriteKind": "Arch", "position": { "x": 94.0, "y": 1.9, "z": 8.0 }, "size": { "x": 3.8, "y": 6.8 } },
+        { "name": "ClaimedGateYellow", "spriteKind": "Square", "position": { "x": 86.0, "y": 5.8, "z": 8.0 }, "size": { "x": 22.0, "y": 0.16 } },
+        { "name": "ArchBreath", "spriteKind": "Arch", "position": { "x": 124.0, "y": 1.3, "z": 8.0 }, "size": { "x": 2.8, "y": 5.6 } },
+        { "name": "ArchTide", "spriteKind": "Arch", "position": { "x": 164.0, "y": 1.7, "z": 8.0 }, "size": { "x": 3.4, "y": 6.4 } },
+        { "name": "ClaimedGateGreen", "spriteKind": "Square", "position": { "x": 156.0, "y": 6.2, "z": 8.0 }, "size": { "x": 24.0, "y": 0.16 } },
+        { "name": "DrownedLight", "spriteKind": "Disc", "position": { "x": 186.0, "y": 6.6, "z": 8.0 }, "size": { "x": 1.1, "y": 1.1 } },
+        { "name": "ArchCopyA", "spriteKind": "Arch", "position": { "x": 202.0, "y": 1.5, "z": 8.0 }, "size": { "x": 3.0, "y": 5.8 } },
+        { "name": "ArchCopyB", "spriteKind": "Arch", "position": { "x": 214.0, "y": 1.5, "z": 8.0 }, "size": { "x": 3.0, "y": 5.8 } },
+        { "name": "ClaimedGateBlue", "spriteKind": "Square", "position": { "x": 208.0, "y": 6.6, "z": 8.0 }, "size": { "x": 26.0, "y": 0.16 } },
+        { "name": "ArchSeraph", "spriteKind": "Arch", "position": { "x": 252.0, "y": 2.0, "z": 8.0 }, "size": { "x": 4.0, "y": 7.2 } },
+        { "name": "ClaimedGateIndigo", "spriteKind": "Square", "position": { "x": 248.0, "y": 7.0, "z": 8.0 }, "size": { "x": 28.0, "y": 0.16 } },
+        { "name": "SeraphHalo", "spriteKind": "Disc", "position": { "x": 286.0, "y": 7.4, "z": 8.0 }, "size": { "x": 3.4, "y": 3.4 } },
+        { "name": "ArchAltar", "spriteKind": "Arch", "position": { "x": 278.0, "y": 1.4, "z": 8.0 }, "size": { "x": 3.0, "y": 5.8 } }
+    ]
+}

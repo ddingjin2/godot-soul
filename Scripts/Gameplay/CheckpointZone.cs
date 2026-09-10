@@ -1,0 +1,263 @@
+using System;
+using Godot;
+using MyGame.Combat;
+using MyGame.Core;
+using MyGame.Player;
+
+namespace MyGame.Gameplay
+{
+    /// <summary>
+    /// A bonfire. Stand inside the trigger, press Interact, and the run is written to the save slot,
+    /// the respawn point moves here, health and stamina come back full and every enemy is put back.
+    /// Humanity is deliberately not restored: the setting treats it as spent for good, so a rest buys
+    /// safety at a price that never refunds (see Docs/WorldSetting.md).
+    /// The component is inert until <see cref="Initialize"/> wires it, so a scene holding no zones keeps
+    /// the single spawn point behaviour it has today.
+    /// </summary>
+    /// <remarks>
+    /// Unity's trigger <c>CircleCollider2D</c> is an <see cref="Area2D"/> here, sitting on
+    /// <c>World.Layer.Trigger</c> and watching <c>World.Layer.Player</c>. Godot's
+    /// <c>BodyEntered</c> only ever reports solid bodies, so Unity's "ignore trigger colliders" filter
+    /// is now the engine's job rather than this file's.
+    /// </remarks>
+    public sealed partial class CheckpointZone : Area2D
+    {
+        private const string MarkerObjectName = "CheckpointZoneMarker";
+
+        /// <summary>Where the player reappears after dying. Falls back to this node itself.</summary>
+        [Export] private Node2D respawnPoint;
+
+        /// <summary>
+        /// This bonfire's place in the chapter's checkpoint list. Written to the save on a rest, and
+        /// read back to decide where a Continue resumes.
+        /// </summary>
+        [Export] private int checkpointIndex;
+
+        /// <summary>Which of the chapter's checkpoints this is. Zero is where the chapter starts.</summary>
+        public int CheckpointIndex => checkpointIndex;
+
+        /// <summary>
+        /// Set by whoever places the zone. Separate from the exported field so an arena built from
+        /// layout data can number its bonfires without a scene per index.
+        /// </summary>
+        public void SetCheckpointIndex(int index)
+        {
+            checkpointIndex = Mathf.Max(0, index);
+        }
+
+        /// <summary>
+        /// Raised after a rest lands. Left here as the seam for a HUD confirmation, which belongs to `ui`.
+        /// </summary>
+        public event Action OnActivated;
+
+        public bool PlayerInside => _playerInside;
+
+        private GameplayPlayerContext _player;
+        private GameplayEnemyRespawner _respawner;
+        private PlayerInputReceiver _input;
+        private bool _playerInside;
+
+        /// <summary>
+        /// Wires every zone in the scene once the player and the enemy respawner exist. Finding nothing
+        /// is the normal case until zones are placed, and costs one tree walk.
+        /// </summary>
+        public static void InitializeAll(GameplayPlayerContext player, GameplayEnemyRespawner respawner)
+        {
+            foreach (CheckpointZone zone in SceneQuery.FindAll<CheckpointZone>())
+                zone.Initialize(player, respawner);
+        }
+
+        /// <summary>
+        /// Interact is taken off <see cref="PlayerInputReceiver"/> rather than read from
+        /// <see cref="GameplayInput"/> here, because a zero timescale does not stop _Process: reading the
+        /// key directly would let the player rest through the pause menu and the victory panel, both of
+        /// which stop play by disabling that receiver.
+        /// </summary>
+        public void Initialize(GameplayPlayerContext player, GameplayEnemyRespawner respawner)
+        {
+            Unsubscribe();
+
+            _player = player;
+            _respawner = respawner;
+            _input = player.GameObject?.GetComponent<PlayerInputReceiver>();
+
+            EnsureTrigger();
+            EnsureMarker();
+
+            if (_input != null)
+                _input.OnInteract += TryActivate;
+        }
+
+        public override void _Ready()
+        {
+            EnsureTrigger();
+            BodyEntered += OnBodyEntered;
+            BodyExited += OnBodyExited;
+        }
+
+        public override void _ExitTree()
+        {
+            Unsubscribe();
+        }
+
+        private void Unsubscribe()
+        {
+            if (_input != null)
+                _input.OnInteract -= TryActivate;
+        }
+
+        private void OnBodyEntered(Node2D body)
+        {
+            if (IsPlayerBody(body))
+                _playerInside = true;
+        }
+
+        private void OnBodyExited(Node2D body)
+        {
+            if (IsPlayerBody(body))
+                _playerInside = false;
+        }
+
+        /// <summary>
+        /// Only the player's solid body counts. In Unity the attack hitbox was a trigger collider on the
+        /// same Rigidbody2D, so a swing at the zone's edge read as "inside" while the body never entered
+        /// - the flag has to track feet, not reach. Here the hitbox is an <see cref="Area2D"/> and
+        /// <c>BodyEntered</c> never reports it, so the group test is all that is left of the filter.
+        /// </summary>
+        private static bool IsPlayerBody(Node body)
+        {
+            return body != null && body.IsInGroup(World.Group.Player);
+        }
+
+        public void TryActivate()
+        {
+            if (!_playerInside)
+                return;
+
+            // Resting out of the spirit state would hand back full health in the middle of the death
+            // sequence, and the respawn that follows would overwrite it anyway.
+            if (_player.DeathController != null && _player.DeathController.IsInSpiritState)
+                return;
+
+            Activate();
+        }
+
+        public void Activate()
+        {
+            // An unwired zone has no player context (GameplayPlayerContext is a struct, so check its
+            // payload). Writing a save from that state captures an empty run - souls 0, everything
+            // default - straight over the real slot.
+            if (_player.GameObject == null)
+            {
+                GD.PushWarning($"CheckpointZone on {Name} activated before Initialize; ignoring.");
+                return;
+            }
+
+            Node2D respawn = respawnPoint ?? this;
+
+            if (_player.DeathController != null)
+                _player.DeathController.SetCheckpoint(respawn);
+
+            if (_player.Health != null)
+                _player.Health.SetHealth(_player.Health.MaxHealth);
+
+            if (_player.Stamina != null)
+                _player.Stamina.SetStamina(_player.Stamina.MaxStamina);
+
+            if (_player.Controller != null)
+                _player.Controller.RefillHealCharges();
+
+            // Humanity is skipped on purpose. Do not "fix" this into a full restore.
+
+            // Captured after the refill, so the slot holds the rested run rather than the one walked in
+            // with. The index is stamped on afterwards because Capture cannot know which bonfire it was
+            // called from - a rest is the only thing that moves it, and this is the rest.
+            GameSaveData saved = GameplaySaveBridge.Capture(_player);
+            saved.checkpointIndex = checkpointIndex;
+            GameSave.Write(saved);
+
+            // Found here rather than held from Initialize: a rest is rare enough that the lookup costs
+            // nothing, and zones placed in a scene with no HUD then need no special case.
+            SceneQuery.FindFirst<MyGame.UI.GameplayHud>()?.ShowCheckpointSaved();
+
+            // The same routine death uses. Enemies coming back is the price of the rest, and a second
+            // return path would drift away from the one the respawn already proved.
+            if (_respawner != null)
+                _respawner.RespawnEnemies();
+
+            GD.Print($"CheckpointZone: rested at {Name}.");
+            OnActivated?.Invoke();
+        }
+
+        /// <summary>
+        /// The designer-owned reach in Godot pixels, or the constant when no design file is loadable -
+        /// which is the case for every synthetic zone the test runners build. Reads through the cached
+        /// catalog, so the cost is one dictionary hit after the first zone in a scene.
+        /// </summary>
+        /// <remarks>
+        /// Both sources are already in Godot pixels - <c>WorldTuningData</c> scales its spatial fields
+        /// when the JSON loads, and <see cref="GameplayTuningDefaults.CheckpointZoneRadius"/> carries its
+        /// own <c>World.Ppu</c> - so nothing is scaled here.
+        /// </remarks>
+        private static float AuthoredRadius()
+        {
+            WorldTuningData world = GameplayTuningCatalog.Load()?.WorldTuning;
+            return world != null ? world.checkpointZoneRadius : GameplayTuningDefaults.CheckpointZoneRadius;
+        }
+
+        /// <summary>
+        /// A zone with no trigger shape never fires and gives no sign why, so one is added. Unity had to
+        /// warn about an authored *solid* collider it must not convert; an <see cref="Area2D"/> cannot be
+        /// solid, so that branch has nothing left to guard and is gone.
+        /// </summary>
+        private void EnsureTrigger()
+        {
+            CollisionLayer = World.Layer.Trigger;
+            CollisionMask = World.Layer.Player;
+            SetDeferred(Area2D.PropertyName.Monitoring, true);
+
+            if (this.GetComponent<CollisionShape2D>() != null)
+                return;
+
+            AddChild(new CollisionShape2D
+            {
+                Name = "Trigger",
+                Shape = new CircleShape2D { Radius = AuthoredRadius() }
+            });
+        }
+
+        /// <summary>
+        /// Greybox marker built from the existing disc sprite and telegraph pulse. No new art, and the
+        /// pulse doubles as the "this is live" read once the zone is wired.
+        /// </summary>
+        private void EnsureMarker()
+        {
+            if (GetNodeOrNull(MarkerObjectName) != null)
+                return;
+
+            var shape = this.GetComponent<CollisionShape2D>()?.Shape as CircleShape2D;
+            float radius = shape != null ? shape.Radius : AuthoredRadius();
+            GameplayReadabilityDefaults readability = GameplayReadabilityDefaults.Create();
+
+            // The pulse owns the transform and the sprite hangs under it, which is how Unity's "two
+            // components on one marker GameObject" comes apart: there the pulse drove localScale while
+            // the renderer owned size, and here the sprite's own scale is what carries the size.
+            var sprite = new Sprite2D
+            {
+                Name = "Disc",
+                Texture = GameplayVisualFactory.CreateDiscSprite(),
+                Modulate = readability.CheckpointLabelColor,
+                ZIndex = readability.SpiritPlatformSortingOrder
+            };
+            sprite.SetSpriteSize(new Vector2(radius * 2f, radius * 2f));
+
+            var marker = new GameplayTelegraphPulse { Name = MarkerObjectName, Position = Vector2.Zero };
+            marker.AddChild(sprite);
+
+            // Attached last, and the order is load-bearing for the same reason it was in Unity: the
+            // pulse caches the colour and scale it finds when it is readied, so the sprite has to be
+            // under it before it enters the tree.
+            AddChild(marker);
+        }
+    }
+}

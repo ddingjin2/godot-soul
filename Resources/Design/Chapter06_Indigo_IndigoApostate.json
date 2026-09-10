@@ -1,0 +1,80 @@
+{
+    "chapterColor": 5,
+    "chapterIndex": 6,
+    "chapterName": "Indigo Chapter",
+    "bossId": "indigo_apostate",
+    "bossName": "Indigo Apostate",
+    "designPillar": "It will not act itself. Track the source, not the spectacle.",
+
+    "maxHealth": 235.0,
+    "moveSpeed": 1.9,
+    "detectionRange": 10.0,
+    "attackRange": 1.9,
+    "phaseTwoHealthThreshold": 0.5,
+    "phaseTwoSpeedMultiplier": 1.1,
+    "phaseTwoCooldownMultiplier": 0.8,
+
+    "afterimageCount": 2,
+    "afterimageSpread": 2.4,
+    "afterimageLifetime": 1.1,
+
+    "maxPoise": 85.0,
+    "poiseHeavyMultiplier": 2.0,
+    "poiseRegenDelay": 3.2,
+    "poiseRegenRate": 26.0,
+    "soulReward": 886,
+
+    "primaryColor": { "r": 0.25, "g": 0.18, "b": 0.78, "a": 1.0 },
+    "secondaryColor": { "r": 0.12, "g": 0.06, "b": 0.42, "a": 1.0 },
+    "bodySize": { "x": 1.4, "y": 2.3 },
+
+    "attacks": [
+        {
+            "attackId": "shadow_reach",
+            "displayName": "Shadow Reach",
+            "damage": 19.0,
+            "knockback": 6.0,
+            "telegraphTime": 1.0,
+            "feintPauseTime": 0.3,
+            "activeTime": 0.25,
+            "recoveryTime": 0.7,
+            "range": 2.0,
+            "telegraphColor": { "r": 0.45, "g": 0.35, "b": 0.95, "a": 1.0 },
+            "damageType": 1,
+            "phaseTwoWeight": 0.35,
+            "forwardOffset": 0.9
+        },
+        {
+            "attackId": "absent_slam",
+            "displayName": "Absent Slam",
+            "damage": 24.0,
+            "knockback": 8.0,
+            "telegraphTime": 1.2,
+            "activeTime": 0.3,
+            "recoveryTime": 0.9,
+            "range": 2.2,
+            "telegraphColor": { "r": 0.3, "g": 0.2, "b": 0.85, "a": 1.0 },
+            "damageType": 2,
+            "phaseTwoWeight": 0.3,
+            "forwardOffset": 0.5
+        },
+        {
+            "attackId": "late_grasp",
+            "displayName": "Late Grasp",
+            "damage": 16.0,
+            "knockback": 5.0,
+            "telegraphTime": 0.8,
+            "feintPauseTime": 0.5,
+            "activeTime": 0.2,
+            "recoveryTime": 0.6,
+            "range": 1.8,
+            "telegraphColor": { "r": 0.35, "g": 0.25, "b": 0.9, "a": 1.0 },
+            "damageType": 1,
+            "phaseTwoWeight": 0.35,
+            "forwardOffset": 1.0,
+            "chainNextAttackId": "shadow_reach",
+            "chainDelay": 0.4,
+            "chainDelayPhaseTwoScale": 1.5
+        }
+    ]
+}

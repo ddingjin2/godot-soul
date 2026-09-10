@@ -1,0 +1,31 @@
+{
+    "maxHealth": 40.0,
+    "moveSpeed": 2.5,
+    "attackDamage": 12.0,
+    "attackKnockback": 5.0,
+    "detectionRange": 5.0,
+    "attackRange": 1.2000000476837158,
+    "telegraphTime": 0.8500000238418579,
+    "attackDuration": 0.3499999940395355,
+    "attackCooldown": 1.350000023841858,
+    "stunDuration": 0.800000011920929,
+    "maxPoise": 35.0,
+    "poiseHeavyMultiplier": 2.0,
+    "poiseRegenDelay": 2.0,
+    "poiseRegenRate": 25.0,
+    "soulReward": 7,
+    "enemyColor": {
+        "r": 0.41960785,
+        "g": 0.22745098,
+        "b": 0.2,
+        "a": 1.0
+    },
+    "bodySize": {
+        "x": 0.6000000238418579,
+        "y": 1.0
+    },
+    "patrolDistance": 2.5,
+    "patrolIdleTime": 0.800000011920929,
+    "attackRadius": 0.699999988079071,
+    "telegraphPulseSpeed": 8.0
+}

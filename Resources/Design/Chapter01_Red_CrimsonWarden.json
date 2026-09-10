@@ -1,0 +1,77 @@
+{
+    "chapterColor": 0,
+    "chapterIndex": 1,
+    "chapterName": "Red Chapter",
+    "bossId": "red_crimson_warden",
+    "bossName": "Crimson Warden",
+    "designPillar": "Wrath. The first gate teaches the grammar: a slow tell, a heavy punish, and one committed charge you have to read rather than out-walk.",
+
+    "maxHealth": 180.0,
+    "moveSpeed": 2.5,
+    "detectionRange": 8.0,
+    "attackRange": 1.8,
+    "phaseTwoHealthThreshold": 0.5,
+    "phaseTwoSpeedMultiplier": 1.4,
+    "phaseTwoCooldownMultiplier": 0.6,
+
+    "maxPoise": 90.0,
+    "poiseHeavyMultiplier": 2.0,
+    "poiseRegenDelay": 3.0,
+    "poiseRegenRate": 25.0,
+    "soulReward": 532,
+
+    "primaryColor": { "r": 0.549, "g": 0.204, "b": 0.157, "a": 1.0 },
+    "secondaryColor": { "r": 0.9, "g": 0.2, "b": 0.2, "a": 1.0 },
+    "bodySize": { "x": 1.2, "y": 2.0 },
+
+    "attacks": [
+        {
+            "attackId": "warden_slash",
+            "displayName": "Warden's Slash",
+            "damage": 18.0,
+            "knockback": 6.0,
+            "telegraphTime": 0.85,
+            "activeTime": 0.35,
+            "recoveryTime": 2.3,
+            "range": 1.6,
+            "telegraphColor": { "r": 1.0, "g": 0.85, "b": 0.06, "a": 1.0 },
+            "damageType": 1,
+            "phaseTwoWeight": 0.4,
+            "forwardOffset": 0.5,
+            "lungeSpeed": 0.0,
+            "lungeDuration": 0.0
+        },
+        {
+            "attackId": "warden_slam",
+            "displayName": "Warden's Slam",
+            "damage": 22.0,
+            "knockback": 7.0,
+            "telegraphTime": 1.0,
+            "activeTime": 0.45,
+            "recoveryTime": 3.0,
+            "range": 2.2,
+            "telegraphColor": { "r": 0.97, "g": 0.06, "b": 0.06, "a": 1.0 },
+            "damageType": 2,
+            "phaseTwoWeight": 0.3,
+            "forwardOffset": 0.0,
+            "lungeSpeed": 0.0,
+            "lungeDuration": 0.0
+        },
+        {
+            "attackId": "warden_charge",
+            "displayName": "Warden's Charge",
+            "damage": 12.0,
+            "knockback": 5.0,
+            "telegraphTime": 0.8,
+            "activeTime": 0.5,
+            "recoveryTime": 3.5,
+            "range": 1.0,
+            "telegraphColor": { "r": 1.0, "g": 0.85, "b": 0.06, "a": 1.0 },
+            "damageType": 1,
+            "phaseTwoWeight": 0.3,
+            "forwardOffset": 0.0,
+            "lungeSpeed": 11.0,
+            "lungeDuration": 0.5
+        }
+    ]
+}

@@ -1,0 +1,21 @@
+{
+    "maxHealth": 100.0,
+    "startingHealth": 100.0,
+    "startingHumanity": 100.0,
+    "maxStamina": 100.0,
+    "staminaRegenRate": 30.0,
+    "staminaRegenDelay": 1.5,
+    "maxPoise": 60.0,
+    "poiseHeavyMultiplier": 2.0,
+    "poiseRegenDelay": 2.0,
+    "poiseRegenRate": 30.0,
+    "attackCost": 20.0,
+    "dodgeCost": 25.0,
+    "parryCost": 15.0,
+    "blockCostPerSecond": 10.0,
+    "blockStaminaThreshold": 20.0,
+    "healAmount": 40.0,
+    "maxHealCharges": 3,
+    "healWindup": 0.9,
+    "soulStainPickupDelay": 0.35
+}

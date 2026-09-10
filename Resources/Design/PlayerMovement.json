@@ -1,0 +1,10 @@
+{
+    "moveSpeed": 6.0,
+    "acceleration": 30.0,
+    "deceleration": 50.0,
+    "gravity": 20.0,
+    "maxFallSpeed": 15.0,
+    "jumpForce": 12.0,
+    "coyoteTime": 0.10000000149011612,
+    "jumpBufferTime": 0.11999999731779099
+}

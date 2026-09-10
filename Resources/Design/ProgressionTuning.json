@@ -1,0 +1,9 @@
+{
+    "maxLevelPerStat": 12,
+    "vitalityPerLevel": 12.0,
+    "endurancePerLevel": 12.0,
+    "strengthPerLevel": 2.0,
+    "resolvePerLevel": 8.0,
+    "baseCost": 80,
+    "costGrowth": 1.07
+}
