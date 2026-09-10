@@ -72,9 +72,9 @@ D3에 대해 감사가 "약 208개 테스트가 출하하지 않는 수치를 �
 | S9 | 아레나를 챕터 셸에 배치 | ~20 | **보류 — 제품 판단 필요** |
 
 **씬 전환은 S9를 제외하고 전부 착지했다 (2026-09-10).** 씬 22개 + Theme 1개가 약 1,000줄의
-런타임 구성 코드를 대신한다. 규칙 3(UI는 씬에 배치)은 제품 코드에서 완결됐고 규칙 2도
-`GameplayBuildShim` 퇴역만 남았다 — 감사는 S8이 그걸 없앨 거라 봤지만 테스트가 아직 쓰므로
-별도 단계가 필요하다.
+런타임 구성 코드를 대신한다. 규칙 3(UI는 씬에 배치)은 제품 코드에서 완결됐고 규칙 2도 완결됐다.
+`GameplayBuildShim` 퇴역은 **하지 않기로 했다** — 측정해 보니 퇴역할 것이 남아 있지 않았다. 아래
+"남겨둔 작은 빚" 항목에 근거가 있다.
 
 S8이 가장 위험했다. 문서화된 `_Ready`/순서 함정 다섯 중 넷을 한 번에 안고 간다 —
 `AddChild` 전 위치 지정(스폰 스윕), `PlayerController2D._Ready`의 의도적 히트박스 덮어쓰기,
@@ -98,7 +98,7 @@ S9는 **아직 일정에 넣지 않는다.** 아레나를 씬에 authoring하면
 | S9 | 카메라 감각 | **완료** |
 | S10 | 가독성 레이아웃 | **완료** · 형제 파일 `ReadabilityLayout.json`로 갔으므로 `Readability.json`은 바이트 그대로 - 비추가적 단계는 결국 없었다 |
 | S12 | `DifficultyTuning.json` | **완료** |
-| S13 | 결정 사항과 죽은 코드 | 남음 |
+| S13 | 결정 사항과 죽은 코드 | **완료** · §3.1~3.19 결과는 `AUDIT_NUMBERS.md` §3 표에 |
 
 완료분 누계 **키 184개 / 파일 27개**. 전부 추가적이었고 출하된 키의 값은 하나도 바뀌지 않았다.
 각 단계가 디자인 파일을 수정한 뒤 바이트 동일 복원을 확인했고, 새 파일이 실제로 읽히는지는
@@ -136,10 +136,14 @@ S10은 감사가 예고한 `Readability.json` 재생성 대신 `Resources/Design
   그대로 authoring 했다. 컴포넌트를 루트로 올리면 두 스포너와 여러 테스트가 부르는
   `AddHealthBar`가 깨진다. 빚은 남는다.
 - **씬 경로 `const`가 6개 늘었다** (S8의 액터 씬 7종). 위의 중복 `const` 항목과 같은 빚이다.
-- **`GameplayBuildShim.NewObject`/`AddComponent`/`EnsureComponent`가 살아남았다.** 감사는 S8에서
-  없어진다고 봤지만 `Scripts/Core`는 S8의 소유가 아니었고, `EnsureComponent`는 스포너에 맨
-  `Node2D`를 넘기는 테스트가 여전히 의존하며, 테스트 7건이 `AddComponent`로 직접 액터를 만든다.
-  shim 은퇴는 별도 단계다.
+- ~~**`GameplayBuildShim.NewObject`/`AddComponent`/`EnsureComponent`가 살아남았다.** shim 은퇴는
+  별도 단계다.~~ **퇴역하지 않기로 결정 (2026-09-10).** 제품 코드에서 세어 보면 `NewObject` 호출은
+  2곳뿐이고 둘 다 의도된 일회성이다 — 컷씬 디렉터 노드, 그리고 `GameplayEnvironmentBuilder`가 "노드
+  하나짜리 씬은 구조 없는 파일"이라며 씬으로 만들지 않은 장식 스프라이트. `AddComponent`의 제품
+  호출은 0건, `EnsureComponent` 21건은 전부 get-or-add라 씬으로 만든 액터에는 아무것도 더하지
+  않으며 맨 `Node2D`를 스포너에 넘기는 테스트를 위해 존재한다. `SceneRoot`·`ActiveSceneName`·
+  `SetActive`는 빌더가 아니라 Godot 관용구다. 남은 것이 빌더가 아니므로 퇴역할 대상이 없다.
+  클래스 doc-comment가 이 결정을 스스로 설명한다.
 
 ## 알려진 마찰
 

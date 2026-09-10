@@ -105,7 +105,7 @@ kept its Unity name and shape.
 - Enemies are `CharacterBody2D`; the Unity `_rb.linearVelocity` is `Velocity`. A defeated boss's
   `bodyType = Static` is `protected bool _bodyFrozen` in `EnemyStateMachine`, which skips gravity and
   `MoveAndSlide`.
-- Enemy gravity is applied in `EnemyStateMachine` / `GameplayEnemy2D` at `World.U(9.81f)`, because
+- Enemy gravity is applied in `EnemyStateMachine` at `World.U(9.81f)`, because
   `project.godot` sets `default_gravity = 0`.
 - No `MyGame.Player` type is referenced from Enemy any more: the player is found with
   `Phys2D.FindActorInGroup(hit, World.Group.Player)`.
@@ -288,3 +288,10 @@ authors those transforms. **Added:** `HealthBarFrameMargin`, `HealthBarLowHealth
 pixels after `ScaleToPixels`. `GameplayWorldHealthBar` and `GameplayLockOnMarker` now call
 `GameplayReadabilityDefaults.Create()` themselves for their few numbers, as the lock-on marker already
 did for its colour; no `Initialize` signature changed.
+
+### `GameplayEnemy2D` is gone
+
+`Scripts/Enemy/GameplayEnemy2D.cs` is deleted (numbers audit §3.10). Nothing in the repository built or
+referenced it apart from `MyGameStateProbe`, whose `CaptureEnemyTelegraphState` lost its
+`GameplayEnemy2D` parameter. An external caller that still had one should build a `MeleeGrunt` - the
+archetype that replaced it - through `GameplayEnemySpawner`.

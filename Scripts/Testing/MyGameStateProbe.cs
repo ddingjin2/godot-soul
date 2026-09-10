@@ -143,7 +143,6 @@ namespace MyGame.Testing
             var health = enemy.GetComponentInChildren<Health>();
             // The enemy body usually *is* the state machine here, but GetComponentInChildren also
             // answers for a caller that handed over an actor root with the body underneath it.
-            var gameplayEnemy = enemy.GetComponentInChildren<GameplayEnemy2D>();
             var stateMachine = enemy.GetComponentInChildren<EnemyStateMachine>();
 
             return new EnemyObservation
@@ -154,7 +153,7 @@ namespace MyGame.Testing
                 HitPoints = RoundHealth(health != null ? health.CurrentHealth : 0f),
                 IsAlive = health == null || !health.IsDead,
                 IsAttacking = ReadBoolField(enemy, "_isAttacking"),
-                TelegraphState = CaptureEnemyTelegraphState(enemy, gameplayEnemy, stateMachine)
+                TelegraphState = CaptureEnemyTelegraphState(enemy, stateMachine)
             };
         }
 
@@ -290,11 +289,8 @@ namespace MyGame.Testing
             return "";
         }
 
-        private static string CaptureEnemyTelegraphState(Node enemy, GameplayEnemy2D gameplayEnemy, EnemyStateMachine stateMachine)
+        private static string CaptureEnemyTelegraphState(Node enemy, EnemyStateMachine stateMachine)
         {
-            if (gameplayEnemy != null && gameplayEnemy.IsStunned)
-                return "Stunned";
-
             if (stateMachine != null && stateMachine.CurrentState == EnemyState.Stunned)
                 return "Stunned";
 

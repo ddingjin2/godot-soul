@@ -504,3 +504,24 @@ demands the pixel value its kind implies.
   the same reason), and `GameplayWorldHealthBar`'s frame colour and low-health tint (the frame colour
   is authored on `WorldHealthBar.tscn`; both are palette, and the palette file was not to be touched).
   The 20 sorting orders stay in code pending §3.6.
+
+### Numbers stage S13 - decisions and dead code
+
+The nineteen open items in `AUDIT_NUMBERS.md` §3 are settled; the table at the top of that section
+says what was done for each and by which stage. Two touched code:
+
+- **`GameplayEnemy2D` is deleted.** Its own comment said it was kept because "the earliest scenes and
+  tests still build one"; by S13 no scene, no test and no spawner did, and the one reader left was an
+  optional `GetComponentInChildren` in `MyGameStateProbe`, which now reads the state machine alone.
+  The 11 unowned tuning numbers the audit counted against it (§2.4n) go with it. A probe that
+  observes a synthetic enemy built on the legacy class would have reported its stun; none exists.
+- **`GameplaySceneDefaultsAsset` keeps its stale numbers no longer.** The camera defaults (8, 2) /
+  7.0 named a framing no shipped layout has; they are the shipped (0, 2) / 6.8 now, so an asset a
+  designer creates in the inspector starts as a no-op. The type stays - two tests pin it and it is
+  the per-scene override hook - and still no `.tres` ships, which the class now says out loud.
+
+And one decision the plan had scheduled as its own stage: **`GameplayBuildShim` is not retired.**
+Measured rather than assumed - product code calls `NewObject` twice (the cutscene director node and
+the deliberately bare decoration sprite), `AddComponent` never, and `EnsureComponent` only as a
+get-or-add that adds nothing to a scene-built actor. What is left is not a world builder, so there is
+nothing to retire; the class comment and `PLAN.md` carry the reasoning.

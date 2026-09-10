@@ -18,6 +18,14 @@ namespace MyGame.Gameplay
     /// The Unity fields were <c>Vector3</c>; z was the camera's depth (-10) and the spawns' draw order,
     /// neither of which survives into 2D Godot, so both are <see cref="Vector2"/> here.
     /// </para>
+    /// <para>
+    /// No <c>.tres</c> ships: <c>Resources/Gameplay/SceneDefaults.tres</c> does not exist, so every load
+    /// of this type answers null and the layout JSON alone decides the arena. The type stays as the
+    /// hook a scene can opt into, and its defaults are the shipped framing (<c>SceneLayout.json</c>'s
+    /// camera and spawn) so a freshly created asset changes nothing until a field is edited. They used
+    /// to be a camera at (8, 2) with a 7.0 half height that no shipped layout names (numbers audit
+    /// §3.3).
+    /// </para>
     /// </remarks>
     [GlobalClass]
     public sealed partial class GameplaySceneDefaultsAsset : Resource
@@ -26,10 +34,10 @@ namespace MyGame.Gameplay
         [Export] private bool overrideCamera;
 
         /// <summary>Unity metres, +Y up.</summary>
-        [Export] private Vector2 cameraPosition = new(8f, 2f);
+        [Export] private Vector2 cameraPosition = new(0f, 2f);
 
         /// <summary>Visible half-height in Unity units - stays unconverted, see <see cref="GameplaySceneDefaults"/>.</summary>
-        [Export] private float cameraOrthographicSize = 7f;
+        [Export] private float cameraOrthographicSize = 6.8f;
 
         [ExportGroup("Spawn")]
         [Export] private bool overrideSpawn;

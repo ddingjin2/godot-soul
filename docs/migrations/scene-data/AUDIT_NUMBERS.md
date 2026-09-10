@@ -589,6 +589,33 @@ Note this block is simultaneously a **rule 3** finding (UI must be authored in `
 Nineteen items where the honest answer is "this could go either way". Each carries the reasoning so a
 later reader can accept or overturn it. **None should be moved without a decision recorded here.**
 
+## Outcomes (S13, 2026-09-10)
+
+Every item below is settled. The reasoning that follows each heading is kept as written; this table
+is what was actually done and where.
+
+| # | Outcome | Where |
+|---|---|---|
+| 3.1 | **Keep** `GameplaySceneDefaults.Create()` as the fallback. Unreachable in a shipped run, diagnosable when a layout file fails to parse. | - |
+| 3.2 | **Accepted as the deserialiser's missing-value behaviour, not reconciled.** The validator reports a missing key as an error, so every shipped file is complete and the defaults are never read; and there is no single right default for a field eight chapter files each author differently. | - |
+| 3.3 | **Kept the type, fixed the numbers.** `GameplaySceneDefaultsAsset` stays as the per-scene override hook (two tests pin it); its stale camera defaults (8, 2) / 7.0 became the shipped (0, 2) / 6.8, so a freshly created asset changes nothing. No `.tres` ships. | S13 |
+| 3.4 | **Tuning.** `WorldTuning.json.enemyGravity`. | S6 |
+| 3.5 | **Split as recommended.** Forward reach and depth moved; the 0.05 / 0.08 insets stayed. | S6 |
+| 3.6 | **Kept in code.** The 20 sorting orders. The sizes beside them moved as one block. | S10 |
+| 3.7 | **Theme resource.** `Resources/UI/MenuTheme.tres`. | scene S2 |
+| 3.8 | **Deleted, not moved.** `SwordLocalRotation` had no reader once `Player.tscn` authored the sword; a key nothing reads would look like tuning. | S10 |
+| 3.9 | **Tuning, per chapter.** `<chapter>_Encounter.json.maxChainSteps`. | S7 |
+| 3.10 | **Retired (option b, without the repointing).** `GameplayEnemy2D` had no scene, no test and no spawner building it - only an optional lookup in `MyGameStateProbe`, which is gone with it. 292 lines and 11 unowned numbers deleted. | S13 |
+| 3.11 | **Tuning.** `CombatTuning.json.shakeFrequency`. | S4 |
+| 3.12 | **Moved as-is, per frame.** `RangedCaster.json.strafeFlipChance`; the frame-rate dependency stays a separate bug. | S7 |
+| 3.13 | **Keep in code.** Diagnostic. | - |
+| 3.14 | **Exempt.** Off-by-default X-ray. | - |
+| 3.15 | **Exempt.** Baked-asset authoring data. | - |
+| 3.16 | **Compliant.** Fallbacks behind `Resources/PixelActors/*/anim.json`. | - |
+| 3.17 | **Keep in code.** Hardware enum and an inert settings list. | - |
+| 3.18 | **Tuning.** `LeapingAttacker.json.landingPunishMultiplier`. | S7 |
+| 3.19 | **Tuning.** `CombatTuning.json.hitStopPauseScale`. | S4 |
+
 **3.1 — `GameplaySceneDefaults.Create()`'s 100 literals: keep as fallback, or delete?**
 They are unreachable in every shipped run (§5.1), so they are not a behaviour risk. But they are a
 third copy of numbers that already exist twice (the JSON, and the `[Export]` defaults on

@@ -3,17 +3,22 @@ using Godot;
 namespace MyGame.Core
 {
     /// <summary>
-    /// The three Unity idioms the runtime world-builders lean on that Godot has no direct member for:
-    /// <c>new GameObject(name)</c>, <c>AddComponent&lt;T&gt;()</c> and <c>SetActive(bool)</c>, plus the
-    /// active scene's name.
+    /// The Unity idioms the arena code still leans on that Godot has no direct member for: the active
+    /// scene's root and name, <c>SetActive(bool)</c>, and <c>GetComponent ?? AddComponent</c>.
     ///
     /// Unity's <c>new GameObject</c> dropped the object into the active scene's root with no parent
     /// named; the Godot equivalent is <see cref="SceneTree.CurrentScene"/>, so that is what
     /// <see cref="SceneRoot"/> resolves to. <see cref="Root"/> overrides it, which is how a headless
     /// test builds an arena into a node it owns instead of into whatever scene happens to be open.
     ///
-    /// Added by the Gameplay/arena port. The other Gameplay files build the same way, so use this
-    /// rather than growing a second copy.
+    /// This was the enabler for building the world in code. Since the scene migration every reusable
+    /// thing is a saved scene the spawners instance, and what is left here is not a builder:
+    /// <see cref="NewObject{T}(string,Vector2)"/> has two callers, both one-offs by decision (the
+    /// cutscene director node, and the bare decoration sprite <c>GameplayEnvironmentBuilder</c> keeps
+    /// out of a scene on purpose); <see cref="EnsureComponent{T}"/> adds nothing to a scene-built actor
+    /// and exists so a test can hand either spawner a bare <see cref="Node2D"/>. The audit expected
+    /// this file to be retired with the actor scenes; it was not, for exactly those two reasons, and
+    /// that decision is recorded in <c>docs/migrations/scene-data/PLAN.md</c>.
     /// </summary>
     public static class GameplayBuildShim
     {
