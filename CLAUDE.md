@@ -44,8 +44,11 @@ tools/godot.ps1               # open the editor (resolves the winget install its
 tools/godot.ps1 --headless --quit-after 200 res://Scenes/GameplayScene.tscn   # smoke run
 ```
 
-Nothing takes a lock. The Unity editor mutex, the two serialised suite runners and UnityMCP are all
-gone: a headless run owns nothing, so several can run at once.
+The Unity editor mutex, the two serialised suite runners and UnityMCP are all gone - a headless run
+holds no editor lock. **That does not make two runs safe.** `user://playerprefs.cfg` is one file
+shared by every run on this machine, and the suites that touch saves clear it in `[SetUp]`, so
+concurrent runs corrupt each other's fixtures. Run one at a time, or accept that a number measured
+alongside another run is not evidence.
 
 ## The conventions that matter
 

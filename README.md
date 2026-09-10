@@ -57,8 +57,12 @@ tools/run-tests.ps1            # 전체, exit 0 = green
 tools/run-tests.ps1 -Filter X  # 클래스 또는 메서드 이름 부분 일치
 ```
 
-Godot 에디터 락이 없으므로 여러 번 동시에 돌려도 됩니다. 필터를 쓸 때는 반드시
-`run-tests.ps1`을 거칩니다 — `godot.ps1`을 직접 부르면 PowerShell이 `--` 뒤 인자를 잃습니다.
+필터를 쓸 때는 반드시 `run-tests.ps1`을 거칩니다 — `godot.ps1`을 직접 부르면 PowerShell이
+`--` 뒤 인자를 잃습니다.
+
+**한 번에 하나씩 돌립니다.** Godot 에디터 락은 없지만 `user://playerprefs.cfg`가 실행 전체가
+공유하는 단일 파일이고, 저장을 건드리는 스위트는 `[SetUp]`에서 그걸 지웁니다. 동시에 돌리면
+서로의 픽스처를 무너뜨립니다.
 
 **최신 결과: 206 passed / 1 failed / 1 skipped (약 11분).**
 
