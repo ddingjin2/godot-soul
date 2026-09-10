@@ -152,3 +152,51 @@ depends on the constant; it is left in place rather than removed in a stage that
 `res://Scenes/UI/CutsceneOverlay.tscn` instead of constructing nodes. `Build()` and `CreateBar()` are
 gone. The child names (`Fade`, `LetterboxTop`, `LetterboxBottom`, `Line`) are the contract the script
 binds against - they were the Unity Timeline track paths and they stay fixed names.
+
+### Arena geometry is instanced, not built
+
+`GameplayEnvironmentBuilder.Build` is unchanged - it still reads `SceneLayout_*.json` and places what
+it makes. Only the construction moved:
+
+- `CreateSolidBox` gained a sixth parameter, `string scenePath = "res://Scenes/World/SolidBox.tscn"`,
+  and now instances that scene instead of building a `StaticBody2D` node by node. It also parents the
+  body itself, which `GameplayBuildShim.NewObject` used to do. Every caller still passes the layout's
+  own name (`platform.Name`, `"Ground"`, `"SpiritPlatform"`, `"ShortcutGate"`, the two world edges),
+  so the built arena carries the same node names it always did - the scene root's name never survives.
+- `CreateWorldEdge` builds no nodes: it is `CreateSolidBox` plus `Sprite.Visible = false`.
+- `CreateShortcutGate` passes `res://Scenes/World/ShortcutGate.tscn`, an inherited scene, and reaches
+  the gate with `GetNode<ShortcutGate>("ShortcutGate")` instead of `AddComponent`.
+- `CreateCheckpointAt` and `CreateGatePortal` instance `Checkpoint.tscn` / `GatePortal.tscn`.
+  `CreateCheckpoint(GameplaySceneDefaults)` keeps its exact name and one-parameter signature - the P0
+  runner reflects on it.
+
+**New public API**, and the reason it is public rather than folded into `_Ready`:
+
+- `CheckpointZone.BindAuthoredTriggerAndMarker()` and `GateTravelZone.BindAuthoredTriggerAndMarker()`.
+  The builder calls these while the instance is still detached. `GameplayTelegraphPulse` caches the
+  marker colour it finds when it readies and writes that cached colour back every frame afterwards, so
+  the designer's `Readability.json` tint has to land before the marker enters the tree. `Initialize`
+  still calls the same two helpers, so a zone built by hand - which is every fixture - is unaffected.
+
+`CheckpointZone.EnsureTrigger` now *binds* `WorldTuning.checkpointZoneRadius` onto the authored shape
+rather than only creating one when absent; without that, authoring the trigger would have taken the
+radius away from the design file. `CheckpointZone.EnsureMarker` and `GateTravelZone.EnsureMarker` bind
+the authored `MarkerDisc.tscn` instance when there is one and instance it when there is not.
+
+`ShortcutGate.ZoneRadius` (5 m) is **deleted**; the reach and the whole argument for its size are
+authored in `Scenes/World/ShortcutGate.tscn`. `ShortcutGate.EnsureTrigger` no longer builds the
+`Area2D` - a gate with no authored `ShortcutGateTrigger` child now warns loudly, because on this one
+component a missing trigger means a chapter nobody can finish.
+
+`CreateSceneryPiece` is deliberately **not** a scene; see `docs/migrations/scene-data/AUDIT_SCENES_UI.md` §7.
+
+### HUD is a scene now
+
+`GameplayHud.CreateUi(CanvasLayer canvas = null)` keeps its signature but **ignores the argument** -
+the HUD is instanced from `res://Scenes/UI/GameplayHud.tscn`, which already has its own root, so
+there is nothing left to build into. `GameplayHudSpawner` instances the scene, renames the root and
+resolves the two authored controllers instead of adding them.
+
+`GameplayHud.Plate` and `Mul` are **deleted** with the Theme; they were `internal` and called from
+`TitleMenuBootstrap`, which no longer styles buttons in code at all. `PlaceRect` and `Face` remain
+only for that file's remaining call sites.

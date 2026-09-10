@@ -249,3 +249,19 @@ two as separate scenes for now.
 - **`TitleMenuBootstrap.CreateButton` still names nodes after translated text.** That is the hazard
   the localization work warned about - a change of locale renames the node. Nothing depends on those
   names today (the test clicks by `Text`), and Stage 4 owns that file.
+
+### What authoring the HUD as scenes changed
+
+- **The four modal panels share `Title` and `Subtitle`.** Godot forbids renaming an inherited node, so
+  seven per-panel label names retire (`VictoryTitle`, `VictorySubtitle`, `PauseTitle`, `PauseStatus`,
+  `GateTravelTitle`, `LevelUpTitle`, `LevelUpSouls`). Only one was reachable from a test, and it is
+  now addressed by full path - which is stricter than the name search it replaced, because a bare
+  name would match whichever panel's `Subtitle` came first.
+- **Static panel text is authored as localisation keys** and translated by Godot's own
+  auto-translation, rather than assigned through `Tr()` when the panel is built. No Korean literal
+  survives anywhere and no test reads those strings.
+- **`CreateUi`'s `canvas` parameter is now ignored.** The HUD is instanced from a scene that already
+  carries its own root, so there is nothing to build into. The method stays because the spawner and
+  several tests call it.
+- `PlaceRect` and `Face` survive in `GameplayHud` only because `TitleMenuBootstrap` still calls them;
+  they go with Stage 4.

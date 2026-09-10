@@ -347,10 +347,13 @@ namespace MyGame.Tests
             var hud = SceneQuery.FindFirst<GameplayHud>();
             Assert.NotNull(hud, "Gameplay scene should spawn the HUD.");
 
-            // owned: false - the HUD builds its panels in code, so none of them has a scene owner.
+            // owned: false because the search must not care who owns the node. The HUD is an
+            // authored scene now, so its children do have a scene owner - but the spawner instances
+            // it and renames the root, and a search restricted to owned nodes is one refactor away
+            // from silently finding nothing.
             var flask = hud.FindChild("FlaskText", recursive: true, owned: false) as Label;
             if (flask == null)
-                Assert.Fail("The HUD should build a FlaskText line for the flask readout.");
+                Assert.Fail("The HUD should carry a FlaskText line for the flask readout.");
 
             return flask;
         }
