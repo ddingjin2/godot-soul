@@ -169,3 +169,27 @@ quietly relaxed.
   its collider - a content mismatch Unity's sprite-import ppu used to hide, not a crash.
 - The scripted agent walks the real player through the real chapter and kills the first grunt through
   the InputMap, so the synthetic-input path is proven end to end rather than merely compiled.
+
+## After the port: bringing the codebase up to the production rules
+
+Tracked on `refactor/godot-scene-data`, planned in `docs/migrations/scene-data/PLAN.md`.
+
+### A defect the template pattern was causing
+
+`SetActive(false)` on a detached template baked `ProcessMode = Disabled` into every node copied from
+it, and the re-arm path restored only `Visible`. A boss hazard strip or afterimage produced that way
+never processed: measured side by side in one headless loop, the old path's `Remaining` timer sat at
+5.000 after 30 frames while a `PackedScene` instance had burned down to 4.737. It never burned and
+never expired. Instancing a scene cannot inherit a deactivated template's state, so the fix is the
+migration itself rather than a patch.
+
+The same change deleted `RangedCaster.CreateDefaultProjectile`, a second builder for the same
+two-node tree that left the sprite with no texture and no size - so a caster nobody wired fired an
+invisible, unsized projectile.
+
+### Behaviour deliberately preserved
+
+The projectile pool still parks a shot with `Visible = false`, `ProcessMode = Disabled` and
+`Monitoring = false` (deferred, because Godot refuses that write while the area is emitting its own
+signal) and re-arms all three on get. That is recycling, not the defect above; only the redundant
+re-arm on a freshly instanced shot was dropped.

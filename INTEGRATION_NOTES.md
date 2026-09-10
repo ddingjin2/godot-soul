@@ -118,3 +118,37 @@ kept its Unity name and shape.
 `Sprite2D.SetSpriteSize(Vector2 px)` (Unity's sliced `SpriteRenderer.size`) and
 `Node2D.BodyBounds(Vector2 fallbackHalfExtents)` (Unity's `Collider2D.bounds` as a `Rect2`).
 Both shims are fine to use; prefer whichever name reads better at the call site.
+
+## Scene migration — signatures that moved (branch `refactor/godot-scene-data`)
+
+Changed by the move from runtime-built node trees to authored scenes. See
+`docs/migrations/scene-data/PLAN.md` for why.
+
+### Effects are `PackedScene` now, not template nodes
+
+The three "prefab" fields were `[Export] Node2D` holding a detached template that callers copied with
+`Duplicate()`. They are `[Export] PackedScene` and callers instance them:
+
+- `RangedCaster.SetProjectilePrefab(PackedScene scene, Color? tint = null, int? sortingOrder = null)` -
+  the two optional arguments carry the designer's `projectileColor` and sorting order from
+  `Resources/Art/Readability.json` through to each instance. Baking the colour into the `.tscn` alone
+  would have silently killed a live override; the scene ships the code default so an unwired caster
+  still works.
+- `RainbowChapterBossBehaviour.SetHazardPrefab(PackedScene)` and `SetAfterimagePrefab(PackedScene)`.
+- `EnemyProjectilePool(PackedScene scene, Node parent)`.
+- `EnemyProjectile.ScenePath`, `BossHazardStrip.ScenePath`, `BossAfterimage.ScenePath` - the
+  `res://Scenes/Effects/*.tscn` constants, used as the fallback when nothing wired a scene.
+
+`GameplayEnemySpawner.CreateProjectilePrefab` / `CreateHazardPrefab` / `CreateAfterimagePrefab` are
+**deleted**. `RangedCaster.CreateDefaultProjectile` is **deleted** - it was a second, divergent
+builder for the same tree whose sprite had no texture and no size.
+
+`GameplayPrefabNames.EnemyProjectile` is now unused. The scene root keeps that node name, so nothing
+depends on the constant; it is left in place rather than removed in a stage that did not own the file.
+
+### Cutscene overlay
+
+`CutsceneOverlay.Create()` keeps its signature but instances
+`res://Scenes/UI/CutsceneOverlay.tscn` instead of constructing nodes. `Build()` and `CreateBar()` are
+gone. The child names (`Fade`, `LetterboxTop`, `LetterboxBottom`, `Line`) are the contract the script
+binds against - they were the Unity Timeline track paths and they stay fixed names.
