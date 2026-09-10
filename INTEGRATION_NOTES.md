@@ -262,3 +262,12 @@ them: `Scenes/Effects/EnemyProjectile.tscn` authors both, and a design key would
 
 `RainbowChapterBossBehaviour.MaxChainSteps` (a `const`) is now `DefaultMaxChainSteps`, used only when
 the boss has no encounter file; the authored number is `<chapter>_Encounter.json.maxChainSteps`.
+
+### The camera feel is pushed in, like the enemy block
+
+`GameplayCameraFollow2D.ApplyTuning(WorldTuningData world)` is new and additive - `Initialize` is
+unchanged. `GameplaySystemBootstrapper.ConfigureCameraFollow` calls it right before `Initialize` with
+`GameplayTuningCatalog.Load()?.WorldTuning`; a null argument keeps the shipped defaults. Every value
+it takes is already pixels - `WorldTuningData.ScaleToPixels` did the conversion, including the Y flip
+on `cameraLookAhead`. The four bound fallbacks the follow used to initialise itself with are gone; a
+follow that was never `Initialize`d is unbounded rather than pinned to numbers from no arena.

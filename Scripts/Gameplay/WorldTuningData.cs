@@ -12,9 +12,13 @@ namespace MyGame.Gameplay
     /// at load and multiplies the spatial fields by <see cref="World.Ppu"/>: <c>checkpointZoneRadius</c>,
     /// <c>lockOnRange</c>, <c>lockOnBreakRange</c>, <c>enemyGravity</c> (m/s^2 -> px/s^2),
     /// <c>enemyDisengageDistance</c>, <c>enemyLedgeProbeForward</c>, <c>enemyLedgeProbeDepth</c> and
-    /// <c>actorMoveAnimThreshold</c> (m/s -> px/s). Left alone, because they are seconds:
-    /// <c>enemyIdleToPatrolTime</c>, <c>enemyInvestigateDuration</c>, <c>enemyRecoveryDuration</c> and
-    /// <c>fallDeathRespawnLockout</c>.
+    /// <c>actorMoveAnimThreshold</c> (m/s -> px/s), <c>cameraDeadZone</c> (a half-extent, so both
+    /// components scale and neither flips) and <c>cameraMaxFollowSpeed</c> (m/s -> px/s).
+    /// <c>cameraLookAhead</c> is the one field that is scaled <b>and</b> Y-flipped, through
+    /// <see cref="World.V"/>: it is an offset, and an authored +1.2 (up) has to arrive as -120.
+    /// Left alone, because they are seconds: <c>enemyIdleToPatrolTime</c>,
+    /// <c>enemyInvestigateDuration</c>, <c>enemyRecoveryDuration</c>, <c>fallDeathRespawnLockout</c>
+    /// and <c>cameraSmoothTime</c>.
     ///
     /// The enemy block is here rather than on an archetype because every archetype shares it, and it is
     /// pushed into <c>EnemyStateMachine</c> by <c>GameplayEnemySpawner</c> rather than read there:
@@ -71,6 +75,22 @@ namespace MyGame.Gameplay
         /// <summary>Seconds the kill plane under the arena refuses to fire again after a pit death.</summary>
         [Export] public float fallDeathRespawnLockout = 1f;
 
+        // --- Camera feel. The bounds stay on SceneLayout, per arena; this is how the camera moves
+        // inside them, shared by every arena. Metres and seconds; see the UNITS block above. The
+        // fallback twins are the initialisers on GameplayCameraFollow2D.
+
+        /// <summary>Half-extents of the box the target may move inside before the camera follows, in metres.</summary>
+        [Export] public Vector2 cameraDeadZone = new(1.2f, 0.6f);
+
+        /// <summary>How far ahead of the target the camera aims, in metres: x in the facing direction, y upward.</summary>
+        [Export] public Vector2 cameraLookAhead = new(1.4f, 1.2f);
+
+        /// <summary>Seconds the critically damped follow takes to settle. The single biggest knob on how the camera feels.</summary>
+        [Export] public float cameraSmoothTime = 0.25f;
+
+        /// <summary>Fastest the camera may move to catch up, in metres per second.</summary>
+        [Export] public float cameraMaxFollowSpeed = 12f;
+
         /// <summary>
         /// Guards against a second pass over the same instance - the scaling rewrites the authored
         /// fields in place, so running it twice would put every reach a hundred times too far out.
@@ -96,6 +116,10 @@ namespace MyGame.Gameplay
             enemyLedgeProbeForward = World.U(enemyLedgeProbeForward);
             enemyLedgeProbeDepth = World.U(enemyLedgeProbeDepth);
             actorMoveAnimThreshold = World.U(actorMoveAnimThreshold);
+
+            cameraDeadZone = new Vector2(World.U(cameraDeadZone.X), World.U(cameraDeadZone.Y));
+            cameraLookAhead = World.V(cameraLookAhead);
+            cameraMaxFollowSpeed = World.U(cameraMaxFollowSpeed);
         }
 
         /// <summary>

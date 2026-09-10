@@ -9,10 +9,11 @@ namespace MyGame.Gameplay
     /// director can own the rig, with none of the three overwriting another's frame.
     /// </summary>
     /// <remarks>
-    /// The dead zone, the look-ahead and the follow speed are literals that live only in this file, so
-    /// they are written as Unity metres and wrapped in <see cref="World.U"/> / <see cref="World.V"/>
-    /// here. The bounds are not: they come off <c>GameplaySceneDefaults</c>, which has already converted
-    /// them.
+    /// The dead zone, the look-ahead, the smooth time and the follow speed are authored in
+    /// <c>WorldTuning.json</c> and arrive through <see cref="ApplyTuning"/> already in pixels -
+    /// <c>WorldTuningData.ScaleToPixels</c> is the boundary. The initialisers below are the fallback a
+    /// rig with no file keeps, written as Unity metres and converted the same way. The bounds come off
+    /// <c>GameplaySceneDefaults</c>, which has already converted them.
     /// </remarks>
     public sealed partial class GameplayCameraFollow2D : Node2D
     {
@@ -23,12 +24,31 @@ namespace MyGame.Gameplay
         private Vector2 _lookAhead = World.V(new Vector2(1.4f, 1.2f));
         private float _smoothTime = 0.25f;
         private float _maxFollowSpeed = World.Ppu * 12f;
-        private float _minX = World.Ppu * -6f;
-        private float _maxX = World.Ppu * 32f;
-        private float _minY = World.Ppu * -8f;
-        private float _maxY = World.Ppu * 0.2f;
+
+        // Unbounded until Initialize hands over the arena's own. There is no authored fallback for
+        // these: every arena's bounds are on its SceneLayout, and a rig that was never told them
+        // should not be pinned to numbers that belong to no arena.
+        private float _minX = float.NegativeInfinity;
+        private float _maxX = float.PositiveInfinity;
+        private float _minY = float.NegativeInfinity;
+        private float _maxY = float.PositiveInfinity;
 
         private Vector2 _velocity;
+
+        /// <summary>
+        /// The feel, from <c>WorldTuning.json</c>. Every value is already pixels - do not convert here.
+        /// A null argument keeps the shipped defaults.
+        /// </summary>
+        public void ApplyTuning(WorldTuningData world)
+        {
+            if (world == null)
+                return;
+
+            _deadZone = world.cameraDeadZone;
+            _lookAhead = world.cameraLookAhead;
+            _smoothTime = world.cameraSmoothTime;
+            _maxFollowSpeed = world.cameraMaxFollowSpeed;
+        }
 
         /// <summary>
         /// Both bound pairs arrive already in Godot space, as min/max: GameplaySceneDefaults is the

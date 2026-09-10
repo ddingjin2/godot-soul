@@ -139,6 +139,8 @@ namespace MyGame.Gameplay
                 return;
             }
 
+            // The feel is shared by every arena and lives on WorldTuning; the bounds are this arena's.
+            follow.ApplyTuning(GameplayTuningCatalog.Load()?.WorldTuning);
             follow.Initialize(target, scene.CameraHorizontalBounds, scene.CameraVerticalBounds);
         }
     }

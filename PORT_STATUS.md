@@ -403,3 +403,22 @@ reads `DifficultyTuningData.Shared` - a lazily read singleton, the same shape as
 so no bootstrap call was needed. Proven read: `easyPlayerDamageTaken` set to 0.5 turned the shipped
 `100 - 10 * 0.7 = 93` assertion into `95`, then the file was restored. The `ponytail:` note that
 asked for exactly this migration is retired with it.
+
+### Numbers stage S9 - camera feel
+
+Four keys appended to `WorldTuning.json`, no existing value changed (the previous last key gained its
+trailing comma, nothing else): `cameraDeadZone` {1.2, 0.6} m, a half-extent, so both components are
+scaled by `World.U` and neither flips; `cameraLookAhead` {1.4, 1.2} m, an offset, scaled **and**
+Y-flipped through `World.V` - the one field in the migration the plan flagged as most likely to be got
+wrong; `cameraSmoothTime` 0.25 s, untouched; `cameraMaxFollowSpeed` 12 m/s, scaled. All four were
+literals on `GameplayCameraFollow2D`, which kept its Unity-metre initialisers as the fallback and gained
+`ApplyTuning(WorldTuningData)`; `GameplaySystemBootstrapper.ConfigureCameraFollow` pushes the file in
+right before `Initialize`. Proven read: `cameraLookAhead.y` set to 3.3 printed `lookAhead=(140, -330)`
+from a headless boot of `GameplayScene` (dead zone `(120, 60)`, max speed `1200`), then the file was
+restored. Seeded from the live literals, so a scene run without the file moves the same.
+
+The four stale bound fallbacks at `GameplayCameraFollow2D.cs:26-29` (§2.8 - written un-flipped,
+belonging to no arena) are gone; the rig is unbounded until `Initialize` hands it the arena's own,
+which every code path does before a target is set. `WorldTuning.json` was chosen over a new
+`CameraTuning.json` because the file already owns "reach numbers that belong to no single actor" and
+the registry stays untouched.

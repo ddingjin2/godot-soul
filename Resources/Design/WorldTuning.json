@@ -10,5 +10,9 @@
     "enemyLedgeProbeForward": 0.3499999940395355,
     "enemyLedgeProbeDepth": 1.100000023841858,
     "actorMoveAnimThreshold": 0.15000000596046449,
-    "fallDeathRespawnLockout": 1.0
+    "fallDeathRespawnLockout": 1.0,
+    "cameraDeadZone": { "x": 1.2, "y": 0.6 },
+    "cameraLookAhead": { "x": 1.4, "y": 1.2 },
+    "cameraSmoothTime": 0.25,
+    "cameraMaxFollowSpeed": 12.0
 }
