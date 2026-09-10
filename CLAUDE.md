@@ -5,6 +5,10 @@ https://github.com/ddingjin2/MyGame. That checkout is no longer kept here; clone
 check what a piece of this code was before the port. `PORT_STATUS.md` records every behavioural
 difference, so most such questions are answered without it.
 
+**Read `AGENTS.md` before writing code here.** It carries the four user-approved Godot production
+rules this project is held to, and an honest statement of where this codebase currently breaks them.
+`SESSION_HANDOFF.md` is the checkpoint a new session starts from.
+
 ## Layout
 
 ```
@@ -21,7 +25,9 @@ Tests/Unit/         ported edit-mode P0 suite
 addons/mygame_tools/ the editor dock: design CSV round trip, sprite baking, scene creation
 Resources/Design/   *.json - the tuning source of truth, owned by the designer
 Resources/Art/, Resources/PixelActors/  generated placeholder art
-Scenes/             nine near-empty shells; the world is built in code
+localization/       ui.csv - all product text, ko + en, keyed
+Scenes/             nine chapter shells, plus the authored scenes migration adds under Scenes/UI etc.
+docs/migrations/scene-data/  the production-rule audits and the plan of record
 ```
 
 Godot has no assembly definitions, so the Unity dependency rules above are convention now. Keep them:
@@ -54,6 +60,11 @@ Full detail in `PORTING_GUIDE.md`; the two that break things silently:
 
 `Resources/Design/*.json` outranks any number quoted in a doc, exactly as in the Unity project.
 
+**All product text goes through the translation table**, never a literal: `localization/ui.csv` with
+ko and en columns, read as `Tr("UI_...")` (or `TranslationServer.Translate` from a static). Never
+name a node after translated text - a change of locale renames the node and every lookup by name
+breaks with it.
+
 ## Traps
 
 - **`_Ready` fires the moment a node enters the tree**, not when a component is added. Build an actor
@@ -83,3 +94,15 @@ ScriptableObject `.asset` files (the JSON is the source of truth and the spawner
 code), `.anim`/`.controller`, the Build Settings scene list (`ChapterRoute` enumerates
 `res://Scenes/*.tscn`), `.meta` files, and UnityMCP. `PORT_STATUS.md` lists every behavioural
 difference and every bug the port introduced and fixed.
+
+## Where this is going
+
+The port deliberately kept Unity's build-the-world-in-code shape, which puts it at odds with the
+production rules in `AGENTS.md` - reusable things should be saved scenes and UI should be authored in
+`.tscn`. Two audits and an ordered plan live in `docs/migrations/scene-data/`; the plan is being
+worked stage by stage on `refactor/godot-scene-data`, each stage landing with the suite green.
+`PORTING_GUIDE.md`'s "build everything in code" section is marked superseded and kept only as the
+explanation of why existing code looks the way it does.
+
+**New code follows the production rules now.** Do not add another runtime-built screen beside the
+existing ones.
