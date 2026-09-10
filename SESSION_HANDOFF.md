@@ -12,7 +12,7 @@ Unity 6 → Godot 4.7.2 이식이 끝났고, Godot 제작 규칙 4개로의 전�
 | 이식 자체 | 완료. 스위트 211 passed / 1 failed / 1 skipped (실패 1건은 이식 전부터 red였던 레이아웃 개수 어서션) |
 | 규칙 3 — UI는 씬에 배치 | 완결 |
 | 규칙 2 — 재사용 단위는 씬 | 완결. `GameplayBuildShim` 퇴역은 **하지 않기로 결정** — 아래 |
-| 규칙 1 — 수치 데이터화 | **완결.** S1·S4~S10·S12·S13 전부 착지. 누계 키 184개 / 디자인 파일 27개 |
+| 규칙 1 — 수치 데이터화 | **완결.** S1·S4~S10·S12·S13 전부 착지. 누계 키 190개 / 디자인 파일 27개 |
 | 규칙 4 — 일회성 테스트 격리 | 지켜지는 중 |
 
 정본 계획은 [docs/migrations/scene-data/PLAN.md](docs/migrations/scene-data/PLAN.md). 감사 §3의
@@ -21,7 +21,7 @@ Unity 6 → Godot 4.7.2 이식이 끝났고, Godot 제작 규칙 4개로의 전�
 ## 브랜치
 
 `master`가 이식 본체, `refactor/godot-scene-data`가 전환 브랜치. **병합하지 않았고 push한 적도
-없다.** 원격 없음. 이번 세션 커밋 6개, 각 커밋이 풀 스위트 green으로 착지했다.
+없다.** 원격 없음. 이번 세션 커밋 8개, 각 커밋이 풀 스위트 green으로 착지했다.
 
 ## 이번 세션에 착지한 것
 
@@ -85,5 +85,5 @@ Unity 6 → Godot 4.7.2 이식이 끝났고, Godot 제작 규칙 4개로의 전�
 - 육안 UI 확인 전반. headless 실행은 구조 검증이지 화면 확인이 아니다.
 - 배포. Windows export template이 없어 EXE를 만든 적이 없다. `export_presets.cfg`는 있다.
 - 오디오. `AudioFeedback`은 겹치는 큐를 끊는다. 귀로 확인한 적 없다.
-- `ShortcutGate.openAlpha`를 `[Export]`로 바꿨지만 `ShortcutGate.tscn`은 손대지 않았다 — Godot은
-  기본값과 같은 값을 쓰지 않으므로 파일이 그대로인 게 맞다. 에디터에서 열어 확인한 적은 없다.
+- `ShortcutGate.tscn`에 `openAlpha = 0.25`를 손으로 써 넣었다(`0ef1d88`). 헤드리스 스위트는
+  통과했지만 에디터에서 열어 인스펙터에 값이 보이는지 확인한 적은 없다.
