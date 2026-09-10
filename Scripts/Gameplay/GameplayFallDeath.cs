@@ -15,6 +15,11 @@ namespace MyGame.Gameplay
         [Export] private float deathY = World.Ppu * 6f;
 
 
+        /// <summary>
+        /// Seconds the plane refuses to fire again after a pit death. Authored as
+        /// <c>WorldTuning.json.fallDeathRespawnLockout</c>; seconds on both sides, so nothing is scaled.
+        /// The initialiser is what a plane running with no design file gets.
+        /// </summary>
         [Export] private float respawnLockout = 1f;
 
         private Health _health;
@@ -32,6 +37,10 @@ namespace MyGame.Gameplay
         public override void _Ready()
         {
             _health = this.GetComponentInParent<Health>();
+
+            WorldTuningData world = GameplayTuningCatalog.Load()?.WorldTuning;
+            if (world != null)
+                respawnLockout = world.fallDeathRespawnLockout;
         }
 
         public override void _Process(double delta)

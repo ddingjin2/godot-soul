@@ -45,11 +45,12 @@ namespace MyGame.Enemy
         }
 
         /// <summary>
-        /// Frozen telegraph base: the pre-mood caster body colour. Blending from here instead of
+        /// Telegraph base: the pre-mood caster body colour. Blending from here instead of
         /// tuningData.enemyColor keeps the telegraph at #E50FFF after the body is muted.
         /// See Docs/MoodDirection.md "The lerp trap".
+        /// Authored as <c>RangedCaster.json.telegraphColor</c>; this is the file-less fallback.
         /// </summary>
-        private static readonly Color TelegraphBase = new Color(0.5f, 0.3f, 1f);
+        private Color TelegraphBase => tuningData?.telegraphColor ?? new Color(0.5f, 0.3f, 1f);
 
         private Health _health;
         private bool _isStunned;
@@ -71,7 +72,8 @@ namespace MyGame.Enemy
         private EnemyProjectilePool _projectilePool;
         private Color? _projectileTint;
         private int? _projectileSortingOrder;
-        private static readonly float PatrolHalfWidth = World.U(3f);
+        /// <summary>Already pixels - <c>RangedCasterData.ScaleToPixels</c> converted the authored metres at load.</summary>
+        private float PatrolHalfWidth => tuningData?.patrolDistance ?? World.U(3f);
 
         public override void _Ready()
         {
@@ -255,7 +257,7 @@ namespace MyGame.Enemy
         {
             _facingDir *= -1;
             _patrolTarget = _startPos + (Vector2.Right * PatrolHalfWidth * _facingDir);
-            _idleTimer = 0.5f;
+            _idleTimer = tuningData?.patrolIdleTime ?? 0.5f;
         }
 
         /// <summary>
@@ -309,7 +311,7 @@ namespace MyGame.Enemy
 
             if (_sr != null && tuningData != null)
             {
-                _sr.Modulate = TelegraphBase.Lerp(Colors.Magenta, 0.8f);
+                _sr.Modulate = TelegraphBase.Lerp(Colors.Magenta, tuningData?.telegraphBlend ?? 0.8f);
             }
         }
 
@@ -327,9 +329,9 @@ namespace MyGame.Enemy
             {
                 var dt = (float)delta;
                 _castTelegraphTimer -= dt;
-                _telegraphPulse += dt * 6f;
+                _telegraphPulse += dt * (tuningData?.telegraphPulseSpeed ?? 6f);
 
-                float pulse = 1f + (Mathf.Sin(_telegraphPulse) * 0.1f);
+                float pulse = 1f + (Mathf.Sin(_telegraphPulse) * (tuningData?.telegraphPulseAmplitude ?? 0.1f));
                 Scale = new Vector2(pulse, pulse);
 
                 if (_castTelegraphTimer <= 0f)
@@ -360,9 +362,15 @@ namespace MyGame.Enemy
                 EnemyProjectile projectile = _projectilePool.Spawn(GlobalPosition);
                 if (projectile != null)
                 {
+                    // Every one of these is already pixels where it is a distance - RangedCasterData
+                    // scaled them at load. The knockback used to be a World.U(3f) literal that ignored
+                    // the attackKnockback sitting in the same file at the same 3 metres; it reads it now.
                     float projSpeed = tuningData != null ? tuningData.projectileSpeed : World.U(5f);
                     float projDmg = tuningData != null ? tuningData.projectileDamage : 8f;
-                    projectile.Initialize(direction, projSpeed, projDmg, World.U(3f));
+                    float projKnockback = tuningData != null ? tuningData.attackKnockback : World.U(3f);
+                    float projLifetime = tuningData?.projectileLifetime ?? 5f;
+                    float projArcHeight = tuningData?.projectileArcHeight ?? World.U(0.5f);
+                    projectile.Initialize(direction, projSpeed, projDmg, projKnockback, projLifetime, projArcHeight);
                 }
             }
 
@@ -383,7 +391,7 @@ namespace MyGame.Enemy
                 _strafeDir *= -1f;
             }
 
-            if (GD.Randf() < 0.01f)
+            if (GD.Randf() < (tuningData?.strafeFlipChance ?? 0.01f))
             {
                 _strafeDir *= -1f;
             }
@@ -408,7 +416,9 @@ namespace MyGame.Enemy
 
             _lastRepositionTime = GameClock.Time;
             _isRepositioning = true;
-            _repositionCooldown = (float)GD.RandRange(1.2f, 2f);
+            _repositionCooldown = (float)GD.RandRange(
+                tuningData?.repositionCooldownMin ?? 1.2f,
+                tuningData?.repositionCooldownMax ?? 2f);
 
             float dir = Mathf.Sign(GlobalPosition.X - _player.GlobalPosition.X);
 
@@ -428,10 +438,11 @@ namespace MyGame.Enemy
             EndRepositionAfterDelay();
         }
 
-        /// <summary>Unity's <c>Invoke(nameof(EndReposition), 0.5f)</c>.</summary>
+        /// <summary>Unity's <c>Invoke(nameof(EndReposition), 0.5f)</c>, with the delay authored.</summary>
         private async void EndRepositionAfterDelay()
         {
-            await ToSignal(GetTree().CreateTimer(0.5f), SceneTreeTimer.SignalName.Timeout);
+            float duration = tuningData?.repositionDuration ?? 0.5f;
+            await ToSignal(GetTree().CreateTimer(duration), SceneTreeTimer.SignalName.Timeout);
 
             if (GodotObject.IsInstanceValid(this))
             {

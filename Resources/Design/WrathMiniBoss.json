@@ -55,5 +55,24 @@
     "bossBodySize": {
         "x": 1.2000000476837159,
         "y": 2.0
-    }
+    },
+    "attackKnockbackSlash": 6.0,
+    "rushRange": 1.0,
+    "rushWindupFraction": 0.5,
+    "attackPointOffset": 0.5,
+    "telegraphPulseSpeed": 8.0,
+    "telegraphPulseAmplitude": 0.20000000298023224,
+    "telegraphBlend": 0.699999988079071,
+    "telegraphColor": {
+        "r": 0.8999999761581421,
+        "g": 0.20000000298023224,
+        "b": 0.20000000298023224,
+        "a": 1.0
+    },
+    "phaseTransitionHitStop": 0.15000000596046449,
+    "phaseFlashRedTime": 0.10000000149011612,
+    "phaseFlashWhiteTime": 0.05000000074505806,
+    "introBlackoutTime": 0.5,
+    "introImpactHitStop": 0.10000000149011612,
+    "introSettleTime": 0.800000011920929
 }

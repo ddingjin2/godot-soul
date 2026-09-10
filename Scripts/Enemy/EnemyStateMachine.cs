@@ -28,11 +28,15 @@ namespace MyGame.Enemy
     /// Gravity comes from here rather than from the engine. Unity's enemies rode
     /// <c>Physics2D.gravity</c> at <c>gravityScale = 1</c>; project.godot sets
     /// <c>physics/2d/default_gravity</c> to zero because every actor in this port supplies its own, so
-    /// the same 9.81 m/s^2 is applied below in pixels and pointing at +Y, which is down in Godot.
+    /// it is applied below in pixels and pointing at +Y, which is down in Godot. The number itself is
+    /// authored - <c>WorldTuning.json.enemyGravity</c>, in metres, pushed in by <see cref="Configure"/>.
     /// </remarks>
     public abstract partial class EnemyStateMachine : CharacterBody2D, IStaggerable
     {
-        // State Transitions
+        // State Transitions. Authored in WorldTuning.json (enemyIdleToPatrolTime,
+        // enemyInvestigateDuration, enemyRecoveryDuration, enemyDisengageDistance) and pushed in by
+        // Configure; the initialisers are what a synthetic enemy built with no design file gets. The
+        // three times are seconds; disengageDistance is PIXELS - the JSON authors 8 metres.
         [Export] protected float idleToPatrolTime = 3f;
         [Export] protected float investigateDuration = 2f;
         [Export] protected float recoveryDuration = 1f;
@@ -56,8 +60,13 @@ namespace MyGame.Enemy
         /// </summary>
         protected bool _bodyFrozen;
 
-        /// <summary>Unity's <c>Physics2D.gravity</c> magnitude at <c>gravityScale = 1</c>, in pixels.</summary>
-        protected static readonly float Gravity = World.U(9.81f);
+        /// <summary>
+        /// Downward acceleration in <b>pixels</b> per second squared. Authored in metres as
+        /// <c>WorldTuning.json.enemyGravity</c> and pushed in by <see cref="Configure"/>; the initialiser
+        /// is Unity's <c>Physics2D.gravity</c> magnitude at <c>gravityScale = 1</c>, which is what a
+        /// synthetic enemy built with no design file gets.
+        /// </summary>
+        protected float gravity = World.U(9.81f);
 
         /// <summary>
         /// Half-extents used for the footing probe when a body carries no collision shape at all - every
@@ -67,12 +76,52 @@ namespace MyGame.Enemy
 
         /// <summary>
         /// How far past the body's own edge the footing probe looks, and how far down it looks for a
-        /// floor. The reach is a little over a body width so the turn happens before the centre of mass
-        /// is over the drop; the depth is deliberately shallow, because a step down is footing and a
-        /// storey down is a ledge.
+        /// floor, in <b>pixels</b>. The reach is a little over a body width so the turn happens before
+        /// the centre of mass is over the drop; the depth is deliberately shallow, because a step down
+        /// is footing and a storey down is a ledge. Authored in metres as
+        /// <c>WorldTuning.json.enemyLedgeProbeForward</c> / <c>.enemyLedgeProbeDepth</c>.
         /// </summary>
-        private static readonly float LedgeProbeAhead = World.U(0.35f);
-        private static readonly float LedgeProbeDepth = World.U(1.1f);
+        private float _ledgeProbeAhead = World.U(0.35f);
+        private float _ledgeProbeDepth = World.U(1.1f);
+
+        /// <summary>
+        /// How much longer a perfect parry's stun lasts than an ordinary one. Player-owned
+        /// (<c>PlayerCombat.json.perfectParryStunMultiplier</c>) and pushed down here by the spawner,
+        /// because <c>MyGame.Enemy</c> may not read the player's design file. Every archetype's
+        /// <c>Stun(bool perfect)</c> multiplies by this.
+        /// </summary>
+        protected float perfectParryStunMultiplier = 1.6f;
+
+        /// <summary>
+        /// The shared behaviour numbers <c>WorldTuning.json</c> and <c>PlayerCombat.json</c> own, pushed
+        /// in by <c>GameplayEnemySpawner</c> while the body is still detached - the same shape
+        /// <c>Poise.Configure</c> uses, and for the same reason: this namespace sits below
+        /// <c>MyGame.Gameplay</c> and below <c>MyGame.Player</c>, so it cannot fetch them itself.
+        /// </summary>
+        /// <remarks>
+        /// Every distance is expected in <b>pixels</b> - <c>WorldTuningData.ScaleToPixels</c> has already
+        /// run on them. A caller handing over raw authored metres would leave every enemy floating and
+        /// blind, and nothing would go red.
+        /// </remarks>
+        public void Configure(
+            float gravityPixels,
+            float disengageDistancePixels,
+            float idleToPatrol,
+            float investigate,
+            float recovery,
+            float ledgeProbeAheadPixels,
+            float ledgeProbeDepthPixels,
+            float perfectParryMultiplier)
+        {
+            gravity = gravityPixels;
+            disengageDistance = disengageDistancePixels;
+            idleToPatrolTime = idleToPatrol;
+            investigateDuration = investigate;
+            recoveryDuration = recovery;
+            _ledgeProbeAhead = ledgeProbeAheadPixels;
+            _ledgeProbeDepth = ledgeProbeDepthPixels;
+            perfectParryStunMultiplier = perfectParryMultiplier;
+        }
 
         public override void _Ready()
         {
@@ -126,7 +175,7 @@ namespace MyGame.Enemy
 
             if (!IsOnFloor())
             {
-                Velocity = new Vector2(Velocity.X, Velocity.Y + (Gravity * (float)delta));
+                Velocity = new Vector2(Velocity.X, Velocity.Y + (gravity * (float)delta));
             }
 
             MoveAndSlide();
@@ -366,10 +415,10 @@ namespace MyGame.Enemy
             // Unity read bounds.min.y for the underside of the body and stepped 0.05 up from it. Godot's
             // +Y is down, so the underside is bounds.End.Y and "just above it" subtracts.
             var origin = new Vector2(
-                dir > 0f ? bounds.End.X + LedgeProbeAhead : bounds.Position.X - LedgeProbeAhead,
+                dir > 0f ? bounds.End.X + _ledgeProbeAhead : bounds.Position.X - _ledgeProbeAhead,
                 bounds.End.Y - World.U(0.05f));
 
-            return Phys2D.Raycast(this, origin, Vector2.Down, LedgeProbeDepth, World.Layer.GroundProbe)
+            return Phys2D.Raycast(this, origin, Vector2.Down, _ledgeProbeDepth, World.Layer.GroundProbe)
                 ? dir
                 : 0f;
         }

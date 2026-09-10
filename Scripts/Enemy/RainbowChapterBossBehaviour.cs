@@ -119,9 +119,11 @@ namespace MyGame.Enemy
         /// <summary>
         /// How many links a chain may run before the boss has to stop and let the player back in. A row
         /// that chains to itself, or a pair that chain to each other, is a fight with no punish window
-        /// at all - and it is a one-word authoring mistake, so it is capped here rather than trusted.
+        /// at all - and it is a one-word authoring mistake, so it is capped rather than trusted.
+        /// Authored per chapter as <c>&lt;chapter&gt;_Encounter.json.maxChainSteps</c>; this is the
+        /// fallback a boss with no encounter file gets.
         /// </summary>
-        private const int MaxChainSteps = 4;
+        private const int DefaultMaxChainSteps = 4;
 
         private Health _bossHealth;
         private AttackPhase _phase;
@@ -160,6 +162,7 @@ namespace MyGame.Enemy
         private static readonly float DefaultArenaLeftOffset = World.U(5f);
         private static readonly float DefaultArenaRightOffset = World.U(1.1f);
         private const float DefaultVictoryPresentationDelay = 1.5f;
+        /// <summary>What a boss with no design file is stunned for. <c>RainbowChapterBossData.stunDuration</c> is the authored number.</summary>
         private const float DefaultStunDuration = 1f;
 
         public void SetBossData(RainbowChapterBossData data)
@@ -278,7 +281,8 @@ namespace MyGame.Enemy
                 return;
             }
 
-            _stunTimer = DefaultStunDuration * (perfect ? 1.6f : 1f);
+            _stunTimer = (bossData != null ? bossData.stunDuration : DefaultStunDuration)
+                * (perfect ? perfectParryStunMultiplier : 1f);
 
             // The rest of the chain dies with the swing that was carrying it. Interrupting one link and
             // then eating the next three is not a punish window. A poise break is also the loudest way
@@ -796,7 +800,8 @@ namespace MyGame.Enemy
         /// </summary>
         private void QueueChain(BossAttackProfile finished)
         {
-            if (!finished.HasChain || bossData == null || _chainStepsTaken >= MaxChainSteps)
+            int maxChainSteps = encounterData != null ? encounterData.maxChainSteps : DefaultMaxChainSteps;
+            if (!finished.HasChain || bossData == null || _chainStepsTaken >= maxChainSteps)
             {
                 ClearChain();
                 return;
@@ -1176,7 +1181,9 @@ namespace MyGame.Enemy
 
         private void PulseTelegraph()
         {
-            float pulse = 1f + (Mathf.Sin(GameClock.Time * 8f) * 0.2f);
+            float pulseSpeed = bossData?.telegraphPulseSpeed ?? 8f;
+            float pulseAmplitude = bossData?.telegraphPulseAmplitude ?? 0.2f;
+            float pulse = 1f + (Mathf.Sin(GameClock.Time * pulseSpeed) * pulseAmplitude);
             Scale = new Vector2(pulse, pulse);
         }
 

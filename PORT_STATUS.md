@@ -349,3 +349,46 @@ and the order of it, which is where the three ordering traps live.
   hand either spawner a bare `Node2D`, and seven tests build actors through `AddComponent` directly.
   Retiring the shim is its own stage.
 - **Six more scene-path `const`s** join the six the plan already counts as debt.
+
+### Numbers stages S6 and S7 - shared reach, AI timing, archetype and chapter-boss fields
+
+Additive throughout: **79 new keys (35 distinct fields) across 22 shipped design files, no existing
+key's value changed**, and the whole suite landed on its usual baseline. Proven read rather than asserted - a throwaway probe
+outside `Tests/` edited every one of the 22 files, watched each changed number arrive with the
+metre-to-pixel conversion applied where it belongs and *not* applied to a time or a multiplier, then
+restored all 36 design files byte-identical (SHA-256 compared) and, with `WorldTuning.json` and
+`MeleeGrunt.json` moved away, watched `GameplayScene` boot and exit 0 on the fallbacks.
+
+- **`WorldTuning.json` gained the shared enemy block** (9 keys): `enemyGravity` 9.81 m/s^2,
+  `enemyDisengageDistance` 8 m, `enemyLedgeProbeForward` 0.35 m, `enemyLedgeProbeDepth` 1.1 m and
+  `actorMoveAnimThreshold` 0.15 m/s are scaled in `Load()`; `enemyIdleToPatrolTime` 3,
+  `enemyInvestigateDuration` 2, `enemyRecoveryDuration` 1 and `fallDeathRespawnLockout` 1 are seconds
+  and cross untouched. Enemy gravity was the audit's open question (§3.4): it is tuning now, because
+  the player's half of the same fall has been authored since the port and a designer could tune only
+  one of the two.
+- **The perfect-parry reward is consumed, not re-typed.** `PlayerCombat.json.perfectParryStunMultiplier`
+  already existed; the four archetypes each carried their own `1.6f`. The spawner pushes it now.
+  `GameplayEnemy2D` still types its own - it is the legacy class the audit exempted (§3.10).
+- **Two knockbacks stopped ignoring the file beside them.** The caster's shot passed a literal
+  `World.U(3f)` while `RangedCaster.json.attackKnockback` said 3.0, and Wrath's rush passed
+  `World.U(5f)` while `WrathMiniBoss.json.attackKnockback` said 5.0. Both read the authored number
+  now. **Same values, so nothing moved.** Wrath's *slash* is the exception: it passed `World.U(6f)`
+  against an authored 5.0, so consuming the shared key would have quietly weakened the fight. It got
+  its own new key, `attackKnockbackSlash: 6.0`, seeded from the live literal.
+- **Four decisions the audit left open, settled.** §3.4 enemy gravity - tuning. §3.5 ledge probes -
+  the forward reach and the depth moved; the `0.05`/`0.08` collision insets stayed, they exist to keep
+  a ray out of its own collider. §3.9 `maxChainSteps` - tuning, per chapter, where the pacing is.
+  §3.18 the leaper's landing punish - tuning; the window's *length* was already authored and its
+  payoff was not. §3.12 was followed as written: `strafeFlipChance` moved as-is, per frame, and the
+  frame-rate dependency stays a separate bug.
+- **Nothing was migrated that a scene already owns.** Five audit rows were skipped for that reason:
+  `gateTravelZoneRadius` and `shortcutGateZoneRadius` (`GatePortal.tscn` / `ShortcutGate.tscn` author
+  radius 140 and 500, and `EnsureTrigger` leaves an authored shape alone), the caster's
+  `projectileRadius` and `projectileSize` (`EnemyProjectile.tscn` authors both), and the grunt's
+  `attackPointOffset` (`MeleeGrunt.tscn` authors `AttackPoint` at 60 px, so the `World.U(0.5f)` branch
+  only ever runs for a synthetic actor). Wrath's `attackPointOffset` **was** migrated - that boss has
+  no `AttackPoint` node, so its offset is what every slash actually uses.
+- **The telegraph blend targets stayed in code.** Each archetype's telegraph *base* colour is authored
+  now (`telegraphColor`), but the yellow and red it blends *toward* are the shared danger language and
+  belong with the rest of the palette; authoring half of the pair here would make two owners of one
+  read. Named so a later stage does not think it was missed.

@@ -403,12 +403,52 @@ namespace MyGame.Gameplay
         /// save data, the debug jump menu and the tests all read that name back.
         ///
         /// The Enemy group is joined by <c>EnemyStateMachine._Ready</c>, which is Unity's "Enemy" tag.
+        ///
+        /// The shared behaviour numbers are pushed here rather than read there: <c>MyGame.Enemy</c> sits
+        /// below this namespace and below <c>MyGame.Player</c>, so it cannot open <c>WorldTuning.json</c>
+        /// or <c>PlayerCombat.json</c> itself. Same shape as <c>Poise.Configure</c>. One funnel, so a new
+        /// archetype cannot forget it.
         /// </summary>
         private static T InstantiateEnemy<T>(string scenePath, string name) where T : CharacterBody2D
         {
             var go = GD.Load<PackedScene>(scenePath).Instantiate<T>();
             go.Name = name;
+            ConfigureSharedBehaviour(go);
             return go;
+        }
+
+        /// <summary>
+        /// <c>WorldTuning.json</c>'s enemy block and <c>PlayerCombat.json</c>'s perfect-parry reward, into
+        /// the state machine every archetype shares. A missing design file leaves the class's own
+        /// initialisers standing, which is the fallback contract every other loader here keeps.
+        /// </summary>
+        /// <remarks>
+        /// UNITS: every distance handed over is already <b>pixels</b>. <c>WorldTuningData.Load</c> ran
+        /// <c>ScaleToPixels</c> over the metre values on the way in, and nothing re-scales below.
+        /// </remarks>
+        private static void ConfigureSharedBehaviour(Node actor)
+        {
+            if (actor is not EnemyStateMachine machine)
+            {
+                return;
+            }
+
+            GameplayTuningCatalog catalog = GameplayTuningCatalog.Load();
+            WorldTuningData world = catalog?.WorldTuning;
+            if (world == null)
+            {
+                return;
+            }
+
+            machine.Configure(
+                world.enemyGravity,
+                world.enemyDisengageDistance,
+                world.enemyIdleToPatrolTime,
+                world.enemyInvestigateDuration,
+                world.enemyRecoveryDuration,
+                world.enemyLedgeProbeForward,
+                world.enemyLedgeProbeDepth,
+                catalog.PlayerCombat?.perfectParryStunMultiplier ?? 1.6f);
         }
 
         /// <summary>

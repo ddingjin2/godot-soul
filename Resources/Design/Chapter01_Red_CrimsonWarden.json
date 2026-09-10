@@ -18,11 +18,14 @@
     "poiseHeavyMultiplier": 2.0,
     "poiseRegenDelay": 3.0,
     "poiseRegenRate": 25.0,
+    "stunDuration": 1.0,
     "soulReward": 532,
 
     "primaryColor": { "r": 0.549, "g": 0.204, "b": 0.157, "a": 1.0 },
     "secondaryColor": { "r": 0.9, "g": 0.2, "b": 0.2, "a": 1.0 },
     "bodySize": { "x": 1.2, "y": 2.0 },
+    "telegraphPulseSpeed": 8.0,
+    "telegraphPulseAmplitude": 0.2,
 
     "attacks": [
         {

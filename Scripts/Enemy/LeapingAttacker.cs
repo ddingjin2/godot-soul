@@ -36,11 +36,12 @@ namespace MyGame.Enemy
         public void SetTuningData(LeapingAttackerData data) => tuningData = data;
 
         /// <summary>
-        /// Frozen telegraph base: the pre-mood leaper body colour. Blending from here instead of
+        /// Telegraph base: the pre-mood leaper body colour. Blending from here instead of
         /// tuningData.enemyColor keeps the telegraph at #FFD900 after the body is muted.
         /// See Docs/MoodDirection.md "The lerp trap".
+        /// Authored as <c>LeapingAttacker.json.telegraphColor</c>; this is the file-less fallback.
         /// </summary>
-        private static readonly Color TelegraphBase = new Color(1f, 0.5f, 0f);
+        private Color TelegraphBase => tuningData?.telegraphColor ?? new Color(1f, 0.5f, 0f);
 
         private static readonly Vector2 FallbackHalfExtents = new Vector2(World.U(0.3f), World.U(0.5f));
 
@@ -61,7 +62,11 @@ namespace MyGame.Enemy
         private float _idleTimer;
         private Vector2 _leapTarget;
         private float _recoveryTimer;
-        private static readonly float PatrolHalfWidth = World.U(3f);
+        /// <summary>
+        /// Already pixels - <c>LeapingAttackerData.ScaleToPixels</c> converted the authored metres at
+        /// load. Also the combat leash, not just the walk: see <see cref="ClampHomewardDirection"/>.
+        /// </summary>
+        private float PatrolHalfWidth => tuningData?.patrolDistance ?? World.U(3f);
 
         public override void _Ready()
         {
@@ -229,7 +234,7 @@ namespace MyGame.Enemy
         {
             _facingDir *= -1;
             _patrolTarget = _startPos + (Vector2.Right * PatrolHalfWidth * _facingDir);
-            _idleTimer = 0.5f;
+            _idleTimer = tuningData?.patrolIdleTime ?? 0.5f;
         }
 
         private void MaintainDistance()
@@ -243,11 +248,14 @@ namespace MyGame.Enemy
             float desiredDist = tuningData != null ? tuningData.maintainDistance : World.U(4f);
             float speed = tuningData != null ? tuningData.moveSpeed : World.U(2f);
 
-            if (dist > desiredDist + World.U(1f))
+            // Already pixels, like desiredDist beside it: LeapingAttackerData scaled both at load.
+            float deadband = tuningData?.maintainDistanceDeadband ?? World.U(1f);
+
+            if (dist > desiredDist + deadband)
             {
                 MoveTowards(_player.GlobalPosition, speed);
             }
-            else if (dist < desiredDist - World.U(1f))
+            else if (dist < desiredDist - deadband)
             {
                 MoveAwayFrom(_player.GlobalPosition, speed);
             }
@@ -336,7 +344,7 @@ namespace MyGame.Enemy
 
             if (_sr != null && tuningData != null)
             {
-                _sr.Modulate = TelegraphBase.Lerp(Colors.Yellow, 0.7f);
+                _sr.Modulate = TelegraphBase.Lerp(Colors.Yellow, tuningData?.telegraphBlend ?? 0.7f);
             }
         }
 
@@ -355,9 +363,9 @@ namespace MyGame.Enemy
             if (_isPreparingLeap)
             {
                 _leapTelegraphTimer -= dt;
-                _telegraphPulse += dt * 8f;
+                _telegraphPulse += dt * (tuningData?.telegraphPulseSpeed ?? 8f);
 
-                float pulse = 1f + (Mathf.Sin(_telegraphPulse) * 0.15f);
+                float pulse = 1f + (Mathf.Sin(_telegraphPulse) * (tuningData?.telegraphPulseAmplitude ?? 0.15f));
                 Scale = Vector2.One * pulse;
 
                 if (_leapTelegraphTimer <= 0f)
@@ -488,7 +496,7 @@ namespace MyGame.Enemy
         public void Stun(bool perfect = false)
         {
             _isStunned = true;
-            _stunTimer = (tuningData?.stunDuration ?? 0.8f) * (perfect ? 1.6f : 1f);
+            _stunTimer = (tuningData?.stunDuration ?? 0.8f) * (perfect ? perfectParryStunMultiplier : 1f);
             _isLeaping = false;
             _isPreparingLeap = false;
             _isVulnerable = false;
@@ -542,7 +550,7 @@ namespace MyGame.Enemy
         {
             if (_isVulnerable)
             {
-                damage *= 2f;
+                damage *= tuningData?.landingPunishMultiplier ?? 2f;
             }
 
             _health.ApplyDamage(damage, direction, knockback);

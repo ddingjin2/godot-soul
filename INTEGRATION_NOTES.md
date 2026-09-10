@@ -238,3 +238,27 @@ the five humanity numbers in, exactly as it does for `Poise.Configure`.
 
 `DeathStateController.ApplyTuning(PlayerResourceData resources)` is new and must be called **before**
 `Initialize`; a null argument leaves the shipped defaults standing.
+
+
+### The shared enemy behaviour is pushed down, not read up
+
+`EnemyStateMachine.Configure(float gravityPixels, float disengageDistancePixels, float idleToPatrol,
+float investigate, float recovery, float ledgeProbeAheadPixels, float ledgeProbeDepthPixels,
+float perfectParryMultiplier)` is new. `MyGame.Enemy` sits below `MyGame.Gameplay` and below
+`MyGame.Player`, so it cannot open `WorldTuning.json` or `PlayerCombat.json` itself;
+`GameplayEnemySpawner.InstantiateEnemy` calls this on every archetype it builds, the same shape
+`Poise.Configure` and `HumanityController.Configure` use. **Every distance it takes is pixels** -
+`WorldTuningData.Load` already ran `ScaleToPixels`. One funnel, so a new archetype cannot forget it.
+
+`EnemyStateMachine.Gravity` (a `protected static readonly` field) is gone; it is now the instance
+field `gravity`, still in pixels. `LedgeProbeAhead` / `LedgeProbeDepth` became `_ledgeProbeAhead` /
+`_ledgeProbeDepth` and are private. `perfectParryStunMultiplier` is a new `protected` field the four
+archetypes multiply their stun by, replacing the `1.6f` each of them typed.
+
+**`EnemyProjectile.Initialize` takes two more arguments** - `float projectileLifetime` (seconds) and
+`float projectileArcHeight` (**pixels**), after the existing knockback. `RangedCaster` is the only
+caller in the repository. The shot's contact radius and sprite size are deliberately *not* among
+them: `Scenes/Effects/EnemyProjectile.tscn` authors both, and a design key would be a second owner.
+
+`RainbowChapterBossBehaviour.MaxChainSteps` (a `const`) is now `DefaultMaxChainSteps`, used only when
+the boss has no encounter file; the authored number is `<chapter>_Encounter.json.maxChainSteps`.

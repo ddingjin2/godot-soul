@@ -104,6 +104,13 @@ namespace MyGame.Enemy
         [Export] public float poiseRegenDelay = 3f;
         [Export] public float poiseRegenRate = 30f;
 
+        /// <summary>
+        /// Seconds a parry or a poise break takes the boss out of the fight for. Every chapter boss was
+        /// stunned for exactly one second regardless of its file until this field existed - a perfect
+        /// parry multiplies it, and the multiplier is <c>PlayerCombat.json</c>'s.
+        /// </summary>
+        [Export] public float stunDuration = 1f;
+
         /// <summary>Souls the kill is worth. The wallet is the drop table, so this is the reward.</summary>
         [Export] public int soulReward = 300;
 
@@ -111,6 +118,12 @@ namespace MyGame.Enemy
         [Export] public Color primaryColor = Colors.Red;
         [Export] public Color secondaryColor = Colors.Black;
         [Export] public Vector2 bodySize = new Vector2(1.6f, 2.3f);
+
+        /// <summary>Radians per second the wind-up pulse runs at. Unitless, so it is not scaled.</summary>
+        [Export] public float telegraphPulseSpeed = 8f;
+
+        /// <summary>How far the wind-up pulse swings, as a fraction of rest scale. The colour it swings to is per attack row (<c>telegraphColor</c>).</summary>
+        [Export] public float telegraphPulseAmplitude = 0.2f;
 
         // Attacks
         [Export] public BossAttackProfile[] attacks = System.Array.Empty<BossAttackProfile>();
@@ -228,6 +241,7 @@ namespace MyGame.Enemy
             phaseTwoHealthThreshold = Mathf.Clamp(phaseTwoHealthThreshold, 0f, 1f);
             phaseTwoSpeedMultiplier = Mathf.Max(0.01f, phaseTwoSpeedMultiplier);
             phaseTwoCooldownMultiplier = Mathf.Max(0.01f, phaseTwoCooldownMultiplier);
+            stunDuration = Mathf.Max(0f, stunDuration);
         }
 
         /// <summary>Metres -> pixels, once, for this boss and every row it owns.</summary>

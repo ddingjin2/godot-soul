@@ -1,5 +1,14 @@
 {
     "checkpointZoneRadius": 1.5,
     "lockOnRange": 8.0,
-    "lockOnBreakRange": 11.0
+    "lockOnBreakRange": 11.0,
+    "enemyGravity": 9.8100004196167,
+    "enemyDisengageDistance": 8.0,
+    "enemyIdleToPatrolTime": 3.0,
+    "enemyInvestigateDuration": 2.0,
+    "enemyRecoveryDuration": 1.0,
+    "enemyLedgeProbeForward": 0.3499999940395355,
+    "enemyLedgeProbeDepth": 1.100000023841858,
+    "actorMoveAnimThreshold": 0.15000000596046449,
+    "fallDeathRespawnLockout": 1.0
 }

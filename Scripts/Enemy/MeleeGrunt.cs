@@ -32,11 +32,12 @@ namespace MyGame.Enemy
         public void SetAttackPoint(Node2D point) => attackPoint = point;
 
         /// <summary>
-        /// Frozen telegraph base: the pre-mood grunt body colour. The telegraph blends toward yellow
-        /// from here rather than from tuningData.enemyColor, so muting the body cannot drag the
-        /// danger read dark. Output stays #F7C20E. See Docs/MoodDirection.md "The lerp trap".
+        /// Telegraph base: the pre-mood grunt body colour. The telegraph blends toward yellow from here
+        /// rather than from tuningData.enemyColor, so muting the body cannot drag the danger read dark.
+        /// Output stays #F7C20E. See Docs/MoodDirection.md "The lerp trap".
+        /// Authored as <c>MeleeGrunt.json.telegraphColor</c>; this is the file-less fallback.
         /// </summary>
-        private static readonly Color TelegraphBase = new Color(0.9f, 0.2f, 0.18f);
+        private Color TelegraphBase => tuningData?.telegraphColor ?? new Color(0.9f, 0.2f, 0.18f);
 
         private Health _health;
 
@@ -132,7 +133,7 @@ namespace MyGame.Enemy
                 float pulseSpeed = tuningData?.telegraphPulseSpeed ?? 8f;
                 _telegraphPulse += dt * pulseSpeed;
 
-                float pulse = 1f + (Mathf.Sin(_telegraphPulse) * 0.15f);
+                float pulse = 1f + (Mathf.Sin(_telegraphPulse) * (tuningData?.telegraphPulseAmplitude ?? 0.15f));
                 if (attackPoint != null)
                 {
                     attackPoint.Scale = Vector2.One * pulse;
@@ -290,7 +291,7 @@ namespace MyGame.Enemy
 
             if (attackPoint != null && _sr != null)
             {
-                _sr.Modulate = TelegraphBase.Lerp(Colors.Yellow, 0.7f);
+                _sr.Modulate = TelegraphBase.Lerp(Colors.Yellow, tuningData?.telegraphBlend ?? 0.7f);
             }
         }
 
@@ -366,7 +367,7 @@ namespace MyGame.Enemy
         public void Stun(bool perfect = false)
         {
             _isStunned = true;
-            _stunTimer = (tuningData?.stunDuration ?? 0.8f) * (perfect ? 1.6f : 1f);
+            _stunTimer = (tuningData?.stunDuration ?? 0.8f) * (perfect ? perfectParryStunMultiplier : 1f);
             _isAttacking = false;
             _telegraphTimer = 0f;
             Velocity = Vector2.Zero;

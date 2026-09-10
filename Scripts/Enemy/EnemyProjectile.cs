@@ -22,6 +22,9 @@ namespace MyGame.Enemy
         /// </summary>
         public const string ScenePath = "res://Scenes/Effects/EnemyProjectile.tscn";
 
+        // Fallbacks for a shot nobody initialised. Every one of these is overwritten by Initialize
+        // with a value RangedCasterData already scaled; the contact radius and the sprite size are not
+        // here at all, because EnemyProjectile.tscn authors both.
         private float speed = World.U(5f);
         private float damage = 8f;
         private float knockback = World.U(3f);
@@ -81,12 +84,25 @@ namespace MyGame.Enemy
             }
         }
 
-        public void Initialize(Vector2 direction, float projectileSpeed, float projectileDamage, float projectileKnockback)
+        /// <summary>
+        /// UNITS: <paramref name="projectileSpeed"/>, <paramref name="projectileKnockback"/> and
+        /// <paramref name="projectileArcHeight"/> are <b>pixels</b> - <c>RangedCasterData</c> converted
+        /// the authored metres at load. <paramref name="projectileLifetime"/> is seconds.
+        /// </summary>
+        public void Initialize(
+            Vector2 direction,
+            float projectileSpeed,
+            float projectileDamage,
+            float projectileKnockback,
+            float projectileLifetime,
+            float projectileArcHeight)
         {
             _direction = direction.Normalized();
             speed = projectileSpeed;
             damage = projectileDamage;
             knockback = projectileKnockback;
+            lifetime = projectileLifetime;
+            arcHeight = projectileArcHeight;
             _isInitialized = true;
 
             // Reset, not just set. A pooled projectile arrives carrying the flight time of its last

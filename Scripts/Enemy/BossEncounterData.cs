@@ -79,6 +79,14 @@ namespace MyGame.Enemy
         /// </summary>
         [Export] public float victoryPresentationDelay = 1.5f;
 
+        /// <summary>
+        /// How many links a chain may run before the boss has to stop and let the player back in. A row
+        /// that chains to itself, or a pair that chain to each other, is a fight with no punish window
+        /// at all - so this is both the designer's pacing knob and the cap that keeps an authoring
+        /// mistake from locking the player out. A count, so it is not scaled.
+        /// </summary>
+        [Export] public int maxChainSteps = 4;
+
         private bool _scaledToPixels;
 
         /// <summary>
@@ -126,6 +134,7 @@ namespace MyGame.Enemy
             phaseTwoRushWeight = Mathf.Max(0f, phaseTwoRushWeight);
             rageSpeedMultiplier = Mathf.Max(0.1f, rageSpeedMultiplier);
             victoryPresentationDelay = Mathf.Max(0f, victoryPresentationDelay);
+            maxChainSteps = Mathf.Max(1, maxChainSteps);
         }
 
         public void ScaleToPixels()
