@@ -222,3 +222,30 @@ re-arm on a freshly instanced shot was dropped.
   The same value is still drifted in a second place, `PlayerResourceData.soulStainPickupDelay`, along
   with five more `[Export]` mirrors listed in the numbers audit. Left for the stage that owns
   `Scripts/Player/`.
+
+### A port defect the scene work surfaced
+
+`GameplayTelegraphPulse` inside an attack readout **never pulses.** Its `_Ready` resolves the renderer
+through `GetComponent<Sprite2D>()`, which searches the node and its *children* - and in that tree the
+pulse is the leaf, so the lookup returns null and it breathes an empty transform. Unity's
+`GetComponent` searched the same GameObject, where the `SpriteRenderer` was, so this is a port defect
+rather than inherited behaviour.
+
+It is recorded rather than fixed. Fixing it makes six attack readouts visibly start pulsing, which is
+a change no test covers and which someone should see before it ships. The same component works
+correctly in `MarkerDisc`, where the pulse is the parent - that asymmetry is why the plan keeps the
+two as separate scenes for now.
+
+### Trade-offs the scene migration accepted
+
+- **A malformed authored tree is no longer repaired at runtime.** `GameplayWorldHealthBar.Build` used
+  to rebuild missing children; it is lookup-only now. There is one source for that tree, so no such
+  case exists - but the robustness is gone deliberately.
+- **`MarkerDisc`, `SoulPickup` and `LockOnMarker` hard-reference `Resources/Art/Disc.png`** instead of
+  falling back to the procedural generator if the baked PNG went missing. Same class of trade as the
+  effect scenes.
+- **`GameplayHud.Plate` and `Mul` were `internal` and called across files.** Both are deleted with
+  the Theme; `TitleMenuBootstrap` no longer styles buttons in code at all.
+- **`TitleMenuBootstrap.CreateButton` still names nodes after translated text.** That is the hazard
+  the localization work warned about - a change of locale renames the node. Nothing depends on those
+  names today (the test clicks by `Text`), and Stage 4 owns that file.
