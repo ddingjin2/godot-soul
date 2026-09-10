@@ -158,13 +158,27 @@ Actors join Godot groups in `_Ready`: `AddToGroup(World.Group.Player)` / `...Ene
 
 ## Scenes and prefabs
 
-The Unity project builds essentially everything from code - its scenes are 314-line shells and only
-six prefabs exist. **That stays true here.** Do not author `.tscn` content that the Unity source
-built at runtime; port the builder (`GameplayEnvironmentBuilder`, `GameplayVisualFactory`,
-`GameplayEnemySpawner`, `GameplayPlayerSpawner`, `GameplayHud`) and let it build nodes in `_Ready`.
+> **Superseded, 2026-09-10.** The rule below was the right instruction *for the port* and it is why
+> the code looks the way it does - but it is not how this project is built from here on. The
+> user-approved Godot production rules (`AGENTS.md`, and the `godot-cli-control` skill) require
+> reusable things to be saved scenes and UI to be authored in `.tscn`, and this codebase currently
+> breaks both. The audits are in `docs/migrations/scene-data/`; the ordered plan of record is
+> `docs/migrations/scene-data/PLAN.md`. **New work follows the production rules, not this section.**
+> What follows is kept because it explains the shape of the code a reader is looking at.
 
-Only these `.tscn` files exist, each a near-empty shell with a root node and a script:
-`Scenes/TitleScene.tscn`, `Scenes/GameplayScene.tscn`, and one per chapter
+The Unity project builds essentially everything from code - its scenes are 314-line shells and only
+six prefabs exist. **That stayed true through the port.** The instruction at the time was: do not
+author `.tscn` content that the Unity source built at runtime; port the builder
+(`GameplayEnvironmentBuilder`, `GameplayVisualFactory`, `GameplayEnemySpawner`,
+`GameplayPlayerSpawner`, `GameplayHud`) and let it build nodes in `_Ready`.
+
+That kept the port honest - a faithful port of a code-built world is a code-built world - but it also
+made this project *less* asset-driven than its source in one place: Unity's HUD was an authored
+`Canvas` with uGUI prefabs, and it arrived here as 1,100 lines of `new Label()`. That is the gap the
+migration closes.
+
+At the end of the port only these `.tscn` files existed, each a near-empty shell with a root node and
+a script: `Scenes/TitleScene.tscn`, `Scenes/GameplayScene.tscn`, and one per chapter
 (`Chapter02_Orange` ... `Chapter08_White`).
 
 ## Data and tuning
