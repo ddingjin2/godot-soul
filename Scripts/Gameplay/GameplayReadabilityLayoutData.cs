@@ -24,8 +24,9 @@ namespace MyGame.Gameplay
     /// <item><description><c>*Offset</c> and <c>*LocalPosition</c> go through <see cref="World.V"/>,
     /// scaled <i>and</i> vertically flipped - a bar 1.24 m above the actor lands 124 px below its
     /// origin; <c>lockOnMarkerHeight</c> is a height above and becomes a flipped offset the same way;</description></item>
-    /// <item><description>font point sizes, the low-health threshold and blend, and the rim height
-    /// fraction are not spatial and cross untouched.</description></item>
+    /// <item><description>font point sizes, the low-health threshold and blend, the rim height
+    /// fraction and the four <c>markerPulse*</c> feel numbers are not spatial and cross
+    /// untouched.</description></item>
     /// </list>
     /// No field carries a default: a missing file leaves the code defaults standing (the loader returns
     /// null and <see cref="GameplayReadabilityDefaults.Create"/> skips the apply), and a missing key
@@ -94,6 +95,13 @@ namespace MyGame.Gameplay
         [Export] public float platformRimThickness;
         [Export] public float platformRimHeightFraction;
 
+        // The breathing every live mark shares - bonfire disc, portal, soul stain, danger readout.
+        // Rad/s, a scale fraction and two alphas: nothing spatial.
+        [Export] public float markerPulseSpeed;
+        [Export] public float markerPulseAmount;
+        [Export] public float markerPulseAlphaMin;
+        [Export] public float markerPulseAlphaMax;
+
         /// <summary>The authored layout, or null when the file is missing - which leaves the code defaults standing.</summary>
         public static GameplayReadabilityLayoutData Load(string resourcePath = GameplayTuningCatalog.DesignResourceFolder + FileName)
         {
@@ -156,6 +164,11 @@ namespace MyGame.Gameplay
             defaults.LockOnMarkerOffset = World.V(new Vector2(0f, lockOnMarkerHeight));
             defaults.PlatformRimThickness = World.U(platformRimThickness);
             defaults.PlatformRimHeightFraction = platformRimHeightFraction;
+
+            defaults.MarkerPulseSpeed = markerPulseSpeed;
+            defaults.MarkerPulseAmount = markerPulseAmount;
+            defaults.MarkerPulseAlphaMin = markerPulseAlphaMin;
+            defaults.MarkerPulseAlphaMax = markerPulseAlphaMax;
         }
 
         private static Vector2 S(Vector2 metres) => new(World.U(metres.X), World.U(metres.Y));

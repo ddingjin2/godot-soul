@@ -28,8 +28,11 @@ namespace MyGame.Gameplay
     /// </remarks>
     public partial class ActorIdleBob : Node
     {
-        [Export] private float period = 1.2f;
-        [Export] private float amplitude = 0.04f;
+        // WorldTuning.json's actorIdleBob* - read at _Ready; these are the fallback for a run without
+        // the file. Were [Export] defaults, which no scene could have set: the bob is attached from
+        // code, never authored.
+        private float period = 1.2f;
+        private float amplitude = 0.04f;
 
         private Sprite2D _sprite;
         private Vector2 _baseScale;
@@ -70,6 +73,13 @@ namespace MyGame.Gameplay
 
         public override void _Ready()
         {
+            WorldTuningData world = GameplayTuningCatalog.Load()?.WorldTuning;
+            if (world != null)
+            {
+                period = world.actorIdleBobPeriod;
+                amplitude = world.actorIdleBobAmplitude;
+            }
+
             _sprite = this.GetComponentInParent<Sprite2D>();
             if (_sprite == null || _sprite.Texture == null)
             {

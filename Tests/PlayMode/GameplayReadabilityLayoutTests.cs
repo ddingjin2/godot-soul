@@ -111,7 +111,8 @@ namespace MyGame.Tests
             if (name.EndsWith("FontSize", StringComparison.Ordinal)
                 || name.EndsWith("Threshold", StringComparison.Ordinal)
                 || name.EndsWith("TintBlend", StringComparison.Ordinal)
-                || name.EndsWith("HeightFraction", StringComparison.Ordinal))
+                || name.EndsWith("HeightFraction", StringComparison.Ordinal)
+                || name.StartsWith("markerPulse", StringComparison.Ordinal))
                 return authored;
 
             // Everything left is a size, a radius, a character size, a thickness or a margin: scaled, never flipped.

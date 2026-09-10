@@ -17,5 +17,7 @@
     "cameraMaxFollowSpeed": 12.0,
     "worldEdgeWallThickness": 0.5,
     "worldEdgeWallHeight": 40.0,
-    "gatePortalOffsetX": 3.0
+    "gatePortalOffsetX": 3.0,
+    "actorIdleBobPeriod": 1.2,
+    "actorIdleBobAmplitude": 0.04
 }

@@ -44,5 +44,9 @@
     "roleMarkerFontSize": 34,
     "lockOnMarkerHeight": 1.3,
     "platformRimThickness": 0.05,
-    "platformRimHeightFraction": 0.58
+    "platformRimHeightFraction": 0.58,
+    "markerPulseSpeed": 4.0,
+    "markerPulseAmount": 0.12,
+    "markerPulseAlphaMin": 0.16,
+    "markerPulseAlphaMax": 0.34
 }

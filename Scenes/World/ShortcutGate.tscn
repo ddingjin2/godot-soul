@@ -41,6 +41,7 @@ radius = 500.0
 ; the "ShortcutGate: opened {Name}" log line reads off it.
 [node name="ShortcutGate" type="Node2D" parent="."]
 script = ExtResource("2")
+openAlpha = 0.25
 
 [node name="ShortcutGateTrigger" type="Area2D" parent="ShortcutGate"]
 ; World.Layer.Trigger = 1 << 6 = 64, watching World.Layer.Player = 1 << 1 = 2. The name is what

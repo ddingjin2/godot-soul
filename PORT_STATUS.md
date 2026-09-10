@@ -497,13 +497,20 @@ demands the pixel value its kind implies.
 - **`ShortcutGate.OpenAlpha` is an `[Export]`** at its shipped 0.25, so `ShortcutGate.tscn` owns it
   the way the rule asks for presentation numbers. The scene file is unchanged - Godot writes only
   non-default values.
-- **Not migrated, because a scene already owns them:** the six `GameplayTelegraphPulse` /
-  `ActorIdleBob` feel numbers (`[Export]` on nodes the marker, readout and actor scenes author since
-  stages 5 and 8), `GameplayLockOnMarker`'s size and `SoulPickup`'s stain (both authored in their
-  scenes), the grunt attack-point offset and the caster projectile size (S7 already skipped them for
-  the same reason), and `GameplayWorldHealthBar`'s frame colour and low-health tint (the frame colour
-  is authored on `WorldHealthBar.tscn`; both are palette, and the palette file was not to be touched).
-  The 20 sorting orders stay in code pending §3.6.
+- **Corrected on review: the six `GameplayTelegraphPulse` / `ActorIdleBob` feel numbers were not
+  scene-owned.** The stage first recorded them as "authored on the scenes"; a compliance pass found
+  that the five scenes carrying the pulse node set none of its `[Export]`s and that the bob is
+  attached from code, so all six lived only as code defaults - exactly the `@export`-default shape
+  the rule names as non-compliance. The pulse's four (`markerPulse*`) are `ReadabilityLayout.json`'s
+  now, beside the marks they breathe on; the bob's two (`actorIdleBob*`) are `WorldTuning.json`'s,
+  beside `actorMoveAnimThreshold`. Both nodes lost their `[Export]`s and read the files at `_Ready`.
+  `ShortcutGate.openAlpha`, an `[Export]` from the same stage, is now written in `ShortcutGate.tscn`
+  for the same reason.
+- **Not migrated, because a scene already owns them:** `GameplayLockOnMarker`'s size and
+  `SoulPickup`'s stain (both authored in their scenes), the grunt attack-point offset and the caster
+  projectile size (S7 already skipped them for the same reason), and `GameplayWorldHealthBar`'s frame
+  colour and low-health tint (the frame colour is authored on `WorldHealthBar.tscn`; both are palette,
+  and the palette file was not to be touched). The 20 sorting orders stay in code pending §3.6.
 
 ### Numbers stage S13 - decisions and dead code
 

@@ -134,6 +134,12 @@ namespace MyGame.Gameplay
         public float PlatformRimThickness { get; internal set; }
         public float PlatformRimHeightFraction { get; internal set; }
 
+        /// <summary>The slow breathing on every live mark: rad/s, a scale fraction, and the alpha floor and ceiling.</summary>
+        public float MarkerPulseSpeed { get; internal set; }
+        public float MarkerPulseAmount { get; internal set; }
+        public float MarkerPulseAlphaMin { get; internal set; }
+        public float MarkerPulseAlphaMax { get; internal set; }
+
         /// <summary>
         /// The pixel font size a Godot <see cref="Label"/> needs to render a world label at the height
         /// Unity's TextMesh did. Unity scaled its generated mesh by <c>characterSize / 10</c> and then
@@ -288,6 +294,10 @@ namespace MyGame.Gameplay
                 LockOnMarkerOffset = P(0f, 1.3f),
                 PlatformRimThickness = World.U(0.05f),
                 PlatformRimHeightFraction = 0.58f,
+                MarkerPulseSpeed = 4f,
+                MarkerPulseAmount = 0.12f,
+                MarkerPulseAlphaMin = 0.16f,
+                MarkerPulseAlphaMax = 0.34f,
 
                 BackdropSortingOrder = -100,
                 MoonSortingOrder = -95,

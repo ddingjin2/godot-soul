@@ -19,8 +19,9 @@ namespace MyGame.Gameplay
     /// <c>cameraLookAhead</c> is the one field that is scaled <b>and</b> Y-flipped, through
     /// <see cref="World.V"/>: it is an offset, and an authored +1.2 (up) has to arrive as -120.
     /// Left alone, because they are seconds: <c>enemyIdleToPatrolTime</c>,
-    /// <c>enemyInvestigateDuration</c>, <c>enemyRecoveryDuration</c>, <c>fallDeathRespawnLockout</c>
-    /// and <c>cameraSmoothTime</c>.
+    /// <c>enemyInvestigateDuration</c>, <c>enemyRecoveryDuration</c>, <c>fallDeathRespawnLockout</c>,
+    /// <c>cameraSmoothTime</c> and <c>actorIdleBobPeriod</c>; and <c>actorIdleBobAmplitude</c>, a
+    /// fraction of the sprite's rest height rather than a distance.
     ///
     /// The enemy block is here rather than on an archetype because every archetype shares it, and it is
     /// pushed into <c>EnemyStateMachine</c> by <c>GameplayEnemySpawner</c> rather than read there:
@@ -104,6 +105,11 @@ namespace MyGame.Gameplay
 
         /// <summary>How far to the right of a bonfire its gate portal stands.</summary>
         [Export] public float gatePortalOffsetX = 3f;
+
+        // --- The greybox breathing on any actor without pixel frames. Seconds and a fraction of the
+        // rest height - explicitly not a distance, so neither is scaled.
+        [Export] public float actorIdleBobPeriod = 1.2f;
+        [Export] public float actorIdleBobAmplitude = 0.04f;
 
         /// <summary>
         /// Guards against a second pass over the same instance - the scaling rewrites the authored
