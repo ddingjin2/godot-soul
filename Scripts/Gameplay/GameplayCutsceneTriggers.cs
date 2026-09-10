@@ -21,16 +21,11 @@ namespace MyGame.Gameplay
         public const string PlayerDeathKey = "PlayerDeath";
         public const string BossIntroKey = "BossIntro";
 
-        // CutsceneDirection.md 3: rig eases to the boss over the first half second, then holds. The hold
-        // needs no code - follow is off for the shot, so the rig stays where the ease left it.
-        private const float BossIntroMoveDuration = 0.5f;
-
-        // CutsceneDirection.md 5: 0.45 - 0.80, "0.6 units toward the player position".
-        private const float DeathMoveDelay = 0.45f;
-        private const float DeathMoveDuration = 0.35f;
-
-        /// <summary>Unity's 0.6 metres, in Godot pixels. A distance, so it scales; a magnitude, so no sign flip.</summary>
-        private static readonly float DeathMoveDistance = World.U(0.6f);
+        // The beats are CutsceneTuning.json's (CutsceneDirection.md 3 and 5): the rig eases to the boss
+        // over bossIntroMoveDuration then holds - the hold needs no code, follow is off for the shot -
+        // and on death it creeps deathMoveDistance toward the body between deathMoveDelay and
+        // deathMoveDelay + deathMoveDuration. The distance is already pixels; Load() scaled it.
+        private static CutsceneTuningData Tuning => CutsceneTuningData.Shared;
 
         private CutsceneDirector _director;
         private DeathStateController _death;
@@ -106,7 +101,7 @@ namespace MyGame.Gameplay
                 return;
 
             if (HitStopManager.Instance != null)
-                HitStopManager.Instance.TriggerHitStop(0.12f);
+                HitStopManager.Instance.TriggerHitStop(Tuning.deathHitStop);
 
             // HeavyHit, not BossPhase: a body falling, not an arrival.
             if (CameraShake.Instance != null)
@@ -135,11 +130,11 @@ namespace MyGame.Gameplay
 
             Vector2 from = rig.GlobalPosition;
 
-            // Clamped, not scaled: when the rig is already inside 0.6 units of the body the move stops on
-            // the player instead of overshooting past them.
-            Vector2 toPlayer = (player.GlobalPosition - from).LimitLength(DeathMoveDistance);
+            // Clamped, not scaled: when the rig is already inside the creep distance of the body the move
+            // stops on the player instead of overshooting past them.
+            Vector2 toPlayer = (player.GlobalPosition - from).LimitLength(Tuning.deathMoveDistance);
 
-            CutsceneRigMove.Play(rig, from + toPlayer, DeathMoveDuration, DeathMoveDelay);
+            CutsceneRigMove.Play(rig, from + toPlayer, Tuning.deathMoveDuration, Tuning.deathMoveDelay);
         }
 
         private void HandleBossIntro()
@@ -185,7 +180,7 @@ namespace MyGame.Gameplay
                 Mathf.Clamp(bossPosition.X, scene.CameraHorizontalBounds.X, scene.CameraHorizontalBounds.Y),
                 bossPosition.Y);
 
-            CutsceneRigMove.Play(rig, target, BossIntroMoveDuration);
+            CutsceneRigMove.Play(rig, target, Tuning.bossIntroMoveDuration);
         }
     }
 }

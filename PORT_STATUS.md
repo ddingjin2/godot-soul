@@ -422,3 +422,40 @@ belonging to no arena) are gone; the rig is unbounded until `Initialize` hands i
 which every code path does before a target is set. `WorldTuning.json` was chosen over a new
 `CameraTuning.json` because the file already owns "reach numbers that belong to no single actor" and
 the registry stays untouched.
+
+### Numbers stage S8 - cutscene tuning
+
+A new file, `Resources/Design/CutsceneTuning.json`: the four shots' keyframe tables (one array per
+Timeline track - `fade`, `letterbox`, `cameraSize`), the trigger beats (`bossIntroMoveDuration` 0.5,
+`deathHitStop` 0.12, `deathMoveDelay` 0.45, `deathMoveDuration` 0.35, `deathMoveDistance` 0.6 m) and
+the bootstrap's entry settle (`enterSettleHeight` 1 m, `enterSettleDuration` 1.2). Three units cross
+the boundary and only one is scaled: the two metres above become pixels in
+`CutsceneTuningData.Load()`; letterbox rows are UI pixels and are deliberately not scaled; fade is
+alpha and every time is seconds. The `* World.Ppu` that `CutsceneDirector` used to apply at the far
+end is gone with the channel that needed it (next paragraph). Proven read: renaming the `BossIntro`
+key in the file turned `Cutscene_PutsTheZoomBackToTheSceneDefault_OnCompletionAndOnSkip` red with
+`No sequence named 'Cutscenes/BossIntro'`, then the file was restored byte-identical.
+
+- **The camera track is a fraction of the resting size, not an absolute size.** Unity's clips animated
+  `orthographicSize` from 6.8 to 5.984 / 6.392 / 6.12 - the same 6.8 that `SceneLayout.json` owns,
+  copied by hand with no compile-time link, so a chapter that framed its room wider would have had its
+  cutscenes snap to the shipped number. The file authors the ratios instead (0.88 / 0.94 / 0.9 - the
+  Unity numbers divide exactly) and the director applies them to the zoom it found the camera at when
+  the shot started. Same push on every chapter, no `6.8` anywhere in the cutscene layer, and the
+  metre-to-pixel conversion the audit asked to move into `Load()` has nothing left to convert.
+  **One chapter moves:** `SceneLayout_Chapter08_White.json` frames at 7.2, so its boss intro used to
+  snap from 7.2 to the absolute 5.984 (a 17% push) and end the shot at 6.8 before `Restore` put 7.2
+  back; it now pushes to 6.336 (the same 12%) and ends where it started. The other seven chapters
+  frame at 6.8 and are unchanged to the pixel.
+- **The entry bars are the shot's own opening height.** `GameplayBootstrap`'s `64f` and the first
+  `GameplayEnter` letterbox row were the same number in two files. The bootstrap now stages
+  `CutsceneTuningData.OpeningLetterbox("GameplayEnter")` - one key, read by both.
+- **The shots have no C# fallback.** The scalar beats keep their shipped literals as `[Export]`
+  defaults; the four keyframe tables exist only in the file, like `SinTuningData.sins`. A missing file
+  means every `Play` takes the director's existing missing-shot path (clear the overlay, hand the
+  continuation back, carry on) rather than a second copy of forty numbers drifting in code - the
+  audit's §2.8 problem. A test keeps the file honest: all four keys present, every channel ending on
+  neutral, because `Skip` writes neutral rather than evaluating the last keyframe.
+- **Not migrated:** `CutsceneOverlay`'s two colours, caption font size and caption box offsets
+  (§2.5a's last row). The overlay is a saved scene since S1 and authors all of them; a design key
+  would be a second owner.

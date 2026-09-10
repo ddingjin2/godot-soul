@@ -20,13 +20,10 @@ namespace MyGame.Gameplay
 
         private const string EnterCutsceneKey = "GameplayEnter";
 
-        // CutsceneDirection.md 4: bars are already at this height on the first rendered frame.
-        private const float EnterLetterboxHeight = 64f;
-
-        // The same section's rig beat: one unit of settle, landing with the fade. Read off the rig rather
-        // than off GameplaySceneDefaults, so whatever FrameCombatRoom decided stays the resting position.
-        private const float EnterSettleHeight = 1f;
-        private const float EnterSettleDuration = 1.2f;
+        // CutsceneDirection.md 4: bars are already at the shot's opening height on the first rendered
+        // frame, and the rig settles one authored unit down onto its rest, landing with the fade. Both
+        // numbers are CutsceneTuning.json's; the rest position is read off the rig rather than off
+        // GameplaySceneDefaults, so whatever FrameCombatRoom decided stays the resting position.
 
         private GameplayPlayerContext _player;
         private PlayerProgression _progression;
@@ -177,7 +174,8 @@ namespace MyGame.Gameplay
             // that is the first writer renders the arena lit for the frames before it evaluates. _Ready
             // still runs ahead of the first rendered frame, so this is the last place the blackout can be
             // raised without the flash. If the shot is missing, Play clears it.
-            overlay.SetBlackout(EnterLetterboxHeight);
+            CutsceneTuningData cutscenes = CutsceneTuningData.Shared;
+            overlay.SetBlackout(cutscenes.OpeningLetterbox(EnterCutsceneKey));
             director.Play(EnterCutsceneKey);
 
             // Play disables camera follow, and CutsceneRigMove treats follow coming back on as the rig
@@ -188,9 +186,10 @@ namespace MyGame.Gameplay
             {
                 Vector2 settled = rig.GlobalPosition;
 
-                // Vector2.Up is (0, -1) in Godot, so this still lifts the rig by one authored unit.
-                rig.GlobalPosition = settled + Vector2.Up * World.U(EnterSettleHeight);
-                CutsceneRigMove.Play(rig, settled, EnterSettleDuration);
+                // Vector2.Up is (0, -1) in Godot, so this still lifts the rig by the authored unit. Already
+                // pixels: CutsceneTuningData.Load did the World.U pass.
+                rig.GlobalPosition = settled + Vector2.Up * cutscenes.enterSettleHeight;
+                CutsceneRigMove.Play(rig, settled, cutscenes.enterSettleDuration);
             }
 
             return triggers;

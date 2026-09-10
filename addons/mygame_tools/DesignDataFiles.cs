@@ -59,6 +59,7 @@ namespace MyGame.EditorTools
             // rested on a C# field.
             new Entry("CombatTuning", "MyGame.Combat.CombatTuningData"),
             new Entry("DifficultyTuning", "MyGame.Combat.DifficultyTuningData"),
+            new Entry("CutsceneTuning", "MyGame.Gameplay.CutsceneTuningData"),
             new Entry("WorldTuning", "MyGame.Gameplay.WorldTuningData"),
             new Entry("SceneLayout", "MyGame.Gameplay.GameplaySceneLayoutData"),
             new Entry("MeleeGrunt", "MyGame.Enemy.MeleeGruntData"),
