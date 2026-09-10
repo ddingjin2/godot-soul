@@ -5,8 +5,11 @@ using MyGame.Combat;
 namespace MyGame.UI
 {
     /// <summary>
-    /// The title screen, built entirely in code - there is no authored menu scene, only the shell
-    /// <c>Scenes/TitleScene.tscn</c> this script sits on.
+    /// The title screen, still assembled in code - there is no authored menu scene yet, only the shell
+    /// <c>Scenes/TitleScene.tscn</c> this script sits on; Stage 4 of docs/migrations/scene-data authors
+    /// it. What a button *looks* like is already out of here: <c>Resources/UI/MenuTheme.tres</c> carries
+    /// the plates, the sizes and the colours, and the lit segment of an option row is the
+    /// <c>SegmentActive</c> variation in the same resource.
     ///
     /// Every number here is a screen pixel, exactly as it was in uGUI: <c>World.Ppu</c> scales world
     /// distances and has nothing to do with a menu.
@@ -19,11 +22,15 @@ namespace MyGame.UI
         private static readonly Color Bone200 = new Color(0.6039216f, 0.5803922f, 0.53333336f);   // #9A9488 text secondary
         private static readonly Color Bone300 = new Color(0.43137255f, 0.40784314f, 0.36078432f); // #6E685C text dim
 
-        // Segment fills. Idle is the same plate every button uses; active is one step up from it, because
-        // the button's state styles only ever darken the plate and so cannot brighten the chosen value on
-        // their own.
-        private static readonly Color SegmentIdle = new Color(0.18039216f, 0.1882353f, 0.21960784f, 0.94f);   // #2E3038
-        private static readonly Color SegmentActive = new Color(0.36078432f, 0.3764706f, 0.43137255f, 0.94f); // #5C606E
+        // Segment fills used to be two Colors here and five StyleBoxFlats per button per refresh. They
+        // are now the SegmentIdle / SegmentActive type variations in MenuTheme.tres - idle is the same
+        // plate every button uses, active one step up from it, because the button's state styles only
+        // ever darken the plate and so cannot brighten the chosen value on their own.
+        /// <summary>The Theme button type the title stack is drawn as - the shared plate, one point smaller.</summary>
+        private const string TitleButtonVariation = "TitleButton";
+
+        private const string SegmentIdleVariation = "SegmentIdle";
+        private const string SegmentActiveVariation = "SegmentActive";
 
         /// <summary>The solid colour the Unity title camera cleared to.</summary>
         private static readonly Color Backdrop = new Color(0.023529412f, 0.02745098f, 0.039215688f); // #06070A
@@ -102,7 +109,7 @@ namespace MyGame.UI
             Font font = GameplayHud.LoadUiFont();
 
             CreateTitle(root, font);
-            CreateButtonStack(root, font);
+            CreateButtonStack(root);
             CreateSettingsPanel(root, font);
         }
 
@@ -121,7 +128,7 @@ namespace MyGame.UI
             GameplayHud.PlaceRect(subtitle, Centre, Centre, new Vector2(0f, 116f), new Vector2(520f, 32f));
         }
 
-        private void CreateButtonStack(Control parent, Font font)
+        private void CreateButtonStack(Control parent)
         {
             var stack = new VBoxContainer { Name = "MenuButtons" };
             parent.AddChild(stack);
@@ -129,28 +136,28 @@ namespace MyGame.UI
             stack.AddThemeConstantOverride("separation", 14);
             stack.Alignment = BoxContainer.AlignmentMode.Center;
 
-            Button newGame = CreateButton(stack, font, Tr("UI_TITLE_NEW_GAME"), StartNewGame);
+            Button newGame = CreateButton(stack, Tr("UI_TITLE_NEW_GAME"), StartNewGame);
 
             // Greyed out with no save to load, so Continue never looks like it did nothing.
-            Button continueButton = CreateButton(stack, font, Tr("UI_TITLE_CONTINUE"), ContinueGame);
+            Button continueButton = CreateButton(stack, Tr("UI_TITLE_CONTINUE"), ContinueGame);
             continueButton.Disabled = !GameSave.Exists;
 
             // Cycles rather than opening a sub-menu: three values, one of which is usually locked, is not
             // worth a second panel. The label carries the current choice so the stack still reads as a
             // list of buttons rather than as a form.
             SeedDifficultyFromSave();
-            _difficultyButton = CreateButton(stack, font, Tr("UI_TITLE_DIFFICULTY"), CycleDifficulty);
+            _difficultyButton = CreateButton(stack, Tr("UI_TITLE_DIFFICULTY"), CycleDifficulty);
 
             // New Game+ only exists for a save that has finished the road, which is the same thing that
             // unlocks Hard. Greyed out rather than hidden, so the reward is visible before it is earned.
             GameSaveData save = GameSave.Read();
-            Button newGamePlusButton = CreateButton(stack, font, Tr("UI_TITLE_NEW_GAME_PLUS"), StartNewGamePlus);
+            Button newGamePlusButton = CreateButton(stack, Tr("UI_TITLE_NEW_GAME_PLUS"), StartNewGamePlus);
             newGamePlusButton.Disabled = !(save != null && save.hardUnlocked);
 
             RefreshDifficultyLabel();
 
-            CreateButton(stack, font, Tr("UI_TITLE_SETTINGS"), ToggleSettings);
-            CreateButton(stack, font, Tr("UI_TITLE_QUIT"), QuitGame);
+            CreateButton(stack, Tr("UI_TITLE_SETTINGS"), ToggleSettings);
+            CreateButton(stack, Tr("UI_TITLE_QUIT"), QuitGame);
 
             // The Unity menu leaned on the EventSystem's first selectable; Godot hands focus to nothing
             // until something asks, so the top of the stack asks. This is what makes the menu playable on
@@ -183,8 +190,8 @@ namespace MyGame.UI
             CreateRowText(_settingsBox, font, Tr("UI_OPTION_HEADING"), 24, Bone100);
             _presetLabel = CreateRowText(_settingsBox, font, string.Empty, 18, Bone200);
 
-            CreatePresetButton(font, Tr("UI_OPTION_PRESET_HIGH_BUTTON"), GraphicsPreset.High);
-            CreatePresetButton(font, Tr("UI_OPTION_PRESET_LOW_BUTTON"), GraphicsPreset.Low);
+            CreatePresetButton(Tr("UI_OPTION_PRESET_HIGH_BUTTON"), GraphicsPreset.High);
+            CreatePresetButton(Tr("UI_OPTION_PRESET_LOW_BUTTON"), GraphicsPreset.Low);
 
             // Two values get a box, three or more get a row of value buttons. The widget says how many
             // choices an option has before the player clicks anything, which one cycling button could not.
@@ -201,15 +208,15 @@ namespace MyGame.UI
                 index => GraphicsOptions.SetRenderScale(GraphicsOptions.RenderScaleSteps[index]),
                 () => System.Array.FindIndex(GraphicsOptions.RenderScaleSteps, step => Mathf.IsEqualApprox(step, GraphicsOptions.RenderScale)));
 
-            CreateButton(_settingsBox, font, Tr("UI_COMMON_CLOSE"), ToggleSettings);
+            CreateButton(_settingsBox, Tr("UI_COMMON_CLOSE"), ToggleSettings);
 
             RefreshOptions();
             _settingsPanel.Visible = false;
         }
 
-        private void CreatePresetButton(Font font, string label, GraphicsPreset preset)
+        private void CreatePresetButton(string label, GraphicsPreset preset)
         {
-            CreateButton(_settingsBox, font, label, () =>
+            CreateButton(_settingsBox, label, () =>
             {
                 GraphicsOptions.ApplyPreset(preset);
                 RefreshOptions();
@@ -282,14 +289,14 @@ namespace MyGame.UI
             for (int i = 0; i < values.Length; i++)
             {
                 int index = i;
-                buttons[i] = CreateButton(row, font, values[i], () =>
+                buttons[i] = CreateButton(row, values[i], () =>
                 {
                     choose(index);
                     RefreshOptions();
-                }, width, 18);
+                }, width, SegmentIdleVariation);
             }
 
-            return new SegmentedRow(buttons, font, currentIndex);
+            return new SegmentedRow(buttons, currentIndex);
         }
 
         private void RefreshOptions()
@@ -328,13 +335,11 @@ namespace MyGame.UI
         private sealed class SegmentedRow
         {
             private readonly Button[] _buttons;
-            private readonly Font _font;
             private readonly Func<int> _currentIndex;
 
-            public SegmentedRow(Button[] buttons, Font font, Func<int> currentIndex)
+            public SegmentedRow(Button[] buttons, Func<int> currentIndex)
             {
                 _buttons = buttons;
-                _font = font;
                 _currentIndex = currentIndex;
             }
 
@@ -347,10 +352,13 @@ namespace MyGame.UI
                 int current = _currentIndex();
                 for (int i = 0; i < _buttons.Length; i++)
                 {
-                    bool chosen = i == current;
                     // uGUI recoloured one shared graphic; a Godot button carries a stylebox per state, so
-                    // the whole set is rewritten from the chosen plate.
-                    StyleButton(_buttons[i], _font, 18, chosen ? SegmentActive : SegmentIdle, chosen ? Bone100 : Bone300);
+                    // lighting a segment used to mean rewriting all five. Both sets are authored in
+                    // MenuTheme.tres now and the choice is which of the two type variations is named -
+                    // which is also what keeps "exactly one segment is lit" readable from the outside:
+                    // Control.GetThemeColor resolves through the variation, so the row still answers
+                    // font_color = bone for the chosen value and the dim bone for the rest.
+                    _buttons[i].ThemeTypeVariation = i == current ? SegmentActiveVariation : SegmentIdleVariation;
                 }
             }
         }
@@ -377,41 +385,23 @@ namespace MyGame.UI
             return text;
         }
 
-        private static Button CreateButton(Control parent, Font font, string label, Action action, float width = 260f, int fontSize = 22)
+        /// <summary>
+        /// A menu button. It carries no styling of its own - <c>MenuTheme.tres</c> is the whole of it,
+        /// and <paramref name="variation"/> picks which of its button types this one is drawn as.
+        /// </summary>
+        private static Button CreateButton(Control parent, string label, Action action, float width = 260f, string variation = TitleButtonVariation)
         {
-            var button = new Button { Name = label + "Button", Text = label };
+            var button = new Button
+            {
+                Name = label + "Button",
+                Text = label,
+                Theme = GameplayHud.LoadMenuTheme(),
+                ThemeTypeVariation = variation,
+            };
             parent.AddChild(button);
             button.CustomMinimumSize = new Vector2(width, 48f);
             button.Pressed += action;
-            StyleButton(button, font, fontSize, SegmentIdle, Bone100);
             return button;
-        }
-
-        /// <summary>
-        /// The plate a button is drawn on, in every state it has.
-        ///
-        /// uGUI's ColorBlock multiplied the target graphic, so it could only darken: the graphic was the
-        /// brightest state and every block entry stepped down from it (Docs/MoodDirection.md section 4 -
-        /// the old block darkened the highlight below idle, which made focus read as "disabled"). Godot
-        /// has no multiply, so each state carries its own StyleBoxFlat with the product already worked
-        /// out. Godot's focus box is uGUI's <c>selectedColor</c>, and it draws over the others.
-        /// </summary>
-        private static void StyleButton(Button button, Font font, int fontSize, Color plate, Color fontColor)
-        {
-            button.AddThemeStyleboxOverride("normal", GameplayHud.Plate(GameplayHud.Mul(plate, 0.5686275f)));      // #919191
-            button.AddThemeStyleboxOverride("hover", GameplayHud.Plate(plate));                                     // white
-            button.AddThemeStyleboxOverride("focus", GameplayHud.Plate(plate));
-            button.AddThemeStyleboxOverride("pressed", GameplayHud.Plate(GameplayHud.Mul(plate, 0.32156864f)));     // #525252
-            button.AddThemeStyleboxOverride("disabled", GameplayHud.Plate(GameplayHud.Mul(plate, 0.36078432f, 0.6f))); // #5C5C5C a0.60
-
-            if (font != null)
-                button.AddThemeFontOverride("font", font);
-            button.AddThemeFontSizeOverride("font_size", fontSize);
-            button.AddThemeColorOverride("font_color", fontColor);
-            button.AddThemeColorOverride("font_hover_color", fontColor);
-            button.AddThemeColorOverride("font_focus_color", fontColor);
-            button.AddThemeColorOverride("font_pressed_color", fontColor);
-            button.AddThemeColorOverride("font_disabled_color", new Color(Bone300.R, Bone300.G, Bone300.B, 0.6f));
         }
 
         private static Label CreateText(Control parent, string name, Font font, string content, int fontSize, Color color)

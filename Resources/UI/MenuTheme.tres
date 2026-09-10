@@ -1,0 +1,110 @@
+[gd_resource type="Theme" load_steps=9 format=3]
+
+; The one place a menu button is styled. Replaces four code paths that all said the same thing:
+; GameplayHud.StyleMenuButton, GameplayHud.Plate, GameplayHud.Mul and TitleMenuBootstrap.StyleButton
+; (the last a near-verbatim copy of the first).
+;
+; WHERE THE COLOURS COME FROM. uGUI's ColorBlock multiplied one target graphic, so a block entry
+; could only ever darken it: the graphic was the brightest state and every state stepped down from
+; it - Docs/MoodDirection.md section 4. Godot has no multiply, so each state carries its own
+; StyleBoxFlat with the product already worked out. The base plate and the multiplier are named on
+; every sub-resource below so the arithmetic stays checkable; the multipliers are the shipped
+; 0.5686275 / 1 / 0.32156864 / 0.36078432-at-alpha-0.6, unchanged by this move.
+;
+; Godot's `focus` stylebox is what uGUI called selectedColor. It draws over the others, so it
+; carries the full-brightness plate rather than a dimmed one - a focused button that read as
+; "disabled" was the defect Docs/MoodDirection.md section 4 records.
+;
+; UNITS: every number here is a screen pixel or a colour channel. World.Ppu is a world-space
+; conversion and has nothing to do with a menu.
+;
+; NO FONT IS REFERENCED HERE, on purpose. An ext_resource pointing at a font Godot has not yet
+; imported is a hard load failure, and this resource is loaded by both UI screens - a cold clone
+; would lose the whole HUD. GameplayHud.LoadMenuTheme() writes `default_font` at runtime from
+; LoadUiFont(), which degrades to ThemeDB.FallbackFont instead. Same trade CutsceneOverlay.Bind()
+; makes, and for the same reason. Theme.has_font() falls back to default_font, so every Button and
+; every variation below picks it up without naming a font of its own.
+
+; --- Button: the plate every menu button is drawn on. #2E3038 at alpha 0.94.
+[sub_resource type="StyleBoxFlat" id="ButtonNormal"]
+; #2E3038 a0.94 x 0.5686275 (uGUI normalColor #919191) -> #1A1B20
+bg_color = Color(0.10257594, 0.10703577, 0.12487506, 0.94)
+
+[sub_resource type="StyleBoxFlat" id="ButtonLit"]
+; #2E3038 a0.94 x 1 (uGUI highlightedColor / selectedColor, both white) -> #2E3038.
+; Shared by `hover` and `focus`.
+bg_color = Color(0.18039216, 0.1882353, 0.21960784, 0.94)
+
+[sub_resource type="StyleBoxFlat" id="ButtonPressed"]
+; #2E3038 a0.94 x 0.32156864 (uGUI pressedColor #525252) -> #0F0F12
+bg_color = Color(0.058008462, 0.060530569, 0.070618994, 0.94)
+
+[sub_resource type="StyleBoxFlat" id="ButtonDisabled"]
+; #2E3038 a0.94 x 0.36078432, alpha x 0.6 (uGUI disabledColor #5C5C5C a0.60) -> #111114 a0.56
+bg_color = Color(0.065082663, 0.067912345, 0.079231065, 0.564)
+
+; --- SegmentActive: the lit segment of a segmented option row. One step up from the shared plate,
+; #5C606E at alpha 0.94, because the state styles above only ever darken and so cannot brighten the
+; chosen value on their own. Same four multipliers.
+[sub_resource type="StyleBoxFlat" id="SegmentActiveNormal"]
+; #5C606E a0.94 x 0.5686275 -> #34373F
+bg_color = Color(0.20515189, 0.21407154, 0.24529029, 0.94)
+
+[sub_resource type="StyleBoxFlat" id="SegmentActiveLit"]
+; #5C606E a0.94 x 1 -> #5C606E. Shared by `hover` and `focus`.
+bg_color = Color(0.36078432, 0.3764706, 0.43137255, 0.94)
+
+[sub_resource type="StyleBoxFlat" id="SegmentActivePressed"]
+; #5C606E a0.94 x 0.32156864 -> #1E1F23
+bg_color = Color(0.11601692, 0.12106114, 0.13871588, 0.94)
+
+[sub_resource type="StyleBoxFlat" id="SegmentActiveDisabled"]
+; #5C606E a0.94 x 0.36078432, alpha x 0.6 -> #212328 a0.56
+bg_color = Color(0.13016533, 0.13582469, 0.15563245, 0.564)
+
+[resource]
+
+; Every Button in the game, unless a variation below says otherwise. Font colours are the mood
+; palette's BONE_100 (#C3BDB1) text primary in the four live states, BONE_300 (#6E685C) at alpha 0.6
+; when disabled - a disabled gate row has to read as unreachable, not as missing.
+Button/colors/font_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+Button/colors/font_hover_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+Button/colors/font_focus_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+Button/colors/font_pressed_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+Button/colors/font_disabled_color = Color(0.43137255, 0.40784314, 0.36078432, 0.6)
+; 24pt: the size the HUD's modal buttons (victory, pause, gate travel, level-up close) shipped with.
+Button/font_sizes/font_size = 24
+Button/styles/normal = SubResource("ButtonNormal")
+Button/styles/hover = SubResource("ButtonLit")
+Button/styles/focus = SubResource("ButtonLit")
+Button/styles/pressed = SubResource("ButtonPressed")
+Button/styles/disabled = SubResource("ButtonDisabled")
+
+; The title screen's menu buttons: the shared plate, one point smaller than the HUD's. Only the size
+; differs, so the variation inherits every stylebox and colour from Button.
+TitleButton/base_type = &"Button"
+TitleButton/font_sizes/font_size = 22
+
+; A segmented option row's unchosen value: the shared plate again, with the dim text colour that is
+; what "not chosen" reads as. TitleGraphicsOptionsTests.AssertLit tells lit from dim by exactly this
+; font_color, so it is declared here rather than left to fall through to Button's bright one.
+SegmentIdle/base_type = &"Button"
+SegmentIdle/colors/font_color = Color(0.43137255, 0.40784314, 0.36078432, 1)
+SegmentIdle/colors/font_hover_color = Color(0.43137255, 0.40784314, 0.36078432, 1)
+SegmentIdle/colors/font_focus_color = Color(0.43137255, 0.40784314, 0.36078432, 1)
+SegmentIdle/colors/font_pressed_color = Color(0.43137255, 0.40784314, 0.36078432, 1)
+SegmentIdle/font_sizes/font_size = 18
+
+; The chosen value: brighter plate, bright text. The four font colours repeat Button's BONE_100 on
+; purpose - see the note on SegmentIdle.
+SegmentActive/base_type = &"Button"
+SegmentActive/colors/font_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+SegmentActive/colors/font_hover_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+SegmentActive/colors/font_focus_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+SegmentActive/colors/font_pressed_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+SegmentActive/font_sizes/font_size = 18
+SegmentActive/styles/normal = SubResource("SegmentActiveNormal")
+SegmentActive/styles/hover = SubResource("SegmentActiveLit")
+SegmentActive/styles/focus = SubResource("SegmentActiveLit")
+SegmentActive/styles/pressed = SubResource("SegmentActivePressed")
+SegmentActive/styles/disabled = SubResource("SegmentActiveDisabled")

@@ -7,9 +7,14 @@ using MyGame.Player;
 namespace MyGame.UI
 {
     /// <summary>
-    /// The gameplay HUD, built entirely in code. The Unity original was a <c>MonoBehaviour</c> on the
-    /// screen-space <c>Canvas</c>; here it is the <see cref="CanvasLayer"/> itself, and every uGUI
-    /// <c>Image</c> is a <see cref="ColorRect"/>, every <c>Text</c> a <see cref="Label"/>.
+    /// The gameplay HUD. The Unity original was a <c>MonoBehaviour</c> on the screen-space
+    /// <c>Canvas</c>; here it is the <see cref="CanvasLayer"/> itself, and every uGUI <c>Image</c> is a
+    /// <see cref="ColorRect"/>, every <c>Text</c> a <see cref="Label"/>.
+    ///
+    /// The screen is still assembled here - Stage 3 of docs/migrations/scene-data authors it - but the
+    /// leaves it is assembled from are not: a gauge is <c>Scenes/UI/HudBar.tscn</c>, a gate row is
+    /// <c>Scenes/UI/GateTravelRow.tscn</c>, and every button's styling is
+    /// <c>Resources/UI/MenuTheme.tres</c>.
     ///
     /// All numbers in this file are screen pixels, exactly as they were in uGUI - <c>World.Ppu</c> is a
     /// world-space conversion and has no business here.
@@ -73,7 +78,6 @@ namespace MyGame.UI
         private Control _gateTravelPanel;
         private Control _gateTravelList;
         private Button _gateTravelCloseButton;
-        private Font _gateTravelFont;
         private Control _levelUpPanel;
         private Button[] _levelUpButtons;
         private Label _levelUpSoulsText;
@@ -117,6 +121,36 @@ namespace MyGame.UI
             return korean != null ? korean : ThemeDB.FallbackFont;
         }
 
+        /// <summary>
+        /// The authored button styling, shared with the title screen. Everything a menu button looks
+        /// like - the five state plates, the font sizes and the font colour per state - lives in
+        /// <c>Resources/UI/MenuTheme.tres</c>; this hands it out and is the only styling call left.
+        /// </summary>
+        /// <remarks>
+        /// The font is the one thing the resource does not carry, and is written here instead. An
+        /// <c>ext_resource</c> pointing at a font Godot has not imported yet is a hard load failure,
+        /// which on a cold clone would take both UI screens down with it; <see cref="LoadUiFont"/>
+        /// degrades to <c>ThemeDB.FallbackFont</c> and the menus still draw. <c>CutsceneOverlay.Bind</c>
+        /// makes the same trade for the same reason. A Theme falls back to <c>default_font</c> for any
+        /// type that names no font of its own, so this reaches every variation in the resource too.
+        ///
+        /// <c>Res.Load</c> hands back the cached instance, so the assignment lands on the same resource
+        /// the <c>.tscn</c> files reference through their own <c>ext_resource</c>.
+        /// </remarks>
+        internal static Theme LoadMenuTheme()
+        {
+            var theme = Res.Load<Theme>("UI/MenuTheme", ".tres");
+            if (theme != null && theme.DefaultFont == null)
+                theme.DefaultFont = LoadUiFont();
+            return theme;
+        }
+
+        /// <summary>The authored gauge - a strip with a ghost layer and a live fill. Instanced three times.</summary>
+        private const string BarScenePath = "res://Scenes/UI/HudBar.tscn";
+
+        /// <summary>The authored gate-travel row. Instanced once per gate the save has opened.</summary>
+        private const string GateRowScenePath = "res://Scenes/UI/GateTravelRow.tscn";
+
         public override void _Ready()
         {
             // The warning line expires on unscaled time and the menus have to keep answering while the
@@ -152,9 +186,10 @@ namespace MyGame.UI
 
             // Health alone gets the ghost. Stamina and poise refill in under a second, so a trailing
             // strip on those two would be lit most of the fight and read as noise rather than as damage.
-            // Built after the live fill and then moved to child 0, so it draws behind it.
-            _ghostFill = CreateFill(_healthFill.GetParent<Control>(), "GhostFill", Bone100, 0.3f);
-            _ghostFill.GetParent().MoveChild(_ghostFill, 0);
+            // HudBar.tscn authors the layer on every bar, ahead of the live fill so it draws behind it,
+            // and rests it hidden; this is the one bar that shows it.
+            _ghostFill = _healthFill.GetParent().GetNode<ColorRect>("GhostFill");
+            _ghostFill.Visible = true;
 
             _healthText = CreateText(_root, "HealthText", uiFont, Bone100, 22, new Vector2(20, -40), HorizontalAlignment.Left);
             _humanityText = CreateText(_root, "HumanityText", uiFont, Bone200, 22, new Vector2(20, -70), HorizontalAlignment.Left);
@@ -226,8 +261,8 @@ namespace MyGame.UI
             title.LabelSettings.FontColor = new Color(0.72156864f, 0.64705884f, 0.47843137f); // #B8A57A
             _victorySubtitle = CreateVictoryText(_victoryPanel, "VictorySubtitle", font, "Wrath has fallen", 24, new Vector2(0f, 46f));
 
-            _restartButton = CreateVictoryButton(_victoryPanel, font, "RestartButton", Tr(DefaultRestartLabelKey), new Vector2(0f, -35f));
-            _titleButton = CreateVictoryButton(_victoryPanel, font, "TitleButton", Tr("UI_COMMON_RETURN_TO_TITLE"), new Vector2(0f, -105f));
+            _restartButton = CreateVictoryButton(_victoryPanel, "RestartButton", Tr(DefaultRestartLabelKey), new Vector2(0f, -35f));
+            _titleButton = CreateVictoryButton(_victoryPanel, "TitleButton", Tr("UI_COMMON_RETURN_TO_TITLE"), new Vector2(0f, -105f));
             _victoryPanel.Visible = false;
         }
 
@@ -263,49 +298,17 @@ namespace MyGame.UI
             return label;
         }
 
-        private static Button CreateVictoryButton(Control parent, Font font, string name, string label, Vector2 position)
+        /// <summary>
+        /// A menu button on an ink plate. It carries no styling of its own: <see cref="LoadMenuTheme"/>
+        /// is the whole of it, including the 24pt face this used to pass by hand.
+        /// </summary>
+        private static Button CreateVictoryButton(Control parent, string name, string label, Vector2 position)
         {
-            var button = new Button { Name = name, Text = label };
+            var button = new Button { Name = name, Text = label, Theme = LoadMenuTheme() };
             parent.AddChild(button);
-            StyleMenuButton(button, font, 24);
             PlaceRect(button, Centre, Centre, position, new Vector2(280f, 56f));
             return button;
         }
-
-        /// <summary>
-        /// The plate a menu button is drawn on, in every state it has.
-        ///
-        /// uGUI's <c>ColorBlock</c> multiplied the target graphic, so a block could only ever darken it:
-        /// the graphic was the brightest state (#2E3038) and the block stepped down from it - see
-        /// Docs/MoodDirection.md section 4. Godot has no multiply; each state gets its own StyleBoxFlat
-        /// with the product already worked out, which is the same picture with none of the arithmetic at
-        /// runtime. Godot's focus box is what uGUI called <c>selectedColor</c>, and it draws over the
-        /// others, so it carries the full-brightness plate.
-        /// </summary>
-        private static void StyleMenuButton(Button button, Font font, int fontSize)
-        {
-            var plate = new Color(0.18039216f, 0.1882353f, 0.21960784f, 0.94f); // #2E3038
-            button.AddThemeStyleboxOverride("normal", Plate(Mul(plate, 0.5686275f)));      // #919191 multiply
-            button.AddThemeStyleboxOverride("hover", Plate(plate));                        // white multiply
-            button.AddThemeStyleboxOverride("focus", Plate(plate));
-            button.AddThemeStyleboxOverride("pressed", Plate(Mul(plate, 0.32156864f)));    // #525252
-            button.AddThemeStyleboxOverride("disabled", Plate(Mul(plate, 0.36078432f, 0.6f))); // #5C5C5C a0.60
-
-            if (font != null)
-                button.AddThemeFontOverride("font", font);
-            button.AddThemeFontSizeOverride("font_size", fontSize);
-            button.AddThemeColorOverride("font_color", Bone100);
-            button.AddThemeColorOverride("font_hover_color", Bone100);
-            button.AddThemeColorOverride("font_focus_color", Bone100);
-            button.AddThemeColorOverride("font_pressed_color", Bone100);
-            button.AddThemeColorOverride("font_disabled_color", new Color(Bone300.R, Bone300.G, Bone300.B, 0.6f));
-        }
-
-        internal static StyleBoxFlat Plate(Color color) => new StyleBoxFlat { BgColor = color };
-
-        /// <summary>RGB-only multiply, the way uGUI's ColorBlock treated an opaque block entry.</summary>
-        internal static Color Mul(Color c, float m, float alphaScale = 1f) =>
-            new Color(c.R * m, c.G * m, c.B * m, c.A * alphaScale);
 
         internal static LabelSettings Face(Font font, int fontSize, Color color) =>
             new LabelSettings { Font = font, FontSize = fontSize, FontColor = color };
@@ -324,9 +327,9 @@ namespace MyGame.UI
             _pauseStatusText = CreateVictoryText(_pausePanel, "PauseStatus", font, string.Empty, 20, new Vector2(0f, 90f));
             _pauseStatusText.LabelSettings.FontColor = Cold200;
 
-            _resumeButton = CreateVictoryButton(_pausePanel, font, "ResumeButton", Tr("UI_PAUSE_RESUME"), new Vector2(0f, 20f));
-            _saveButton = CreateVictoryButton(_pausePanel, font, "SaveButton", Tr("UI_PAUSE_SAVE"), new Vector2(0f, -50f));
-            _pauseTitleButton = CreateVictoryButton(_pausePanel, font, "PauseTitleButton", Tr("UI_COMMON_RETURN_TO_TITLE"), new Vector2(0f, -120f));
+            _resumeButton = CreateVictoryButton(_pausePanel, "ResumeButton", Tr("UI_PAUSE_RESUME"), new Vector2(0f, 20f));
+            _saveButton = CreateVictoryButton(_pausePanel, "SaveButton", Tr("UI_PAUSE_SAVE"), new Vector2(0f, -50f));
+            _pauseTitleButton = CreateVictoryButton(_pausePanel, "PauseTitleButton", Tr("UI_COMMON_RETURN_TO_TITLE"), new Vector2(0f, -120f));
             _pausePanel.Visible = false;
         }
 
@@ -377,8 +380,6 @@ namespace MyGame.UI
         /// </summary>
         private void CreateGateTravelPanel(Control parent, Font font)
         {
-            _gateTravelFont = font;
-
             _gateTravelPanel = CreatePanel(parent, "GateTravelPanel", 0.92f);
 
             Label title = CreateVictoryText(_gateTravelPanel, "GateTravelTitle", font, Tr("UI_GATE_TRAVEL"), 44, new Vector2(0f, 300f));
@@ -388,7 +389,7 @@ namespace MyGame.UI
             _gateTravelPanel.AddChild(_gateTravelList);
             _gateTravelList.SetAnchorsPreset(Control.LayoutPreset.FullRect);
 
-            _gateTravelCloseButton = CreateVictoryButton(_gateTravelPanel, font, "GateTravelCloseButton", Tr("UI_COMMON_CLOSE"), new Vector2(0f, -320f));
+            _gateTravelCloseButton = CreateVictoryButton(_gateTravelPanel, "GateTravelCloseButton", Tr("UI_COMMON_CLOSE"), new Vector2(0f, -320f));
             _gateTravelPanel.Visible = false;
         }
 
@@ -449,12 +450,12 @@ namespace MyGame.UI
                     ? titles[i]
                     : gate;
 
-                Button row = CreateVictoryButton(
-                    _gateTravelList,
-                    _gateTravelFont,
-                    $"Gate{i}Button",
-                    $"{i + 1}. {title}",
-                    new Vector2(0f, top - i * step));
+                var row = GD.Load<PackedScene>(GateRowScenePath).Instantiate<Button>();
+                row.Name = $"Gate{i}Button";
+                row.Text = $"{i + 1}. {title}";
+                _gateTravelList.AddChild(row);
+                // The row's rect is authored; only where it sits in the column is computed here.
+                PlaceRect(row, Centre, Centre, new Vector2(0f, top - i * step), row.CustomMinimumSize);
 
                 if (gate == currentScene)
                 {
@@ -499,7 +500,7 @@ namespace MyGame.UI
                 PlayerStat stat = LevelUpStats[i];
 
                 Button row = CreateVictoryButton(
-                    _levelUpPanel, font, $"LevelUp{stat}Button", string.Empty, new Vector2(0f, top - i * step));
+                    _levelUpPanel, $"LevelUp{stat}Button", string.Empty, new Vector2(0f, top - i * step));
 
                 // Wider and smaller-lettered than a menu button: a row carries four columns of text
                 // (stat, level, what a level gives, price) where 계속하기 carries one word.
@@ -512,7 +513,7 @@ namespace MyGame.UI
                 row.Pressed += () => PurchaseLevel(stat);
             }
 
-            _levelUpCloseButton = CreateVictoryButton(_levelUpPanel, font, "LevelUpCloseButton", Tr("UI_COMMON_CLOSE"), new Vector2(0f, -320f));
+            _levelUpCloseButton = CreateVictoryButton(_levelUpPanel, "LevelUpCloseButton", Tr("UI_COMMON_CLOSE"), new Vector2(0f, -320f));
             _levelUpCloseButton.Pressed += CloseLevelUp;
             _levelUpPanel.Visible = false;
         }
@@ -715,37 +716,23 @@ namespace MyGame.UI
         /// A dark strip with a fill child, sized to sit under one text row. The fill is driven by its
         /// right anchor rather than by a ProgressBar, because the bar is two stacked layers (the live
         /// fill and the ghost behind it) sharing one strip, which a ProgressBar cannot express.
+        /// The strip, both layers and the 240x26 rect are authored in <c>Scenes/UI/HudBar.tscn</c>.
         /// Returns the fill - <see cref="SetFill"/> is what moves it.
         /// </summary>
         private static ColorRect CreateBar(Control parent, string name, Color fillColor, Vector2 position)
         {
-            var strip = new ColorRect
-            {
-                Name = name,
-                Color = new Color(PanelInk.R, PanelInk.G, PanelInk.B, 0.85f),
-                MouseFilter = Control.MouseFilterEnum.Ignore,
-            };
+            var strip = GD.Load<PackedScene>(BarScenePath).Instantiate<ColorRect>();
+            strip.Name = name;
+
+            // The three colour channels are the only thing that differs between the three bars. The
+            // fill's alpha stays as authored - half-transparent over the ink strip, because an opaque
+            // bone or slate fill wins the contrast fight against the number printed on top of it, which
+            // is the one thing that must stay readable.
+            var fill = strip.GetNode<ColorRect>("Fill");
+            fill.Color = new Color(fillColor.R, fillColor.G, fillColor.B, fill.Color.A);
+
             parent.AddChild(strip);
-            // 240 wide keeps the strip inside the 280px HUD plate; 26 tall covers the glyph band of a
-            // 22pt row without spilling into the row below it (rows are 30px apart).
-            PlaceRect(strip, TopLeft, TopLeft, position, new Vector2(240, 26));
-
-            // Half-transparent over the ink strip: an opaque bone or slate fill wins the contrast fight
-            // against the number printed on top of it, which is the one thing that must stay readable.
-            return CreateFill(strip, "Fill", fillColor, 0.55f);
-        }
-
-        /// <summary>One left-anchored layer of a bar - the live fill, or the ghost behind it.</summary>
-        private static ColorRect CreateFill(Control strip, string name, Color color, float alpha)
-        {
-            var fill = new ColorRect
-            {
-                Name = name,
-                Color = new Color(color.R, color.G, color.B, alpha),
-                MouseFilter = Control.MouseFilterEnum.Ignore,
-            };
-            strip.AddChild(fill);
-            fill.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+            PlaceRect(strip, TopLeft, TopLeft, position, strip.CustomMinimumSize);
             return fill;
         }
 

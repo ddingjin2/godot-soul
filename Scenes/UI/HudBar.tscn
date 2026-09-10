@@ -1,0 +1,53 @@
+[gd_scene load_steps=1 format=3]
+
+; One HUD gauge: a dark strip with two stacked fill layers. Replaces GameplayHud.CreateBar and
+; CreateFill; GameplayHud.SetFill stays in script, because moving a fill's right anchor from a
+; current/max ratio is binding, not styling.
+;
+; Instanced three times (health, stamina, poise). The instance is renamed by the layout - HealthGauge,
+; StaminaGauge, PoiseGauge - so nothing looks the root node up as "Gauge".
+;
+; Two layers rather than a ProgressBar because that is what a ProgressBar cannot express: the ghost
+; and the live fill share one strip, and the ghost has to draw *behind* the live one. Tree order is
+; the depth order, so GhostFill is authored first.
+;
+; UNITS: screen pixels. World.Ppu is a world-space conversion and has no business in the HUD.
+
+[node name="Gauge" type="ColorRect"]
+; 240 wide keeps the strip inside the 280px HUD plate; 26 tall covers the glyph band of a 22pt row
+; without spilling into the row below it (rows are 30px apart). Carried as custom_minimum_size rather
+; than as an authored rect because GameplayHud.PlaceRect reads it back and writes the anchors - until
+; Stage 3 the HUD's layout still lives in code.
+custom_minimum_size = Vector2(240, 26)
+; Ignore: the HUD must not eat clicks meant for the world or for a panel.
+mouse_filter = 2
+; PanelInk #0A0B0E at alpha 0.85 - MoodDirection.md section 2 panel fill.
+color = Color(0.039215688, 0.043137256, 0.05490196, 0.85)
+
+[node name="GhostFill" type="ColorRect" parent="."]
+; Health alone gets a ghost. Stamina and poise refill in under a second, so a trailing strip on those
+; two would be lit most of the fight and read as noise rather than as damage - so the layer rests
+; hidden here and GameplayHud.CreateUi shows the one on the health bar.
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 0.0
+offset_bottom = 0.0
+mouse_filter = 2
+; Bone100 #C3BDB1 at alpha 0.30.
+color = Color(0.7647059, 0.7411765, 0.69411767, 0.3)
+
+[node name="Fill" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 0.0
+offset_bottom = 0.0
+mouse_filter = 2
+; Ember300 #A84B33, the health bar's colour, at the alpha every bar shares. Half-transparent over the
+; ink strip on purpose: an opaque bone or slate fill wins the contrast fight against the number
+; printed on top of it, which is the one thing that must stay readable. GameplayHud.CreateBar rewrites
+; the three channels per bar (health ember, stamina cold, poise bone) and keeps the alpha authored
+; here.
+color = Color(0.65882355, 0.29411766, 0.2, 0.55)

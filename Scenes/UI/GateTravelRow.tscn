@@ -1,0 +1,22 @@
+[gd_scene load_steps=2 format=3]
+
+; One row of the gate-travel list. Instanced 0-8 times per open by GameplayHud.BuildGateRows, which
+; now only names it, writes its text, connects Pressed and - for the gate the player is standing in -
+; disables it. Replaces the CreateVictoryButton call that used to build a button per row.
+;
+; The row count is genuinely dynamic (it follows the save), which is exactly the case Rule 3 answers
+; with "instance a pre-authored item scene", not with a builder.
+;
+; Everything the button looks like comes from MenuTheme.tres, including the disabled plate and the
+; dimmed disabled text that make "this is the gate you are standing in" readable.
+;
+; UNITS: screen pixels.
+
+[ext_resource type="Theme" path="res://Resources/UI/MenuTheme.tres" id="1_theme"]
+
+[node name="GateRow" type="Button"]
+; The rect the HUD's modal buttons all share. Carried as custom_minimum_size because
+; GameplayHud.PlaceRect reads it back and writes the anchors - until Stage 3 the panel's layout is
+; still code. The instance is renamed Gate0Button..GateNButton by the loop.
+custom_minimum_size = Vector2(280, 56)
+theme = ExtResource("1_theme")
