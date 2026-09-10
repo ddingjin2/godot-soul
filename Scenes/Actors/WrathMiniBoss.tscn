@@ -1,0 +1,69 @@
+; Chapter one's fight, and the fallback whenever an arena names boss data that will not load.
+; Inherits Scenes/Actors/EnemyBase.tscn and adds its two danger discs - the horizontal slash and the
+; ground slam. Replaces the construction half of GameplayEnemySpawner.CreateWrathMiniBoss.
+;
+; No EnemyDeathCleanup, deliberately: a boss body stays in the arena after it dies, because the
+; victory beat and the outro cutscene both play over it. That is what the destroyOnDeath = false
+; argument decided before this scene existed.
+;
+; STILL BOUND AT RUNTIME: WrathMiniBossData (Resources/Design/WrathMiniBoss.json) through
+; SetTuningData, BossEncounterData through SetEncounterData, and every colour and size below from
+; GameplayReadabilityDefaults / Resources/Art/Readability.json.
+;
+; UNITS: 1 Unity metre = 100 px (World.Ppu), +Y down.
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="PackedScene" path="res://Scenes/Actors/EnemyBase.tscn" id="1"]
+[ext_resource type="Script" path="res://Scripts/Enemy/WrathMiniBoss.cs" id="2"]
+[ext_resource type="Texture2D" path="res://Resources/Art/ActorBoss.png" id="3"]
+[ext_resource type="PackedScene" path="res://Scenes/World/AttackReadout.tscn" id="4"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_boss"]
+; Local to the scene - see the base. WrathMiniBoss:211 reads this back as
+; FindComponent<CollisionShape2D>()?.Shape as CapsuleShape2D to find its own half-height, so it has to
+; stay a capsule and it has to be the first CollisionShape2D child.
+; BossColliderSize = World.U(1.2, 2.0) = 120 x 200 px, halved for Godot's radius.
+resource_local_to_scene = true
+radius = 60.0
+height = 200.0
+
+[node name="WrathMiniBoss" instance=ExtResource("1")]
+script = ExtResource("2")
+
+[node name="Collider" parent="."]
+shape = SubResource("CapsuleShape2D_boss")
+
+[node name="Visual" parent="."]
+texture = ExtResource("3")
+; BossVisualSize = World.U(1.75, 2.35) = 175 x 235 px, / the 64 x 128 texture.
+scale = Vector2(2.734375, 1.8359375)
+; GameplayReadabilityDefaults.BossColor as shipped; Readability.json still wins at runtime.
+modulate = Color(0.54901963, 0.20392157, 0.15686275, 1)
+
+[node name="RoleMarker" parent="."]
+; BossRoleLocalPosition = World.V(0, -1.35) = (0, 135).
+position = Vector2(0, 135)
+
+[node name="HealthBar" parent="GameplayWorldHealthBar"]
+; BossHealthBarOffset = World.V(0, 1.65) = (0, -165).
+position = Vector2(0, -165)
+
+; BossSlashDangerLocalPosition = World.V(0.85, 0) = (85, 0) - out in front of the body, mirrored by
+; the boss flipping its own scale.
+[node name="BossSlashDanger" parent="." instance=ExtResource("4")]
+position = Vector2(85, 0)
+; BossSlashDangerSize = World.U(2.7, 1.55) = 270 x 155 px, / the 64 x 64 Disc.png.
+scale = Vector2(4.21875, 2.421875)
+modulate = Color(1, 0.06, 0.02, 0.22)
+; BossSlashReadoutSortingOrder = 4 - above the slam, so the two overlapping discs still read apart.
+z_index = 4
+
+; BossSlamDangerLocalPosition = World.V(0, -0.15) = (0, 15).
+[node name="BossSlamDanger" parent="." instance=ExtResource("4")]
+position = Vector2(0, 15)
+; BossSlamDangerSize = World.U(4.2, 1.45) = 420 x 145 px, / the 64 x 64 Disc.png. The widest readout
+; in the game: the slam covers most of the arena floor.
+scale = Vector2(6.5625, 2.265625)
+modulate = Color(1, 0.22, 0.02, 0.13)
+; BossSlamReadoutSortingOrder = 2.
+z_index = 2

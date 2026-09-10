@@ -1,0 +1,58 @@
+; The pouncing enemy. Inherits Scenes/Actors/EnemyBase.tscn and adds the disc that shows where its
+; leap lands, plus the cleanup that removes the body after it dies. Replaces the construction half of
+; GameplayEnemySpawner.CreateLeapingAttackerAt.
+;
+; STILL BOUND AT RUNTIME: LeapingAttackerData (Resources/Design/LeapingAttacker.json, or the
+; per-spawn variant a placement names) through SetTuningData, and every colour and size below from
+; GameplayReadabilityDefaults / Resources/Art/Readability.json.
+;
+; UNITS: 1 Unity metre = 100 px (World.Ppu), +Y down.
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="PackedScene" path="res://Scenes/Actors/EnemyBase.tscn" id="1"]
+[ext_resource type="Script" path="res://Scripts/Enemy/LeapingAttacker.cs" id="2"]
+[ext_resource type="Texture2D" path="res://Resources/Art/ActorLeaper.png" id="3"]
+[ext_resource type="PackedScene" path="res://Scenes/World/AttackReadout.tscn" id="4"]
+[ext_resource type="Script" path="res://Scripts/Enemy/EnemyDeathCleanup.cs" id="5"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_leaper"]
+; Local to the scene for the same reason as the base's: two leapers in one arena must not share one
+; shape. LeaperColliderSize = World.U(0.55, 0.9) = 55 x 90 px, and Godot wants a radius, so 55 / 2.
+resource_local_to_scene = true
+radius = 27.5
+height = 90.0
+
+[node name="LeapingAttacker" instance=ExtResource("1")]
+script = ExtResource("2")
+
+[node name="Collider" parent="."]
+shape = SubResource("CapsuleShape2D_leaper")
+
+[node name="Visual" parent="."]
+texture = ExtResource("3")
+; LeaperVisualSize = World.U(0.9, 1.08) = 90 x 108 px, / the 64 x 128 texture.
+scale = Vector2(1.40625, 0.84375)
+; GameplayReadabilityDefaults.LeaperColor as shipped; Readability.json still wins at runtime.
+modulate = Color(0.47843137, 0.29411766, 0.17254902, 1)
+
+[node name="RoleMarker" parent="."]
+; LeapRoleLocalPosition = World.V(0, -0.68) = (0, 68).
+position = Vector2(0, 68)
+
+[node name="HealthBar" parent="GameplayWorldHealthBar"]
+; LeaperHealthBarOffset = World.V(0, 0.86) = (0, -86).
+position = Vector2(0, -86)
+
+; LeapDangerLocalPosition = World.V(0, -0.08) = (0, 8) - the landing ring sits slightly below the
+; body, and +Y is down, so a Unity -0.08 is a positive 8 here.
+[node name="LeapLandingDanger" parent="." instance=ExtResource("4")]
+position = Vector2(0, 8)
+; LeapDangerSize = World.U(1.9, 1.25) = 190 x 125 px, / the 64 x 64 Disc.png.
+scale = Vector2(2.96875, 1.953125)
+modulate = Color(1, 0.62, 0.08, 0.18)
+; EnemyReadoutSortingOrder = 3.
+z_index = 3
+
+; One of the three archetypes that despawn on death - see the note in MeleeGrunt.tscn.
+[node name="EnemyDeathCleanup" type="Node" parent="."]
+script = ExtResource("5")

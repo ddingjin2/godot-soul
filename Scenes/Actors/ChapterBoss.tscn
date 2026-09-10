@@ -1,0 +1,57 @@
+; Every authored chapter boss - the Crimson Warden, the Ember Pilgrim, all seven of them - is this
+; one scene. Inherits Scenes/Actors/EnemyBase.tscn and adds nothing but the RainbowChapterBossBehaviour
+; script: the whole point of a chapter boss is that it needs no code and no scene of its own, only a
+; RainbowChapterBossData file in Resources/Design. Replaces the construction half of
+; GameplayEnemySpawner.CreateChapterBoss.
+;
+; No danger readouts: a chapter boss telegraphs through its attack profiles, which spawn
+; Scenes/Effects/BossHazardStrip.tscn and Scenes/Effects/BossAfterimage.tscn instances as they fire.
+; Both are handed over at spawn by SetHazardPrefab / SetAfterimagePrefab.
+;
+; No EnemyDeathCleanup, for the same reason as WrathMiniBoss.tscn: the body has to survive its own
+; death for the victory beat and the outro cutscene.
+;
+; MORE IS BOUND AT RUNTIME HERE THAN ON ANY OTHER ACTOR, and it has to be - the data decides which
+; boss this is. The node's *name* is the boss's name (data.BossName), the capsule is data.BodySize,
+; the visual's colour is data.PrimaryColor, the role marker's caption is data.ChapterName, and max
+; health, poise and the soul reward all come from the same file through SetBossData. So the literals
+; below are chapter one's, and every one of them is overwritten before the boss is dressed.
+;
+; UNITS: 1 Unity metre = 100 px (World.Ppu), +Y down.
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="PackedScene" path="res://Scenes/Actors/EnemyBase.tscn" id="1"]
+[ext_resource type="Script" path="res://Scripts/Enemy/RainbowChapterBossBehaviour.cs" id="2"]
+[ext_resource type="Texture2D" path="res://Resources/Art/ActorBoss.png" id="3"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_boss"]
+; Local to the scene - see the base. RainbowChapterBossBehaviour:383 reads this back as
+; FindComponent<CollisionShape2D>()?.Shape as CapsuleShape2D for its own half-height, so it has to
+; stay a capsule and stay the first CollisionShape2D child.
+; BossColliderSize = World.U(1.2, 2.0) = 120 x 200 px, halved for Godot's radius. Rewritten from
+; RainbowChapterBossData.BodySize on every spawn.
+resource_local_to_scene = true
+radius = 60.0
+height = 200.0
+
+[node name="ChapterBoss" instance=ExtResource("1")]
+script = ExtResource("2")
+
+[node name="Collider" parent="."]
+shape = SubResource("CapsuleShape2D_boss")
+
+[node name="Visual" parent="."]
+texture = ExtResource("3")
+; BossVisualSize = World.U(1.75, 2.35) = 175 x 235 px, / the 64 x 128 texture. Every chapter boss
+; shares this body size; only the colour changes, and that comes from the data.
+scale = Vector2(2.734375, 1.8359375)
+; GameplayReadabilityDefaults.BossColor as shipped. Overwritten by data.PrimaryColor on every spawn.
+modulate = Color(0.54901963, 0.20392157, 0.15686275, 1)
+
+[node name="RoleMarker" parent="."]
+; BossRoleLocalPosition = World.V(0, -1.35) = (0, 135).
+position = Vector2(0, 135)
+
+[node name="HealthBar" parent="GameplayWorldHealthBar"]
+; BossHealthBarOffset = World.V(0, 1.65) = (0, -165).
+position = Vector2(0, -165)

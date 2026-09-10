@@ -1,0 +1,50 @@
+; The baseline enemy. Inherits Scenes/Actors/EnemyBase.tscn and adds the three things only a grunt
+; has: the point its swing is measured from, the disc that telegraphs where the swing lands, and the
+; cleanup that removes the body after it dies. Replaces the construction half of
+; GameplayEnemySpawner.CreateMeleeGruntAt.
+;
+; The root carries the MeleeGrunt script - EnemyStateMachine is the CharacterBody2D in this port, so
+; the behaviour *is* the actor - and keeps the name GameplayPrefabNames.MeleeGrunt, which the save
+; data, the debug jump menu and the tests all read.
+;
+; STILL BOUND AT RUNTIME: MeleeGruntData (Resources/Design/MeleeGrunt.json, or the per-spawn variant
+; file a placement names) through SetTuningData, the attack point through SetAttackPoint, and every
+; colour and size below from GameplayReadabilityDefaults / Resources/Art/Readability.json.
+;
+; UNITS: 1 Unity metre = 100 px (World.Ppu), +Y down.
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="PackedScene" path="res://Scenes/Actors/EnemyBase.tscn" id="1"]
+[ext_resource type="Script" path="res://Scripts/Enemy/MeleeGrunt.cs" id="2"]
+[ext_resource type="Texture2D" path="res://Resources/Art/ActorGrunt.png" id="3"]
+[ext_resource type="PackedScene" path="res://Scenes/World/AttackReadout.tscn" id="4"]
+[ext_resource type="Script" path="res://Scripts/Enemy/EnemyDeathCleanup.cs" id="5"]
+
+[node name="MeleeGrunt" instance=ExtResource("1")]
+script = ExtResource("2")
+
+[node name="Visual" parent="."]
+texture = ExtResource("3")
+
+; The pulse target MeleeGrunt scales while it winds up an attack, and the origin its attack overlap
+; is centred on. World.U(0.6) = 60 px ahead of the body; the grunt mirrors it by flipping its own
+; scale, so there is no second authored position for facing left.
+[node name="AttackPoint" type="Node2D" parent="."]
+position = Vector2(60, 0)
+
+; MeleeDangerLocalPosition = World.V(0.55, 0) = (55, 0). AttackReadout.tscn ships the player's arc,
+; so size, colour and sorting order are all overridden here - and then bound again per spawn, because
+; the colour is designer-owned.
+[node name="SlashDanger" parent="." instance=ExtResource("4")]
+position = Vector2(55, 0)
+; MeleeDangerSize = World.U(1.55, 1.05) = 155 x 105 px, / the 64 x 64 Disc.png.
+scale = Vector2(2.421875, 1.640625)
+modulate = Color(1, 0.08, 0.04, 0.2)
+; EnemyReadoutSortingOrder = 3.
+z_index = 3
+
+; Authored rather than left to GameplayEnemySpawner.EnsureEnemyHealthRig's EnsureComponent: a grunt
+; is one of the three archetypes that despawn on death. Neither boss scene carries this, which is
+; what the destroyOnDeath flag decided before.
+[node name="EnemyDeathCleanup" type="Node" parent="."]
+script = ExtResource("5")

@@ -1,0 +1,63 @@
+; The shooting enemy. Inherits Scenes/Actors/EnemyBase.tscn and adds the bar that shows how far its
+; shot reaches, plus the cleanup that removes the body after it dies. Replaces the construction half
+; of GameplayEnemySpawner.CreateRangedCasterAt.
+;
+; The shot itself is NOT authored here. It is Scenes/Effects/EnemyProjectile.tscn, handed over at
+; spawn by SetProjectilePrefab together with the projectile's designer-owned colour and sorting
+; order, and pooled by EnemyProjectilePool - so one caster's magazine is a pool of scene instances
+; rather than a template hanging off this tree.
+;
+; STILL BOUND AT RUNTIME: RangedCasterData (Resources/Design/RangedCaster.json, or the per-spawn
+; variant a placement names) through SetTuningData, the projectile scene, and every colour and size
+; below from GameplayReadabilityDefaults / Resources/Art/Readability.json.
+;
+; UNITS: 1 Unity metre = 100 px (World.Ppu), +Y down.
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="PackedScene" path="res://Scenes/Actors/EnemyBase.tscn" id="1"]
+[ext_resource type="Script" path="res://Scripts/Enemy/RangedCaster.cs" id="2"]
+[ext_resource type="Texture2D" path="res://Resources/Art/ActorCaster.png" id="3"]
+[ext_resource type="PackedScene" path="res://Scenes/World/AttackReadout.tscn" id="4"]
+[ext_resource type="Script" path="res://Scripts/Enemy/EnemyDeathCleanup.cs" id="5"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_caster"]
+; Local to the scene - see the base. CasterColliderSize = World.U(0.5, 0.9) = 50 x 90 px, halved for
+; Godot's radius.
+resource_local_to_scene = true
+radius = 25.0
+height = 90.0
+
+[node name="RangedCaster" instance=ExtResource("1")]
+script = ExtResource("2")
+
+[node name="Collider" parent="."]
+shape = SubResource("CapsuleShape2D_caster")
+
+[node name="Visual" parent="."]
+texture = ExtResource("3")
+; CasterVisualSize = World.U(0.82, 1.1) = 82 x 110 px, / the 64 x 128 texture.
+scale = Vector2(1.28125, 0.859375)
+; GameplayReadabilityDefaults.CasterColor as shipped; Readability.json still wins at runtime.
+modulate = Color(0.29411766, 0.27058825, 0.3764706, 1)
+
+[node name="RoleMarker" parent="."]
+; CastRoleLocalPosition = World.V(0, -0.68) = (0, 68).
+position = Vector2(0, 68)
+
+[node name="HealthBar" parent="GameplayWorldHealthBar"]
+; CasterHealthBarOffset = World.V(0, 0.84) = (0, -84).
+position = Vector2(0, -84)
+
+; CastDangerLocalPosition = World.V(0, -0.1) = (0, 10).
+[node name="CastRange" parent="." instance=ExtResource("4")]
+position = Vector2(0, 10)
+; CastDangerSize = World.U(2.35, 0.22) = 235 x 22 px, / the 64 x 64 Disc.png. Wide and flat: it reads
+; as the lane the shot travels down rather than as a landing circle.
+scale = Vector2(3.671875, 0.34375)
+modulate = Color(0.62, 0.35, 1, 0.24)
+; EnemyReadoutSortingOrder = 3.
+z_index = 3
+
+; One of the three archetypes that despawn on death - see the note in MeleeGrunt.tscn.
+[node name="EnemyDeathCleanup" type="Node" parent="."]
+script = ExtResource("5")

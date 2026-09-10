@@ -293,3 +293,42 @@ two as separate scenes for now.
   `TitleGraphicsOptionsTests.AssertLit` reads it back through `GetThemeColor("font_color")`, which
   resolves the variation ahead of the base type; losing the theme chain lights all four segments and
   fails the "exactly one" assertion rather than passing quietly.
+
+### What authoring the actors as scenes changed
+
+Stage 8 of the scene migration. `Scenes/Actors/Player.tscn` plus `EnemyBase.tscn` and the five
+archetype scenes that inherit it replace `GameplayPlayerSpawner.BuildPlayer` / `CreatePlayerSword` /
+`CreateAttackReadout` and `GameplayEnemySpawner.CreateEnemyRoot` / `AddCapsuleCollider` /
+`AddActorVisual` / `CreateAttackReadout` / `CreateRoleMarker`. Both spawners keep every tuning call
+and the order of it, which is where the three ordering traps live.
+
+- **Actor and sword textures are hard `ext_resource` references** to `Resources/Art/Actor*.png` and
+  `Sword.png`, where `GameplayVisualFactory.CreateActorSprite` / `CreateSwordSprite` preferred the
+  baked PNG and fell back to the procedural generator. Delete a baked actor PNG now and the actor is
+  invisible rather than greybox. Same trade the marker and effect scenes already took.
+- **`GameplayVisualFactory.Dress` has no caller left on the actor path.** The Unity pivot it turned
+  into an `Offset` is authored per sprite; the size and colour it wrote are still bound per spawn, by
+  `DressSprite` and `DressActorVisual`, because both are designer-owned.
+- **`EnemyGroupCombat` and `CombatFeedback` are authored on `EnemyBase.tscn`.** The guard blocks in
+  `Scripts/Enemy` (`MeleeGrunt:85,90`, `LeapingAttacker:84,89`, `RangedCaster:99,104`,
+  `WrathMiniBoss:189`) now always find one and build nothing. They are left standing - that folder
+  was not this stage's to edit - and are dead code the next Enemy-owning stage can remove.
+- **The player's `AudioSource` is authored** rather than created by the first cue that has a clip.
+  `AudioFeedback.Play` looks it up by type before creating one, so only the allocation moved.
+- **`EnemyDeathCleanup` is authored on the three mob scenes and absent from both boss scenes**, which
+  is what `EnsureEnemyHealthRig`'s `destroyOnDeath` flag decided before. Flag and `EnsureComponent`
+  both stay: a test that hands the spawner a bare `Node2D` still gets one built.
+- **A latent bug found and fixed inside the stage.** `CreateChapterBoss` used `AddComponent<Poise>`
+  and `AddComponent<SoulsWallet>`, which on an authored boss added a *second* of each.
+  `GetComponent<SoulsWallet>()` kept answering with the authored, empty one, so every chapter boss
+  kill was worth 0 souls. `GameplayChapterBossTests` caught it; both are `EnsureComponent` now.
+- **`GameplayWorldHealthBar` did not fold into the actor scenes** the way the plan's debt note
+  expected. The component is still a child node reached by `EnsureComponent`, with
+  `WorldHealthBar.tscn` instanced *under* it as `HealthBar`; making the component the bar's root would
+  break `AddHealthBar`, which both spawners and several tests call. The debt stands, and
+  `PLAN.md` is corrected to say so.
+- **`GameplayBuildShim.NewObject` / `AddComponent` / `EnsureComponent` survive.** The audit expected
+  Stage 8 to retire them. `Scripts/Core` was out of scope, `EnsureComponent` is still what lets a test
+  hand either spawner a bare `Node2D`, and seven tests build actors through `AddComponent` directly.
+  Retiring the shim is its own stage.
+- **Six more scene-path `const`s** join the six the plan already counts as debt.
