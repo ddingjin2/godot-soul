@@ -1,0 +1,31 @@
+[gd_scene load_steps=2 format=3]
+
+; One value of a segmented option row. Instanced 3-4 times per row by TitleMenuBootstrap.BindRow,
+; which names it, writes its caption and connects Pressed. Replaces the inner loop of
+; CreateSegmentedRow, which built a Button per value and computed its width by hand.
+;
+; How many values an option has follows GraphicsOptions.MsaaSteps / RenderScaleSteps, so the count is
+; genuinely dynamic - the case Rule 3 answers with "instance a pre-authored item scene". The captions
+; are dynamic too (StepLabels turns 4 into "4x" and 0.6 into "60%"), which is why the text is written
+; by the script rather than authored as a localisation key like every other caption on this screen.
+;
+; NO WIDTH HERE. size_flags_horizontal = 3 (ExpandFill) is what replaced the arithmetic: the segments
+; split whatever the caption and the gaps leave, so a value can never be clipped by the panel edge no
+; matter how many of them there are. See the note in SegmentedRow.tscn for the numbers.
+;
+; theme_type_variation is the resting one. TitleMenuBootstrap.SegmentedRow.Refresh swaps it to
+; SegmentActive on the chosen value and back, which is the whole of "this one is lit" - both plates
+; and both text colours are authored in MenuTheme.tres.
+;
+; The theme is named here as well as inherited from TitleRoot, the way GateTravelRow.tscn names it:
+; an item scene that carries its own styling is still styled wherever it is instanced.
+;
+; UNITS: screen pixels.
+
+[ext_resource type="Theme" path="res://Resources/UI/MenuTheme.tres" id="1_theme"]
+
+[node name="Segment" type="Button"]
+custom_minimum_size = Vector2(0, 48)
+size_flags_horizontal = 3
+theme = ExtResource("1_theme")
+theme_type_variation = &"SegmentIdle"

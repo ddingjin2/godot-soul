@@ -15,9 +15,9 @@
 
 [node name="Gauge" type="ColorRect"]
 ; 240 wide keeps the strip inside the 280px HUD plate; 26 tall covers the glyph band of a 22pt row
-; without spilling into the row below it (rows are 30px apart). Carried as custom_minimum_size rather
-; than as an authored rect because GameplayHud.PlaceRect reads it back and writes the anchors - until
-; Stage 3 the HUD's layout still lives in code.
+; without spilling into the row below it (rows are 30px apart). Carried as custom_minimum_size, which
+; is the size every instance of this scene starts from; GameplayHud.tscn gives each of the three
+; gauges its own rect on top of it.
 custom_minimum_size = Vector2(240, 26)
 ; Ignore: the HUD must not eat clicks meant for the world or for a panel.
 mouse_filter = 2

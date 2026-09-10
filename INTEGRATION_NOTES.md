@@ -198,5 +198,19 @@ there is nothing left to build into. `GameplayHudSpawner` instances the scene, r
 resolves the two authored controllers instead of adding them.
 
 `GameplayHud.Plate` and `Mul` are **deleted** with the Theme; they were `internal` and called from
-`TitleMenuBootstrap`, which no longer styles buttons in code at all. `PlaceRect` and `Face` remain
-only for that file's remaining call sites.
+`TitleMenuBootstrap`, which no longer styles buttons in code at all.
+
+### The title screen is a scene now, and `PlaceRect` / `Face` are gone
+
+`GameplayHud.PlaceRect` and `GameplayHud.Face` are **deleted**. Both were `internal` and survived only
+for `TitleMenuBootstrap`'s four and one call sites; `Scenes/UI/TitleScreen.tscn` carries those rects
+and label faces now, so nothing in the project calls either.
+
+`Scenes/TitleScene.tscn` - the boot scene, `run/main_scene` - **inherits** `Scenes/UI/TitleScreen.tscn`
+and adds nothing. The script sits on the screen's root, which the boot scene inherits, so the root's
+name (`TitleRoot`) and every scene path into it are unchanged. Anything that wants the screen without
+booting it (the test does) instantiates `TitleScreen.tscn`.
+
+Widgets on that screen are named `<localisation key><role>` - `UI_TITLE_QUITButton`,
+`UI_OPTION_VSYNCToggle`, `UI_OPTION_MSAARow` - never after the translated caption, which a change of
+locale would rewrite.

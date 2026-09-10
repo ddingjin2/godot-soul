@@ -246,9 +246,11 @@ two as separate scenes for now.
   effect scenes.
 - **`GameplayHud.Plate` and `Mul` were `internal` and called across files.** Both are deleted with
   the Theme; `TitleMenuBootstrap` no longer styles buttons in code at all.
-- **`TitleMenuBootstrap.CreateButton` still names nodes after translated text.** That is the hazard
-  the localization work warned about - a change of locale renames the node. Nothing depends on those
-  names today (the test clicks by `Text`), and Stage 4 owns that file.
+- **`TitleMenuBootstrap.CreateButton` named nodes after translated text.** That was the hazard the
+  localization work warned about - a change of locale renames the node. Stage 4 closed it: the
+  authored screen names every widget after its localisation key plus a role
+  (`UI_TITLE_QUITButton`, `UI_OPTION_VSYNCToggle`, `UI_OPTION_MSAARow`) and the test addresses them
+  that way rather than by caption.
 
 ### What authoring the HUD as scenes changed
 
@@ -263,5 +265,31 @@ two as separate scenes for now.
 - **`CreateUi`'s `canvas` parameter is now ignored.** The HUD is instanced from a scene that already
   carries its own root, so there is nothing to build into. The method stays because the spawner and
   several tests call it.
-- `PlaceRect` and `Face` survive in `GameplayHud` only because `TitleMenuBootstrap` still calls them;
-  they go with Stage 4.
+- `PlaceRect` and `Face` survived in `GameplayHud` only because `TitleMenuBootstrap` still called
+  them. Stage 4 authored that screen and both are deleted - 33 lines, no caller left anywhere.
+
+### What authoring the title screen changed
+
+- **One visual change, deliberate: the four option checkboxes are drawn on the shared menu plate.** A
+  `CheckBox` is a `Button`, so with `MenuTheme.tres` on the screen's root it resolves that theme's
+  five state plates where the code-built box resolved Godot's default `CheckBox` styleboxes - four
+  empty ones and a focus ring. An option row now lights on hover and on focus like every other row on
+  the screen, where before it did neither. Kept rather than overridden back, because restoring the
+  flat look means overriding four of the five slots with an empty box and reproducing the default
+  theme's focus ring for the fifth, or a gamepad loses track of where it is. Four
+  `theme_override_styles` lines per box put it back. **Not verified by eye.**
+- **Every other pixel is unchanged**, checked with a throwaway probe against the shipped arithmetic:
+  the segments come out 53px wide for the four MSAA steps and 72px for the three render scales, which
+  is exactly what `(408 - 180 - values * 4) / values` produced. The formula is gone - a
+  `size_flags_horizontal = ExpandFill` on the segment strip does it - and so is the last of
+  `PanelInnerWidth` / `SegmentCaptionWidth` / `SegmentSpacing`.
+- **Static title text is authored as localisation keys**, the same as the HUD panels. The three lines
+  that carry a value are still written at runtime: the difficulty button, the preset line, and the
+  segment captions (`4x`, `100%`, the translated off).
+- **`Scenes/TitleScene.tscn` inherits `Scenes/UI/TitleScreen.tscn`** and adds nothing. The split is
+  what lets `TitleGraphicsOptionsTests` instantiate the screen without booting the game's main scene -
+  changing scenes in a test frees the runner, which is the current scene.
+- **The lit segment is still the `SegmentActive` type variation**, not an instance override.
+  `TitleGraphicsOptionsTests.AssertLit` reads it back through `GetThemeColor("font_color")`, which
+  resolves the variation ahead of the base type; losing the theme chain lights all four segments and
+  fails the "exactly one" assertion rather than passing quietly.

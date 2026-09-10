@@ -259,39 +259,6 @@ namespace MyGame.UI
         }
 
         /// <summary>
-        /// uGUI placed a rect with anchorMin/anchorMax + pivot + anchoredPosition + sizeDelta; Godot
-        /// places one with four anchors and four offsets. This is that conversion, in one place. Unity's
-        /// +Y-up screen axis flips to Godot's +Y-down here, which is why every <c>anchor.Y</c> and every
-        /// <c>position.Y</c> is negated.
-        /// </summary>
-        /// <remarks>
-        /// Nothing in the HUD calls this any more - <c>Scenes/UI/GameplayHud.tscn</c> and the four panel
-        /// scenes carry the anchors and offsets it used to write. It survives because
-        /// <see cref="TitleMenuBootstrap"/> still builds its screen in code; Stage 4 of
-        /// docs/migrations/scene-data authors that one, and this goes with it.
-        /// </remarks>
-        internal static void PlaceRect(Control control, Vector2 anchor, Vector2 pivot, Vector2 position, Vector2 size)
-        {
-            control.AnchorLeft = control.AnchorRight = anchor.X;
-            control.AnchorTop = control.AnchorBottom = 1f - anchor.Y;
-
-            float left = position.X - pivot.X * size.X;
-            float top = -position.Y - (1f - pivot.Y) * size.Y;
-            control.OffsetLeft = left;
-            control.OffsetTop = top;
-            control.OffsetRight = left + size.X;
-            control.OffsetBottom = top + size.Y;
-        }
-
-        /// <summary>
-        /// A <see cref="LabelSettings"/> face. The HUD's own labels take their colour and size from the
-        /// scene as theme overrides and no longer need this; it survives for
-        /// <see cref="TitleMenuBootstrap"/>, and goes when Stage 4 authors that screen.
-        /// </summary>
-        internal static LabelSettings Face(Font font, int fontSize, Color color) =>
-            new LabelSettings { Font = font, FontSize = fontSize, FontColor = color };
-
-        /// <summary>
         /// Recolours one readout. The scene authors each label's resting colour as a theme override;
         /// these are the four lines that change colour with what they say - the active sin, a staggered
         /// poise, an empty flask, and the warning line - which is state, not styling.
