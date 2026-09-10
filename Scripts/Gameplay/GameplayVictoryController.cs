@@ -141,7 +141,7 @@ namespace MyGame.Gameplay
                 return;
             }
 
-            _hud?.ShowVictory(AdvanceToNextChapter, ReturnToTitle, "다음 관문", subtitle);
+            _hud?.ShowVictory(AdvanceToNextChapter, ReturnToTitle, Tr("UI_VICTORY_NEXT_GATE"), subtitle);
         }
 
         /// <summary>

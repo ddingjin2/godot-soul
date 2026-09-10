@@ -98,44 +98,44 @@ namespace MyGame.Tests
             Assert.NotNull(panel, "Title canvas should build the settings panel.");
             Assert.IsFalse(panel.Visible, "Settings panel should start hidden.");
 
-            Click(root, "설정");
+            Click(root, Tr("UI_TITLE_SETTINGS"));
             Assert.IsTrue(panel.Visible, "The settings button should open the panel.");
 
-            Click(panel, "상 (High)");
-            Assert.AreEqual("프리셋: 상", LabelStartingWith(panel, "프리셋:"), "High preset should be reported.");
-            Assert.IsTrue(Box(panel, "화면 흔들림").ButtonPressed, "The High preset should tick the screen shake box.");
-            AssertLit(panel, "안티에일리어싱", "4x");
-            AssertLit(panel, "렌더 스케일", "100%");
+            Click(panel, Tr("UI_OPTION_PRESET_HIGH_BUTTON"));
+            Assert.AreEqual(PresetLine("UI_OPTION_PRESET_HIGH"), PresetLabel(panel), "High preset should be reported.");
+            Assert.IsTrue(Box(panel, Tr("UI_OPTION_SCREEN_SHAKE")).ButtonPressed, "The High preset should tick the screen shake box.");
+            AssertLit(panel, "UI_OPTION_MSAA", "4x");
+            AssertLit(panel, "UI_OPTION_RENDER_SCALE", "100%");
 
             // Unticking the box rather than clicking a label: a two-value option is a checkbox now.
             // Writing ButtonPressed (rather than SetPressedNoSignal) is what fires the listener, which is
             // uGUI's isOn setter exactly.
-            Box(panel, "화면 흔들림").ButtonPressed = false;
-            Assert.AreEqual("프리셋: 커스텀", LabelStartingWith(panel, "프리셋:"), "Changing one option should report Custom.");
+            Box(panel, Tr("UI_OPTION_SCREEN_SHAKE")).ButtonPressed = false;
+            Assert.AreEqual(PresetLine("UI_OPTION_PRESET_CUSTOM"), PresetLabel(panel), "Changing one option should report Custom.");
             Assert.IsFalse(GraphicsOptions.ScreenShake, "The toggle should reach the shared options.");
 
-            Click(panel, "하 (Low)");
-            Assert.AreEqual("프리셋: 하", LabelStartingWith(panel, "프리셋:"));
+            Click(panel, Tr("UI_OPTION_PRESET_LOW_BUTTON"));
+            Assert.AreEqual(PresetLine("UI_OPTION_PRESET_LOW"), PresetLabel(panel));
 
             // A preset writes every value and then refreshes the widgets. If that refresh went through
             // ButtonPressed instead of SetPressedNoSignal it would fire each box's Toggled back into the
             // refresh, and the preset it had just applied would read as Custom.
-            Assert.IsFalse(Box(panel, "화면 흔들림").ButtonPressed, "The Low preset should untick the box.");
-            Assert.AreEqual("프리셋: 하", LabelStartingWith(panel, "프리셋:"), "Refreshing the boxes must not write back through their listeners.");
-            AssertLit(panel, "안티에일리어싱", "끔");
+            Assert.IsFalse(Box(panel, Tr("UI_OPTION_SCREEN_SHAKE")).ButtonPressed, "The Low preset should untick the box.");
+            Assert.AreEqual(PresetLine("UI_OPTION_PRESET_LOW"), PresetLabel(panel), "Refreshing the boxes must not write back through their listeners.");
+            AssertLit(panel, "UI_OPTION_MSAA", Tr("UI_OPTION_STEP_OFF"));
 
             // PORT: in Unity this row also proved the renderer was resized. Godot's render-scale
             // equivalent is 3D-only, so GraphicsOptions stores, clamps, cycles and saves the value but
             // never reaches the renderer - the assertion is therefore about the stored value the row
             // lights, which is all that is left to be wrong.
-            AssertLit(panel, "렌더 스케일", "60%");
+            AssertLit(panel, "UI_OPTION_RENDER_SCALE", "60%");
             Assert.AreEqual(0.6f, GraphicsOptions.RenderScale, 0.0001f,
                 "The Low preset should store 60% render scale, even though nothing downstream reads it in 2D.");
 
             // One click reaches any value; the cycling button this replaced needed three to get here.
-            Click(Row(panel, "안티에일리어싱"), "8x");
+            Click(Row(panel, "UI_OPTION_MSAA"), "8x");
             Assert.AreEqual(8, GraphicsOptions.Msaa, "A segment should write its own value, not the next one.");
-            AssertLit(panel, "안티에일리어싱", "8x");
+            AssertLit(panel, "UI_OPTION_MSAA", "8x");
 
             // uGUI's Canvas.ForceUpdateCanvases plus LayoutUtility.GetPreferredHeight: a Godot container
             // reports the same thing as its combined minimum size, and one frame is enough for the panel
@@ -148,7 +148,7 @@ namespace MyGame.Tests
                 panel.Size.Y,
                 "Every settings row should fit inside the panel instead of overflowing it.");
 
-            Click(panel, "닫기");
+            Click(panel, Tr("UI_COMMON_CLOSE"));
             Assert.IsFalse(panel.Visible, "The close button should hide the panel.");
         }
 
@@ -170,10 +170,14 @@ namespace MyGame.Tests
             return toggle;
         }
 
-        private static Control Row(Node panel, string option)
+        /// <summary>
+        /// <paramref name="optionKey"/> is the localisation key, because that is what the row is named -
+        /// a node named after the translated caption would be renamed by a change of locale.
+        /// </summary>
+        private static Control Row(Node panel, string optionKey)
         {
-            Control row = Descendants(panel).OfType<Control>().FirstOrDefault(node => node.Name == option + "Row");
-            Assert.NotNull(row, "Expected a segmented row for: " + option);
+            Control row = Descendants(panel).OfType<Control>().FirstOrDefault(node => node.Name == optionKey + "Row");
+            Assert.NotNull(row, "Expected a segmented row for: " + optionKey);
             return row;
         }
 
@@ -182,19 +186,41 @@ namespace MyGame.Tests
         /// Asserting on exactly one lit segment also catches a row that lights all of them or none.
         /// A Godot button carries that colour as a theme override rather than on a child Text.
         /// </summary>
-        private static void AssertLit(Node panel, string option, string value)
+        private static void AssertLit(Node panel, string optionKey, string value)
         {
-            string[] lit = Descendants(Row(panel, option)).OfType<Button>()
+            string[] lit = Descendants(Row(panel, optionKey)).OfType<Button>()
                 .Where(button => button.GetThemeColor("font_color").R > 0.7f)
                 .Select(button => button.Text)
                 .ToArray();
 
-            Assert.AreEqual(1, lit.Length, "Expected exactly one lit segment on " + option + ": " + value);
-            Assert.AreEqual(value, lit[0], "Expected the lit segment on " + option + " to be " + value);
+            Assert.AreEqual(1, lit.Length, "Expected exactly one lit segment on " + optionKey + ": " + value);
+            Assert.AreEqual(value, lit[0], "Expected the lit segment on " + optionKey + " to be " + value);
         }
 
-        private static string LabelStartingWith(Node panel, string prefix)
+        /// <summary>
+        /// The localisation table, not a copy of it: the screen reads these labels through the same keys,
+        /// so re-wording one in <c>localization/ui.csv</c> moves the test with it. The guard is what keeps
+        /// that from weakening the assertion - an unimported table makes Translate hand back the key, and
+        /// both sides of every comparison would then be that key.
+        /// </summary>
+        private static string Tr(string key)
         {
+            string text = TranslationServer.Translate(key);
+            Assert.AreNotEqual(key, text, "localization/ui.csv should carry a translation for " + key);
+            return text;
+        }
+
+        /// <summary>The whole preset line as the panel should read it, for the given preset-name key.</summary>
+        private static string PresetLine(string presetKey) =>
+            string.Format(Tr("UI_OPTION_PRESET_VALUE"), Tr(presetKey));
+
+        /// <summary>
+        /// The preset line on screen. Found by the fixed part of its own format string rather than by a
+        /// hard-coded prefix, so the row is still located after the wording is edited in the table.
+        /// </summary>
+        private static string PresetLabel(Node panel)
+        {
+            string prefix = Tr("UI_OPTION_PRESET_VALUE").Split("{0}")[0];
             Label text = Descendants(panel).OfType<Label>().FirstOrDefault(candidate => candidate.Text.StartsWith(prefix));
             Assert.NotNull(text, "Expected a label starting with: " + prefix);
             return text.Text;

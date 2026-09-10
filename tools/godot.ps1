@@ -27,5 +27,10 @@ function Resolve-GodotBin {
 }
 
 $bin = Resolve-GodotBin
+
+# Godot logs warnings to stderr, and Windows PowerShell 5.1 turns every stderr line from a native
+# executable into an ErrorRecord - which under ErrorActionPreference = Stop kills the run on the
+# first warning. Only the engine's exit code decides success here.
+$ErrorActionPreference = 'Continue'
 & $bin --path $root @args
 exit $LASTEXITCODE

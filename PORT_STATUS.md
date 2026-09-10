@@ -40,6 +40,17 @@ bottom once everything compiles and runs.
   the node layout the Player agent actually built.**
 - HUD runs with `ProcessMode = Always` so the unscaled warning timer and menus survive a pause; the
   ghost gauge and hit flash stay on scaled time and freeze at `TimeScale 0`, as before.
+- **Product text is a translation table, not literals.** Unity hardcoded all 34 Korean UI strings;
+  they now live in `localization/ui.csv` (`keys,ko,en`, imported to `ui.ko.translation` /
+  `ui.en.translation`, registered under `[internationalization]` with `ko` as the fallback) and the
+  screens read them through `Tr(key)` - `TranslationServer.Translate(key)` where the caller is static
+  (`DifficultySettings.DisplayName`, `TitleMenuBootstrap.PresetName`/`StepLabels`). Two sentences
+  that were C# interpolations are format keys filled with `string.Format`:
+  `UI_TITLE_DIFFICULTY_VALUE` and `UI_OPTION_PRESET_VALUE`. The settings panel's checkbox and
+  segmented-row nodes are now named after the key rather than the caption, so a change of locale does
+  not rename them; `TitleGraphicsOptionsTests` looks rows up by key for the same reason. Both UI
+  fixtures assert against `Tr(key)` with a guard that the key actually resolved, so re-wording the
+  table moves the tests with it without weakening them.
 
 ### Combat
 - `HitStopManager` no longer writes a physics step: `Engine.TimeScale` already scales physics, so

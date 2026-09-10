@@ -60,7 +60,7 @@ namespace MyGame.UI
         private float _ghostHoldUntil;
         private float _hitFlashUntil;
         private Control _victoryPanel;
-        private const string DefaultRestartLabel = "다시하기";
+        private const string DefaultRestartLabelKey = "UI_VICTORY_RESTART";
 
         private Label _victorySubtitle;
         private Button _restartButton;
@@ -226,8 +226,8 @@ namespace MyGame.UI
             title.LabelSettings.FontColor = new Color(0.72156864f, 0.64705884f, 0.47843137f); // #B8A57A
             _victorySubtitle = CreateVictoryText(_victoryPanel, "VictorySubtitle", font, "Wrath has fallen", 24, new Vector2(0f, 46f));
 
-            _restartButton = CreateVictoryButton(_victoryPanel, font, "RestartButton", DefaultRestartLabel, new Vector2(0f, -35f));
-            _titleButton = CreateVictoryButton(_victoryPanel, font, "TitleButton", "타이틀로", new Vector2(0f, -105f));
+            _restartButton = CreateVictoryButton(_victoryPanel, font, "RestartButton", Tr(DefaultRestartLabelKey), new Vector2(0f, -35f));
+            _titleButton = CreateVictoryButton(_victoryPanel, font, "TitleButton", Tr("UI_COMMON_RETURN_TO_TITLE"), new Vector2(0f, -105f));
             _victoryPanel.Visible = false;
         }
 
@@ -319,14 +319,14 @@ namespace MyGame.UI
         {
             _pausePanel = CreatePanel(parent, "PausePanel", 0.88f);
 
-            Label title = CreateVictoryText(_pausePanel, "PauseTitle", font, "일시정지", 48, new Vector2(0f, 140f));
+            Label title = CreateVictoryText(_pausePanel, "PauseTitle", font, Tr("UI_PAUSE_TITLE"), 48, new Vector2(0f, 140f));
             title.LabelSettings.FontColor = Bone100;
             _pauseStatusText = CreateVictoryText(_pausePanel, "PauseStatus", font, string.Empty, 20, new Vector2(0f, 90f));
             _pauseStatusText.LabelSettings.FontColor = Cold200;
 
-            _resumeButton = CreateVictoryButton(_pausePanel, font, "ResumeButton", "계속하기", new Vector2(0f, 20f));
-            _saveButton = CreateVictoryButton(_pausePanel, font, "SaveButton", "저장", new Vector2(0f, -50f));
-            _pauseTitleButton = CreateVictoryButton(_pausePanel, font, "PauseTitleButton", "타이틀로", new Vector2(0f, -120f));
+            _resumeButton = CreateVictoryButton(_pausePanel, font, "ResumeButton", Tr("UI_PAUSE_RESUME"), new Vector2(0f, 20f));
+            _saveButton = CreateVictoryButton(_pausePanel, font, "SaveButton", Tr("UI_PAUSE_SAVE"), new Vector2(0f, -50f));
+            _pauseTitleButton = CreateVictoryButton(_pausePanel, font, "PauseTitleButton", Tr("UI_COMMON_RETURN_TO_TITLE"), new Vector2(0f, -120f));
             _pausePanel.Visible = false;
         }
 
@@ -381,14 +381,14 @@ namespace MyGame.UI
 
             _gateTravelPanel = CreatePanel(parent, "GateTravelPanel", 0.92f);
 
-            Label title = CreateVictoryText(_gateTravelPanel, "GateTravelTitle", font, "관문 이동", 44, new Vector2(0f, 300f));
+            Label title = CreateVictoryText(_gateTravelPanel, "GateTravelTitle", font, Tr("UI_GATE_TRAVEL"), 44, new Vector2(0f, 300f));
             title.LabelSettings.FontColor = Bone100;
 
             _gateTravelList = new Control { Name = "GateList", MouseFilter = Control.MouseFilterEnum.Ignore };
             _gateTravelPanel.AddChild(_gateTravelList);
             _gateTravelList.SetAnchorsPreset(Control.LayoutPreset.FullRect);
 
-            _gateTravelCloseButton = CreateVictoryButton(_gateTravelPanel, font, "GateTravelCloseButton", "닫기", new Vector2(0f, -320f));
+            _gateTravelCloseButton = CreateVictoryButton(_gateTravelPanel, font, "GateTravelCloseButton", Tr("UI_COMMON_CLOSE"), new Vector2(0f, -320f));
             _gateTravelPanel.Visible = false;
         }
 
@@ -481,7 +481,7 @@ namespace MyGame.UI
         {
             _levelUpPanel = CreatePanel(parent, "LevelUpPanel", 0.92f);
 
-            Label title = CreateVictoryText(_levelUpPanel, "LevelUpTitle", font, "레벨 업", 44, new Vector2(0f, 300f));
+            Label title = CreateVictoryText(_levelUpPanel, "LevelUpTitle", font, Tr("UI_LEVEL_UP"), 44, new Vector2(0f, 300f));
             title.LabelSettings.FontColor = Bone100;
 
             _levelUpSoulsText = CreateVictoryText(_levelUpPanel, "LevelUpSouls", font, string.Empty, 24, new Vector2(0f, 236f));
@@ -512,7 +512,7 @@ namespace MyGame.UI
                 row.Pressed += () => PurchaseLevel(stat);
             }
 
-            _levelUpCloseButton = CreateVictoryButton(_levelUpPanel, font, "LevelUpCloseButton", "닫기", new Vector2(0f, -320f));
+            _levelUpCloseButton = CreateVictoryButton(_levelUpPanel, font, "LevelUpCloseButton", Tr("UI_COMMON_CLOSE"), new Vector2(0f, -320f));
             _levelUpCloseButton.Pressed += CloseLevelUp;
             _levelUpPanel.Visible = false;
         }
@@ -660,7 +660,7 @@ namespace MyGame.UI
         public void ShowPauseSaved()
         {
             if (_pauseStatusText != null)
-                _pauseStatusText.Text = "저장됨";
+                _pauseStatusText.Text = Tr("UI_PAUSE_SAVED");
         }
 
         /// <summary>
@@ -678,7 +678,7 @@ namespace MyGame.UI
         {
             if (_warningText == null) return;
 
-            _warningText.Text = "저장됨";
+            _warningText.Text = Tr("UI_PAUSE_SAVED");
             _warningText.LabelSettings.FontColor = Bone200;
             _warningExpiryUnscaled = GameClock.UnscaledTime + 2f;
         }
@@ -699,7 +699,7 @@ namespace MyGame.UI
 
             // Restored rather than left alone when no label is given: a panel re-shown after a rematch
             // would otherwise still read 다음 관문 over a button that restarts.
-            _restartButton.Text = !string.IsNullOrEmpty(primaryLabel) ? primaryLabel : DefaultRestartLabel;
+            _restartButton.Text = !string.IsNullOrEmpty(primaryLabel) ? primaryLabel : Tr(DefaultRestartLabelKey);
 
             if (_victorySubtitle != null && !string.IsNullOrEmpty(subtitle))
                 _victorySubtitle.Text = subtitle;

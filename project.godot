@@ -24,6 +24,11 @@ window/stretch/aspect="expand"
 
 project/assembly_name="MyGame"
 
+[internationalization]
+
+locale/translations=PackedStringArray("res://localization/ui.ko.translation", "res://localization/ui.en.translation")
+locale/fallback="ko"
+
 [layer_names]
 
 2d_physics/layer_1="World"

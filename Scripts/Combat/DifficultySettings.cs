@@ -100,11 +100,11 @@ namespace MyGame.Combat
             NewGamePlus = Mathf.Max(0, newGamePlus);
         }
 
-        public static string DisplayName(Difficulty difficulty) => difficulty switch
+        public static string DisplayName(Difficulty difficulty) => TranslationServer.Translate(difficulty switch
         {
-            Difficulty.Easy => "쉬움",
-            Difficulty.Hard => "어려움",
-            _ => "보통"
-        };
+            Difficulty.Easy => "UI_OPTION_DIFFICULTY_EASY",
+            Difficulty.Hard => "UI_OPTION_DIFFICULTY_HARD",
+            _ => "UI_OPTION_DIFFICULTY_NORMAL"
+        });
     }
 }

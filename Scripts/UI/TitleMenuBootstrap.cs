@@ -129,28 +129,28 @@ namespace MyGame.UI
             stack.AddThemeConstantOverride("separation", 14);
             stack.Alignment = BoxContainer.AlignmentMode.Center;
 
-            Button newGame = CreateButton(stack, font, "새로하기", StartNewGame);
+            Button newGame = CreateButton(stack, font, Tr("UI_TITLE_NEW_GAME"), StartNewGame);
 
             // Greyed out with no save to load, so Continue never looks like it did nothing.
-            Button continueButton = CreateButton(stack, font, "이어하기", ContinueGame);
+            Button continueButton = CreateButton(stack, font, Tr("UI_TITLE_CONTINUE"), ContinueGame);
             continueButton.Disabled = !GameSave.Exists;
 
             // Cycles rather than opening a sub-menu: three values, one of which is usually locked, is not
             // worth a second panel. The label carries the current choice so the stack still reads as a
             // list of buttons rather than as a form.
             SeedDifficultyFromSave();
-            _difficultyButton = CreateButton(stack, font, "난이도", CycleDifficulty);
+            _difficultyButton = CreateButton(stack, font, Tr("UI_TITLE_DIFFICULTY"), CycleDifficulty);
 
             // New Game+ only exists for a save that has finished the road, which is the same thing that
             // unlocks Hard. Greyed out rather than hidden, so the reward is visible before it is earned.
             GameSaveData save = GameSave.Read();
-            Button newGamePlusButton = CreateButton(stack, font, "뉴게임+", StartNewGamePlus);
+            Button newGamePlusButton = CreateButton(stack, font, Tr("UI_TITLE_NEW_GAME_PLUS"), StartNewGamePlus);
             newGamePlusButton.Disabled = !(save != null && save.hardUnlocked);
 
             RefreshDifficultyLabel();
 
-            CreateButton(stack, font, "설정", ToggleSettings);
-            CreateButton(stack, font, "종료", QuitGame);
+            CreateButton(stack, font, Tr("UI_TITLE_SETTINGS"), ToggleSettings);
+            CreateButton(stack, font, Tr("UI_TITLE_QUIT"), QuitGame);
 
             // The Unity menu leaned on the EventSystem's first selectable; Godot hands focus to nothing
             // until something asks, so the top of the stack asks. This is what makes the menu playable on
@@ -180,28 +180,28 @@ namespace MyGame.UI
             _settingsBox.OffsetBottom = -16f;
             _settingsBox.AddThemeConstantOverride("separation", 8);
 
-            CreateRowText(_settingsBox, font, "그래픽 옵션", 24, Bone100);
+            CreateRowText(_settingsBox, font, Tr("UI_OPTION_HEADING"), 24, Bone100);
             _presetLabel = CreateRowText(_settingsBox, font, string.Empty, 18, Bone200);
 
-            CreatePresetButton(font, "상 (High)", GraphicsPreset.High);
-            CreatePresetButton(font, "하 (Low)", GraphicsPreset.Low);
+            CreatePresetButton(font, Tr("UI_OPTION_PRESET_HIGH_BUTTON"), GraphicsPreset.High);
+            CreatePresetButton(font, Tr("UI_OPTION_PRESET_LOW_BUTTON"), GraphicsPreset.Low);
 
             // Two values get a box, three or more get a row of value buttons. The widget says how many
             // choices an option has before the player clicks anything, which one cycling button could not.
-            _shakeToggle = CreateToggleRow(font, "화면 흔들림", GraphicsOptions.SetScreenShake);
-            _hitStopToggle = CreateToggleRow(font, "히트스톱", GraphicsOptions.SetHitStop);
-            _hitFlashToggle = CreateToggleRow(font, "타격 연출", GraphicsOptions.SetHitFlash);
-            _vsyncToggle = CreateToggleRow(font, "수직 동기화", GraphicsOptions.SetVSync);
+            _shakeToggle = CreateToggleRow(font, "UI_OPTION_SCREEN_SHAKE", GraphicsOptions.SetScreenShake);
+            _hitStopToggle = CreateToggleRow(font, "UI_OPTION_HIT_STOP", GraphicsOptions.SetHitStop);
+            _hitFlashToggle = CreateToggleRow(font, "UI_OPTION_HIT_FLASH", GraphicsOptions.SetHitFlash);
+            _vsyncToggle = CreateToggleRow(font, "UI_OPTION_VSYNC", GraphicsOptions.SetVSync);
 
-            _msaaRow = CreateSegmentedRow(font, "안티에일리어싱", StepLabels(GraphicsOptions.MsaaSteps),
+            _msaaRow = CreateSegmentedRow(font, "UI_OPTION_MSAA", StepLabels(GraphicsOptions.MsaaSteps),
                 index => GraphicsOptions.SetMsaa(GraphicsOptions.MsaaSteps[index]),
                 () => System.Array.IndexOf(GraphicsOptions.MsaaSteps, GraphicsOptions.Msaa));
 
-            _renderScaleRow = CreateSegmentedRow(font, "렌더 스케일", StepLabels(GraphicsOptions.RenderScaleSteps),
+            _renderScaleRow = CreateSegmentedRow(font, "UI_OPTION_RENDER_SCALE", StepLabels(GraphicsOptions.RenderScaleSteps),
                 index => GraphicsOptions.SetRenderScale(GraphicsOptions.RenderScaleSteps[index]),
                 () => System.Array.FindIndex(GraphicsOptions.RenderScaleSteps, step => Mathf.IsEqualApprox(step, GraphicsOptions.RenderScale)));
 
-            CreateButton(_settingsBox, font, "닫기", ToggleSettings);
+            CreateButton(_settingsBox, font, Tr("UI_COMMON_CLOSE"), ToggleSettings);
 
             RefreshOptions();
             _settingsPanel.Visible = false;
@@ -222,12 +222,14 @@ namespace MyGame.UI
         /// whole row as the hit target - so the Unity original's hand-built box, checkmark and caption
         /// collapse into it.
         /// </summary>
-        private CheckBox CreateToggleRow(Font font, string label, Action<bool> set)
+        private CheckBox CreateToggleRow(Font font, string labelKey, Action<bool> set)
         {
             var toggle = new CheckBox
             {
-                Name = label + "Toggle",
-                Text = label,
+                // The node name is the key, not the caption: a name built from translated text would
+                // change with the locale and every lookup by name with it.
+                Name = labelKey + "Toggle",
+                Text = Tr(labelKey),
                 CustomMinimumSize = new Vector2(PanelInnerWidth, 48f),
                 Alignment = HorizontalAlignment.Left,
             };
@@ -255,18 +257,19 @@ namespace MyGame.UI
         /// menu is assembled in code and the whole point is that all the steps are visible at once, which
         /// a dropdown hides behind a click.
         /// </summary>
-        private SegmentedRow CreateSegmentedRow(Font font, string label, string[] values, Action<int> choose, Func<int> currentIndex)
+        private SegmentedRow CreateSegmentedRow(Font font, string labelKey, string[] values, Action<int> choose, Func<int> currentIndex)
         {
             var row = new HBoxContainer
             {
-                Name = label + "Row",
+                // Key rather than caption, for the reason spelled out in CreateToggleRow.
+                Name = labelKey + "Row",
                 CustomMinimumSize = new Vector2(PanelInnerWidth, 48f),
                 Alignment = BoxContainer.AlignmentMode.Begin,
             };
             _settingsBox.AddChild(row);
             row.AddThemeConstantOverride("separation", (int)SegmentSpacing);
 
-            Label caption = CreateText(row, "Caption", font, label, 20, Bone200);
+            Label caption = CreateText(row, "Caption", font, Tr(labelKey), 20, Bone200);
             caption.VerticalAlignment = VerticalAlignment.Center;
             caption.CustomMinimumSize = new Vector2(SegmentCaptionWidth, 48f);
             caption.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
@@ -291,7 +294,7 @@ namespace MyGame.UI
 
         private void RefreshOptions()
         {
-            _presetLabel.Text = "프리셋: " + PresetName(GraphicsOptions.Preset);
+            _presetLabel.Text = string.Format(Tr("UI_OPTION_PRESET_VALUE"), PresetName(GraphicsOptions.Preset));
 
             // SetPressedNoSignal, not ButtonPressed: a preset button writes all six values and then
             // refreshes, and the plain setter would fire Toggled back into this method once for every box
@@ -309,7 +312,7 @@ namespace MyGame.UI
         {
             var labels = new string[steps.Length];
             for (int i = 0; i < steps.Length; i++)
-                labels[i] = steps[i] <= 1 ? "끔" : steps[i] + "x";
+                labels[i] = steps[i] <= 1 ? TranslationServer.Translate("UI_OPTION_STEP_OFF") : steps[i] + "x";
             return labels;
         }
 
@@ -357,11 +360,11 @@ namespace MyGame.UI
             switch (preset)
             {
                 case GraphicsPreset.High:
-                    return "상";
+                    return TranslationServer.Translate("UI_OPTION_PRESET_HIGH");
                 case GraphicsPreset.Low:
-                    return "하";
+                    return TranslationServer.Translate("UI_OPTION_PRESET_LOW");
                 default:
-                    return "커스텀";
+                    return TranslationServer.Translate("UI_OPTION_PRESET_CUSTOM");
             }
         }
 
@@ -510,7 +513,7 @@ namespace MyGame.UI
         private void RefreshDifficultyLabel()
         {
             if (_difficultyButton != null)
-                _difficultyButton.Text = $"난이도: {DifficultySettings.DisplayName(_difficulty)}";
+                _difficultyButton.Text = string.Format(Tr("UI_TITLE_DIFFICULTY_VALUE"), DifficultySettings.DisplayName(_difficulty));
         }
 
         /// <summary>
