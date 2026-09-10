@@ -1,4 +1,4 @@
-# 인수인계 — 2026-09-10 (2차)
+# 인수인계 — 2026-09-10 (3차)
 
 새 세션은 이 파일부터 읽는다. 그다음 `README.md`의 현재 상태, 그다음 `AGENTS.md`.
 
@@ -12,16 +12,17 @@ Unity 6 → Godot 4.7.2 이식이 끝났고, Godot 제작 규칙 4개로의 전�
 | 이식 자체 | 완료. 스위트 211 passed / 1 failed / 1 skipped (실패 1건은 이식 전부터 red였던 레이아웃 개수 어서션) |
 | 규칙 3 — UI는 씬에 배치 | 완결 |
 | 규칙 2 — 재사용 단위는 씬 | 완결. `GameplayBuildShim` 퇴역은 **하지 않기로 결정** — 아래 |
-| 규칙 1 — 수치 데이터화 | **완결.** S1·S4~S10·S12·S13 전부 착지. 누계 키 190개 / 디자인 파일 27개 |
+| 규칙 1 — 수치 데이터화 | 1차 **완결**(S1·S4~S10·S12·S13, 키 190개 / 파일 27개). 2차([PLAN_CLOSEOUT.md](docs/migrations/scene-data/PLAN_CLOSEOUT.md)) **K0 착지, K1부터 남음** |
 | 규칙 4 — 일회성 테스트 격리 | 지켜지는 중 |
 
-정본 계획은 [docs/migrations/scene-data/PLAN.md](docs/migrations/scene-data/PLAN.md). 감사 §3의
-결정 19건 결과는 `AUDIT_NUMBERS.md` §3 첫머리 표에 있다.
+1차 정본 계획은 [docs/migrations/scene-data/PLAN.md](docs/migrations/scene-data/PLAN.md), 2차는
+[PLAN_CLOSEOUT.md](docs/migrations/scene-data/PLAN_CLOSEOUT.md) — 결정 D1~D8 **전부 승인됨**, 단계 K0~K8.
+감사 §3의 결정 19건 결과는 `AUDIT_NUMBERS.md` §3 첫머리 표에 있다.
 
 ## 브랜치
 
 `master`가 이식 본체, `refactor/godot-scene-data`가 전환 브랜치. **병합하지 않았고 push한 적도
-없다.** 원격 없음. 이번 세션 커밋 8개, 각 커밋이 풀 스위트 green으로 착지했다.
+없다.** 원격 없음. 이번 세션 커밋 11개, 각 커밋이 풀 스위트 green으로 착지했다.
 
 ## 이번 세션에 착지한 것
 
@@ -37,26 +38,62 @@ Unity 6 → Godot 4.7.2 이식이 끝났고, Godot 제작 규칙 4개로의 전�
   `GameplaySceneDefaultsAsset`의 낡은 기본값 수정.
 - **shim 퇴역 → 안 함.** 세어 보니 제품 코드의 `NewObject`는 의도된 일회성 2곳, `AddComponent`
   0곳, `EnsureComponent`는 씬 액터엔 아무것도 안 더하는 get-or-add. 퇴역할 빌더가 없다. 근거는
-  `PLAN.md` "남겨둔 작은 빚"과 클래스 doc-comment.
+  `PLAN.md` "남겨둔 작은 빚"과 클래스 doc-comment. (2차 K7이 결국 축소한다 — 이 결정은 1차 기준.)
+- **컴플라이언스 점검 → fix `0ef1d88`.** S10이 "씬 소유"라 적은 맥동 4값·바운스 2값은 씬이 authoring한
+  적 없는 `[Export]` 기본값이었다. JSON으로. `ShortcutGate.openAlpha`도 tscn에 값 기록.
+- **2차 계획 `PLAN_CLOSEOUT.md`** 작성·승인(`5c804f4`, `32584d2`). 잔여 측정값: Data 클래스 `[Export]`
+  기본값 232, 아키타입 `?? 리터럴` 63, `Create`/`CreateBase` 리터럴 179, 컴포넌트 초기화값 약 25, 씬 거울
+  약 42, 누락 시 처리 미정의.
+- **K0 `be8fb52`.** 누락 = `PushError` + 부팅 중단. `Res.LoadJson(path, required)`, `.Shared` 3종 null,
+  `GameplayTuningCatalog.IsComplete`, `GameplayBootstrap`이 확인. 파일 전부 있으면 행동 변화 없음.
 
-## 다음에 할 일
+## 다음에 할 일 — K1부터
 
-1차 전환의 단계는 끝났다. 정본 스킬의 완료 기준("코드 fallback 하드코딩 없음", "중복 보관 없음")에
-대조하면 잔여가 있고, 그 2차 계획이 [docs/migrations/scene-data/PLAN_CLOSEOUT.md](docs/migrations/scene-data/PLAN_CLOSEOUT.md)에
-있다. 결정 D1~D8은 전부 추천안으로 **승인됐다.** K0(누락 = 오류 + 부팅 중단)는 착지했다 — 다음은
-**K1**(테스트 12파일을 fallback 경로에서 떼어내기, 최고 위험, 단독). K1 전에 K2~K4를 시작하면 스위트의
-맨손 액터가 전부 오류로 죽는다. 그 대조에서 나온 S10의
-실수(맥동·바운스 6값이 씬 소유라 적었으나 코드 기본값뿐이었음)는 `0ef1d88`에서 고쳤다.
+**K1: 테스트를 fallback 경로에서 떼어낸다.** 이게 문이다 — K1 없이 K2~K4를 하면 스위트의 맨손 액터가 전부
+`PushError`로 죽는다. 단독 작업, 최고 위험.
+
+측정(2026-09-10, 착지 직전 갱신할 것):
+
+| 테스트 파일 | `AddComponent<` | `new 아키타입` | `GameplayTuningDefaults.` |
+|---|---|---|---|
+| `GameplayBossAttackGrammarTests` | 7 | | |
+| `UnityTestAgentPlayModeSmokeTests` | 6 | | |
+| `GameplayChapterBossTests` | 5 | | |
+| `GameplayHazardStripRegressionTests` | 5 | | |
+| `GameplayDifficultyAndGateTravelTests` | 4 | | |
+| `GameplayBossChapterSystemsTests` | 1 | | |
+| `GameplayChapterProgressionRegressionTests` | 1 | | |
+| `GameplayDifficultySaveMergeRegressionTests` | 1 | | |
+| `P0CombatStabilityTests.Gameplay` | | 3 (`MeleeGrunt`, `WrathMiniBoss`×2) | 3 |
+| `P0CombatStabilityTests.Systems` | | 2 (`LeapingAttacker`, `WrathMiniBoss`) | 3 (`SetTuningData` 1곳만 있음) |
+| `GameplaySoulsPoisePauseTests` | | | 1 |
+| `P0CombatStabilityTests` (본체) | `new Node2D {` 빌더 | | |
+
+방법:
+1. `new MeleeGrunt` 류 5곳 → 생성 직후 `SetTuningData(MeleeGruntData.Load())` (`EnemyTuningData.Load<T>`가
+   실제 JSON을 읽고 스케일까지 한다). K2가 `tuningData` 없는 아키타입을 `_Ready`에서 죽이므로 **반드시**.
+2. `GameplayTuningDefaults.CreateX` 소비 7곳 → 같은 `XData.Load()`. 그 뒤 `GameplayTuningDefaults.cs`의
+   팩토리 4개 삭제(D3). `const` 4개(`CheckpointZoneRadius` 등)는 K5가 없앤다 — K1에서는 두되 테스트가
+   그 상수를 어서션 값으로 쓰면 `WorldTuningData.Load()` 값으로 바꾼다.
+3. `AddComponent<Health>()` 같은 컴포넌트 합성은 K1에서 그대로 둔다 — 그건 fallback이 아니라 조립이고
+   K7이 `Tests/Framework`로 옮긴다. K1의 대상은 **숫자를 코드 사본에서 받는 경로**뿐이다.
+4. 착지 조건: 스위트가 fallback을 **한 번도 안 탄다.** 증명은 rule-4 probe로 — 아키타입 `??` 우변과
+   `GameplayTuningDefaults` 팩토리에 임시 `GD.PushError("FALLBACK")`를 심고 풀 스위트를 돌려 로그에 0건,
+   그 다음 심은 줄을 전부 지운다. `Tests/`에 아무것도 남기지 않는다.
+5. 어서션 숫자가 바뀌는 테스트가 나오면 그 테스트는 출하하지 않는 숫자를 검증하고 있었다는 뜻이다.
+   출하 값으로 바꾸고 `PORT_STATUS.md`에 어느 테스트가 얼마나 어긋나 있었는지 적는다. 약화가 아니라
+   발견이다.
+
+K1이 green으로 착지하면 K2 ∥ K3 ∥ K4 (파일 서로소, 담당별 소유 목록 명시, `run-tests.ps1`은 한 명만).
+K3는 **K3a 선행**: `SceneLayout*.json` 8파일에 `shortcutGatePosition`·`shortcutGateSize`·
+`shortcutOpensFromRight`를 현재 기본값으로 추가 — 빼먹으면 챕터 7개의 숏컷 게이트가 크기 0.
 
 그 밖에 남은 것은 전부 **사람의 판단이 필요한 것**이다.
 
 1. **씬 S9 — 아레나를 챕터 셸에 배치.** 아레나를 씬에 넣으면 `SceneLayout_*.json`이 레이아웃
    정본 자리를 잃는다. 기획자 소유 데이터의 소유권 이동이라 **물어본 뒤에** 한다.
-2. **`master`로의 병합 여부.** 커밋 28개가 전환 브랜치에만 있다.
-3. **씬이 거울로 들고 있는 값.** 액터 씬은 콜라이더 반지름·비주얼 스케일·바 오프셋을 authoring
-   하지만 스포너가 `ReadabilityLayout.json` 값으로 매 스폰 덮어쓴다 (씬 S8의 의도된 결정). 씬 값은
-   절대 이기지 않는 거울이다. 지금은 기록만 했다 — 씬에서 지우든 스포너 덮어쓰기를 멈추든 결정이
-   필요하다.
+2. **`master`로의 병합 여부.** 커밋 34개가 전환 브랜치에만 있다.
+3. ~~씬이 거울로 들고 있는 값~~ → D4로 결정됨(씬에서 제거). 2차 K6.
 
 ## 사람이 봐야 하는 것 — 자동 검증으로 못 잡는다
 

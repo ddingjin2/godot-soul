@@ -131,7 +131,7 @@ keep-in-code 목록, `GameplayVisualFactory`, `DebugVisualization`. 이들은 "�
 | 단계 | 편집 |
 |---|---|
 | K0 | 5파일, 약 20줄 |
-| K1 | 테스트 12파일 (가장 큼, 사이트 수 미측정 — 시작 전 세어서 이 표를 갱신) |
+| K1 | 테스트 12파일: `AddComponent<` 30사이트(조립 — K1은 손대지 않음), `new 아키타입` 5, `GameplayTuningDefaults.` 7. 상세 표는 `SESSION_HANDOFF.md` |
 | K2 | 5파일, 63사이트 |
 | K3 | 13파일 232필드 + JSON 8파일 +3키 |
 | K4 | 3파일 179리터럴 삭제 + 도구 1 삭제 + 테스트 2 재설계 |
