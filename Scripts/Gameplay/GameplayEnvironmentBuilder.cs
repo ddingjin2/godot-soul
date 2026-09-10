@@ -36,6 +36,9 @@ namespace MyGame.Gameplay
     /// </summary>
     public static class GameplayEnvironmentBuilder
     {
+        /// <summary>World-space text, shared with <see cref="GameplayEnemySpawner"/>'s role markers.</summary>
+        private const string WorldLabelScenePath = "res://Scenes/World/WorldLabel.tscn";
+
         /// <summary>
         /// Builds the arena and hands back the checkpoint the player belongs at. On a resumed slot that
         /// is the bonfire last rested at rather than the chapter's first, which is the whole point of
@@ -323,31 +326,29 @@ namespace MyGame.Gameplay
             return body;
         }
 
+        /// <summary>
+        /// One arena sign. The Control's centring - Unity's TextAnchor.MiddleCenter - and its resting
+        /// font size and sorting order are authored in <c>Scenes/World/WorldLabel.tscn</c>; the text, the
+        /// colour and the two readability numbers are bound here.
+        ///
+        /// <see cref="GameplayEnemySpawner"/> instances the same scene for the word under an enemy's
+        /// feet, with the role-marker font size and sorting order instead.
+        /// </summary>
         private static void CreateWorldLabel(string label, Vector2 position, Color color, GameplayReadabilityDefaults readability)
         {
-            Node2D go = GameplayBuildShim.NewObject<Node2D>(label + "Label", position);
+            var go = GD.Load<PackedScene>(WorldLabelScenePath).Instantiate<Node2D>();
+            go.Name = label + "Label";
 
-            // Unity's TextMesh has no Godot twin; a Control Label parented to a Node2D is the 2D
-            // world-space text this project needs, and it scales with the camera the same way.
-            var text = new Label
-            {
-                Name = "Text",
-                Text = label,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                ZIndex = readability.WorldLabelSortingOrder,
+            // Positioned before it enters the tree, as GameplayBuildShim.NewObject did.
+            go.Position = position;
 
-                // Unity's TextAnchor.MiddleCenter. A Control is placed by its top-left corner; growing
-                // in both directions from a zero-sized rect puts the text's centre on the node's origin
-                // without anyone having to measure the string.
-                GrowHorizontal = Control.GrowDirection.Both,
-                GrowVertical = Control.GrowDirection.Both,
-                Size = Vector2.Zero,
-            };
-
+            Label text = go.GetNode<Label>("Text");
+            text.Text = label;
+            text.ZIndex = readability.WorldLabelSortingOrder;
             text.AddThemeFontSizeOverride("font_size", readability.WorldLabelFontSizePx);
             text.AddThemeColorOverride("font_color", color);
-            go.AddChild(text);
+
+            GameplayBuildShim.SceneRoot?.AddChild(go);
         }
 
         private static void CreateSceneryPiece(string name, Vector2 position, Texture2D texture, Vector2 size, Color color, int sortingOrder)

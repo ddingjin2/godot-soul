@@ -1,0 +1,32 @@
+; The pulsing greybox disc on a trigger zone - a bonfire checkpoint or an arena gate. Replaces two
+; identical builders, CheckpointZone.EnsureMarker and GateTravelZone.EnsureMarker, which differed
+; only in Modulate (CheckpointLabelColor vs ArenaGateColor). That colour is designer-owned, so it
+; stays a binding; the root's name is bound too, because each zone guards on its own marker name.
+;
+; The pulse owns the transform and the sprite hangs under it, which is how Unity's "two components on
+; one marker GameObject" comes apart: there the pulse drove localScale while the renderer owned size,
+; and here the sprite's own scale is what carries the size. That order is load-bearing - the pulse
+; caches the colour and the scale it finds when it is readied - and it is why this scene is NOT
+; merged with AttackReadout.tscn, where the pulse is the child instead.
+;
+; UNITS: 1 Unity metre = 100 px (World.Ppu). Disc.png is 64x64.
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Gameplay/GameplayTelegraphPulse.cs" id="1"]
+[ext_resource type="Texture2D" path="res://Resources/Art/Disc.png" id="2"]
+
+[node name="MarkerDisc" type="Node2D"]
+; Scale stays 1: this is the pulse's base scale, cached at _Ready, and the sprite below carries size.
+script = ExtResource("1")
+
+[node name="Disc" type="Sprite2D" parent="."]
+texture = ExtResource("2")
+; The zone's own trigger radius sets this per instance: SetSpriteSize(radius * 2) with radius in
+; pixels. Authored at WorldTuning.checkpointZoneRadius = 1.5 m -> World.U -> 150 px radius,
+; 300 px across, / 64 = 4.6875. A gate binds 1.4 m instead.
+scale = Vector2(4.6875, 4.6875)
+; GameplayReadabilityDefaults.CheckpointLabelColor as shipped. Designer-owned via
+; Resources/Art/Readability.json; a gate binds ArenaGateColor over it.
+modulate = Color(0.5176471, 0.57254905, 0.627451, 1)
+; SpiritPlatformSortingOrder = 5.
+z_index = 5

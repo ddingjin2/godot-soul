@@ -24,6 +24,9 @@ namespace MyGame.Gameplay
     {
         private const string MarkerObjectName = "GateTravelZoneMarker";
 
+        /// <summary>Shared with <see cref="CheckpointZone"/>, which tints the same disc differently.</summary>
+        private const string MarkerScenePath = "res://Scenes/World/MarkerDisc.tscn";
+
         /// <summary>
         /// Reach of the portal, in Unity metres. Smaller than the bonfire's so the two can share a
         /// corner of the arena.
@@ -306,8 +309,10 @@ namespace MyGame.Gameplay
         }
 
         /// <summary>
-        /// Greybox marker, built from the existing disc sprite in the arena-gate colour so it reads as a
-        /// gate rather than as a second bonfire. No new art.
+        /// Greybox marker: <c>Scenes/World/MarkerDisc.tscn</c>, the same scene
+        /// <see cref="CheckpointZone"/> instances, tinted the arena-gate colour so it reads as a gate
+        /// rather than as a second bonfire. That colour is the only thing that ever differed between
+        /// the two, and it is designer-owned, so it stays bound here.
         /// </summary>
         private void EnsureMarker()
         {
@@ -318,17 +323,14 @@ namespace MyGame.Gameplay
             float radius = shape != null ? shape.Radius : World.U(ZoneRadius);
             GameplayReadabilityDefaults readability = GameplayReadabilityDefaults.Create();
 
-            var sprite = new Sprite2D
-            {
-                Name = "Disc",
-                Texture = GameplayVisualFactory.CreateDiscSprite(),
-                Modulate = readability.ArenaGateColor,
-                ZIndex = readability.SpiritPlatformSortingOrder
-            };
-            sprite.SetSpriteSize(new Vector2(radius * 2f, radius * 2f));
+            var marker = GD.Load<PackedScene>(MarkerScenePath).Instantiate<GameplayTelegraphPulse>();
+            marker.Name = MarkerObjectName;
 
-            var marker = new GameplayTelegraphPulse { Name = MarkerObjectName, Position = Vector2.Zero };
-            marker.AddChild(sprite);
+            Sprite2D disc = marker.GetNode<Sprite2D>("Disc");
+            disc.SetSpriteSize(new Vector2(radius * 2f, radius * 2f));
+            disc.Modulate = readability.ArenaGateColor;
+
+            // Sized and tinted before it enters the tree: the pulse caches both when it is readied.
             AddChild(marker);
         }
     }

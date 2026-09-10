@@ -24,6 +24,9 @@ namespace MyGame.Gameplay
     {
         private const string MarkerObjectName = "CheckpointZoneMarker";
 
+        /// <summary>Shared with <see cref="GateTravelZone"/>, which tints the same disc differently.</summary>
+        private const string MarkerScenePath = "res://Scenes/World/MarkerDisc.tscn";
+
         /// <summary>Where the player reappears after dying. Falls back to this node itself.</summary>
         [Export] private Node2D respawnPoint;
 
@@ -227,8 +230,11 @@ namespace MyGame.Gameplay
         }
 
         /// <summary>
-        /// Greybox marker built from the existing disc sprite and telegraph pulse. No new art, and the
-        /// pulse doubles as the "this is live" read once the zone is wired.
+        /// Greybox marker: <c>Scenes/World/MarkerDisc.tscn</c>, the same scene
+        /// <see cref="GateTravelZone"/> instances. The pulse owns the transform and the disc hangs
+        /// under it - that is how Unity's "two components on one marker GameObject" comes apart, and
+        /// the scene authors it. Only the marker's name, its size (this zone's own trigger radius) and
+        /// the designer-owned colour are bound here.
         /// </summary>
         private void EnsureMarker()
         {
@@ -239,24 +245,16 @@ namespace MyGame.Gameplay
             float radius = shape != null ? shape.Radius : AuthoredRadius();
             GameplayReadabilityDefaults readability = GameplayReadabilityDefaults.Create();
 
-            // The pulse owns the transform and the sprite hangs under it, which is how Unity's "two
-            // components on one marker GameObject" comes apart: there the pulse drove localScale while
-            // the renderer owned size, and here the sprite's own scale is what carries the size.
-            var sprite = new Sprite2D
-            {
-                Name = "Disc",
-                Texture = GameplayVisualFactory.CreateDiscSprite(),
-                Modulate = readability.CheckpointLabelColor,
-                ZIndex = readability.SpiritPlatformSortingOrder
-            };
-            sprite.SetSpriteSize(new Vector2(radius * 2f, radius * 2f));
+            var marker = GD.Load<PackedScene>(MarkerScenePath).Instantiate<GameplayTelegraphPulse>();
+            marker.Name = MarkerObjectName;
 
-            var marker = new GameplayTelegraphPulse { Name = MarkerObjectName, Position = Vector2.Zero };
-            marker.AddChild(sprite);
+            Sprite2D disc = marker.GetNode<Sprite2D>("Disc");
+            disc.SetSpriteSize(new Vector2(radius * 2f, radius * 2f));
+            disc.Modulate = readability.CheckpointLabelColor;
 
             // Attached last, and the order is load-bearing for the same reason it was in Unity: the
-            // pulse caches the colour and scale it finds when it is readied, so the sprite has to be
-            // under it before it enters the tree.
+            // pulse caches the colour and scale it finds when it is readied, so the disc has to be
+            // sized and tinted before the marker enters the tree.
             AddChild(marker);
         }
     }

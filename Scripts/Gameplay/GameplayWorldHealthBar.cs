@@ -17,6 +17,12 @@ namespace MyGame.Gameplay
     /// </remarks>
     public partial class GameplayWorldHealthBar : Node2D
     {
+        /// <summary>
+        /// The authored bar. Its root is the <c>HealthBar</c> child this component looks for, not a
+        /// GameplayWorldHealthBar: the component is added to an actor, the tree under it is instanced.
+        /// </summary>
+        private const string ScenePath = "res://Scenes/World/WorldHealthBar.tscn";
+
         /// <summary>Bar size in Godot pixels.</summary>
         private Vector2 _size = new(World.Ppu * 1.2f, World.Ppu * 0.12f);
 
@@ -93,6 +99,13 @@ namespace MyGame.Gameplay
             _subscribed = false;
         }
 
+        /// <summary>
+        /// Lookup first, instance second - and it never builds a node itself any more. An actor whose
+        /// bar is already authored under it keeps that one; anything else gets
+        /// <c>Scenes/World/WorldHealthBar.tscn</c>, whose root <i>is</i> the <c>HealthBar</c> node,
+        /// because the component this method sits on is added by
+        /// <c>GameplayBuildShim.AddComponent</c> rather than instanced.
+        /// </summary>
         private void Build()
         {
             if (_barRoot != null)
@@ -101,30 +114,18 @@ namespace MyGame.Gameplay
             // Reused when the actor was built with the bar already under it; _barRoot is not exported
             // and is null on every fresh instance.
             _barRoot = GetNodeOrNull<Node2D>("HealthBar");
-            if (_barRoot != null)
+            if (_barRoot == null)
             {
-                _frameRenderer = _barRoot.GetNodeOrNull<Sprite2D>("Frame");
-                _fill = _barRoot.GetNodeOrNull<Node2D>("Fill");
-                _fillRenderer = _fill?.GetNodeOrNull<Sprite2D>("FillSprite");
+                _barRoot = GD.Load<PackedScene>(ScenePath).Instantiate<Node2D>();
+                AddChild(_barRoot);
             }
 
-            if (_frameRenderer == null || _fillRenderer == null)
-            {
-                if (_barRoot == null)
-                {
-                    _barRoot = new Node2D { Name = "HealthBar" };
-                    AddChild(_barRoot);
-                }
+            _frameRenderer = _barRoot.GetNodeOrNull<Sprite2D>("Frame");
 
-                _frameRenderer = CreateSpriteChild("Frame", _barRoot, FrameColor, 40);
+            // The pivot the fullness scales, with the sized sprite beneath it.
+            _fill = _barRoot.GetNodeOrNull<Node2D>("Fill");
+            _fillRenderer = _fill?.GetNodeOrNull<Sprite2D>("FillSprite");
 
-                // The pivot the fullness scales, with the sized sprite beneath it.
-                _fill = new Node2D { Name = "Fill" };
-                _barRoot.AddChild(_fill);
-                _fillRenderer = CreateSpriteChild("FillSprite", _fill, _fillColor, 41);
-            }
-
-            _frameRenderer.Position = Vector2.Zero;
             ApplyLayout();
         }
 
@@ -138,7 +139,14 @@ namespace MyGame.Gameplay
             Vector2 sizePx = _size;
             _baseFillWidth = sizePx.X;
 
-            _frameRenderer?.SetSpriteSize(sizePx + new Vector2(World.U(FrameMargin), World.U(FrameMargin)));
+            if (_frameRenderer != null)
+            {
+                _frameRenderer.SetSpriteSize(sizePx + new Vector2(World.U(FrameMargin), World.U(FrameMargin)));
+
+                // The scene authors this same colour; re-applying it is what keeps an authored bar and a
+                // freshly instanced one identical, and it is what the P0 suite reads back.
+                _frameRenderer.Modulate = FrameColor;
+            }
 
             if (_fillRenderer != null)
             {
@@ -165,35 +173,5 @@ namespace MyGame.Gameplay
                 _fillRenderer.Modulate = normalized <= 0.3f ? _fillColor.Lerp(LowHealthTint, 0.35f) : _fillColor;
         }
 
-        private static Sprite2D CreateSpriteChild(string name, Node2D parent, Color color, int sortingOrder)
-        {
-            var sprite = new Sprite2D
-            {
-                Name = name,
-                Texture = PixelTexture(),
-                Modulate = color,
-                ZIndex = sortingOrder
-            };
-            parent.AddChild(sprite);
-            sprite.Position = Vector2.Zero;
-            return sprite;
-        }
-
-        private static Texture2D _pixel;
-
-        /// <summary>
-        /// The 8x8 white square Unity's <c>CreatePixelSprite</c> made, once per session rather than once
-        /// per bar. Point filtering, because everything else in this project is pixel art.
-        /// </summary>
-        private static Texture2D PixelTexture()
-        {
-            if (_pixel != null)
-                return _pixel;
-
-            var image = Image.CreateEmpty(8, 8, false, Image.Format.Rgba8);
-            image.Fill(Colors.White);
-            _pixel = ImageTexture.CreateFromImage(image);
-            return _pixel;
-        }
     }
 }

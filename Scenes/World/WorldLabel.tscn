@@ -1,0 +1,37 @@
+; World-space text: an arena sign ("CHECKPOINT") or the word under an enemy's feet ("Melee").
+; Replaces two identical builders - GameplayEnvironmentBuilder.CreateWorldLabel and
+; GameplayEnemySpawner.CreateRoleMarker - which differed only in the node name and in which pair of
+; readability fields supplied the font size and the sorting order. Both are bound per instance.
+;
+; Unity's TextMesh has no Godot twin. A Control Label under a Node2D is the world-space text this
+; project needs and it scales with the camera the same way. Unity's TextAnchor.MiddleCenter is the
+; grow_horizontal/grow_vertical pair below: a Control is placed by its top-left corner, so growing
+; both ways from a zero-sized rect puts the text's centre on the node's origin without anyone having
+; to measure the string.
+;
+; UNITS: the font size is already in pixels. GameplayReadabilityDefaults.WorldLabelFontSizePx is
+; fontSize * characterSize / 10 where characterSize has had World.U applied - see the comment on that
+; property. The colour is designer-owned (Resources/Art/Readability.json), so what is authored here is
+; only the code default; the builder overwrites it on every instance.
+[gd_scene load_steps=1 format=3]
+
+[node name="WorldLabel" type="Node2D"]
+
+[node name="Text" type="Label" parent="."]
+; Control.GrowDirection.Both on both axes, with a zero-sized rect - Unity's TextAnchor.MiddleCenter.
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+grow_horizontal = 2
+grow_vertical = 2
+; GameplayReadabilityDefaults.WorldLabelSortingOrder = 25. A role marker binds 30 instead.
+z_index = 25
+; WorldLabelFontSizePx = round(42 pt * World.U(0.22 m) * 0.1) = round(42 * 22 * 0.1) = 92.
+; A role marker binds RoleMarkerFontSizePx = round(34 * World.U(0.16 m) * 0.1) = 54 instead.
+theme_override_font_sizes/font_size = 92
+; GameplayReadabilityDefaults.CheckpointLabelColor as shipped. Readability.json still wins at runtime.
+theme_override_colors/font_color = Color(0.5176471, 0.57254905, 0.627451, 1)
+text = ""
+horizontal_alignment = 1
+vertical_alignment = 1

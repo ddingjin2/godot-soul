@@ -13,10 +13,9 @@ namespace MyGame.Gameplay
     /// </summary>
     public sealed partial class GameplayLockOnMarker : Node2D
     {
-        private const string MarkerObjectName = "LockOnMarker";
+        private const string ScenePath = "res://Scenes/World/LockOnMarker.tscn";
 
-        /// <summary>Marker size and hover height, in Unity metres.</summary>
-        private const float MarkerSize = 0.45f;
+        /// <summary>Hover height above the target, in Unity metres. The marker's own size is authored in the scene.</summary>
         private const float MarkerHeight = 1.3f;
 
         private PlayerLockOn _lockOn;
@@ -81,6 +80,11 @@ namespace MyGame.Gameplay
                 _marker.GlobalPosition = target.GlobalPosition + World.V(new Vector2(0f, MarkerHeight));
         }
 
+        /// <summary>
+        /// One instance of <c>Scenes/World/LockOnMarker.tscn</c>, which carries the texture, the 0.45 m
+        /// size and the hidden-at-rest state. Only the designer-owned colour and the sorting order are
+        /// bound, so Resources/Art/Readability.json still wins.
+        /// </summary>
         private void BuildMarker()
         {
             if (_marker != null)
@@ -90,15 +94,9 @@ namespace MyGame.Gameplay
 
             // Not parented to the player either: the player's own transform is flipped by facing, and
             // the marker would swing across the screen with every turn.
-            var sprite = new Sprite2D
-            {
-                Name = MarkerObjectName,
-                Texture = GameplayVisualFactory.CreateDiscSprite(),
-                Modulate = readability.PlayerAttackReadoutColor,
-                ZIndex = readability.RoleMarkerSortingOrder,
-                Visible = false
-            };
-            sprite.SetSpriteSize(new Vector2(World.U(MarkerSize), World.U(MarkerSize)));
+            var sprite = GD.Load<PackedScene>(ScenePath).Instantiate<Sprite2D>();
+            sprite.Modulate = readability.PlayerAttackReadoutColor;
+            sprite.ZIndex = readability.RoleMarkerSortingOrder;
 
             GameplayBuildShim.SceneRoot?.AddChild(sprite);
             _marker = sprite;

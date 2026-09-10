@@ -67,6 +67,9 @@ namespace MyGame.Gameplay
     /// </summary>
     public static class GameplayPlayerSpawner
     {
+        /// <summary>Shared with <see cref="GameplayEnemySpawner"/>'s danger discs.</summary>
+        private const string AttackReadoutScenePath = "res://Scenes/World/AttackReadout.tscn";
+
         private const float StartingHealth = 100f;
         private const float StartingHumanity = 100f;
 
@@ -332,16 +335,21 @@ namespace MyGame.Gameplay
             animator.AddComponent<AnimationPlayer>();
         }
 
+        /// <summary>
+        /// The player's swing arc. Same scene as every enemy danger disc - the two builders were
+        /// verbatim identical - with the texture, the disc's centring and the telegraph pulse child
+        /// authored in <c>Scenes/World/AttackReadout.tscn</c>.
+        /// </summary>
         private static void CreateAttackReadout(Node2D parent, string name, Vector2 localPosition, Vector2 size, Color color, int sortingOrder)
         {
-            var go = new Sprite2D { Name = name, Position = localPosition };
-            parent.AddChild(go);
-
-            GameplayVisualFactory.Dress(go, GameplayVisualFactory.CreateDiscSprite(), size, GameplayVisualFactory.Pivot(GameplayVisualFactory.SpriteKind.Disc));
+            var go = GD.Load<PackedScene>(AttackReadoutScenePath).Instantiate<Sprite2D>();
+            go.Name = name;
+            go.Position = localPosition;
+            go.SetSpriteSize(size);
             go.Modulate = color;
             go.ZIndex = sortingOrder;
 
-            go.AddComponent<GameplayTelegraphPulse>();
+            parent.AddChild(go);
         }
     }
 }

@@ -1,0 +1,56 @@
+; The little bar over an actor's head: a frame sprite and a fill sprite, with the fill scaled along x
+; by the normalised health. Replaces GameplayWorldHealthBar.Build's construction half and
+; CreateSpriteChild; Build is now lookup-first and instances this when the lookup finds nothing.
+;
+; The root of this scene is the HealthBar node, not the GameplayWorldHealthBar - the bar component
+; itself is added to an actor by GameplayBuildShim.AddComponent/EnsureComponent, so what it needs is
+; the child tree, and "HealthBar" / "HealthBar/Frame" are the paths the P0 suite asserts.
+;
+; Unity used SpriteRenderer.size under SpriteDrawMode.Sliced for the bar's dimensions and the fill
+; transform's localScale for how full it is - two independent knobs on one object. Godot's Sprite2D
+; has no size, so size IS scale, and the two knobs are split across two nodes: Fill carries the
+; fullness, FillSprite under it carries the size.
+;
+; UNITS: 1 Unity metre = 100 px (World.Ppu). The white texture is 8x8, so every scale below is the
+; wanted pixel size / 8. GameplayWorldHealthBar.ApplyLayout rewrites all of them from the size and
+; offset GameplayReadabilityDefaults hands it, which are already in pixels; these are the code
+; defaults for a bar nobody initialised.
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="Gradient" id="Gradient_white"]
+; Unity's CreatePixelSprite made an 8x8 white square. Two white stops is the authored equivalent.
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_white"]
+gradient = SubResource("Gradient_white")
+width = 8
+height = 8
+
+[node name="HealthBar" type="Node2D"]
+; GameplayWorldHealthBar's default _offset, (0, World.Ppu * -1.2) - 1.2 m above the actor, and +Y is
+; down, so above is negative. ApplyLayout binds each actor's own offset over it.
+position = Vector2(0, -120)
+
+[node name="Frame" type="Sprite2D" parent="."]
+texture = SubResource("GradientTexture2D_white")
+; Default bar 1.2 x 0.12 m = 120 x 12 px, grown by the frame's FrameMargin of 0.08 m = 8 px on each
+; axis -> 128 x 20 px, / 8 = (16, 2.5).
+scale = Vector2(16, 2.5)
+; GameplayWorldHealthBar.FrameColor - INK_950 #06070A at a 0.92. A literal of that file's own, not
+; part of the designer palette.
+modulate = Color(0.023529412, 0.02745098, 0.039215688, 0.92)
+z_index = 40
+
+[node name="Fill" type="Node2D" parent="."]
+; The pivot the fullness scales. UpdateBar writes scale.x and position.x here; the sized sprite is
+; beneath it.
+
+[node name="FillSprite" type="Sprite2D" parent="Fill"]
+texture = SubResource("GradientTexture2D_white")
+; The default bar itself: 1.2 x 0.12 m = 120 x 12 px, / 8 = (15, 1.5).
+scale = Vector2(15, 1.5)
+; GameplayWorldHealthBar's default _fillColor. Every spawner binds a readability colour over it
+; (PlayerHealthBarColor, EnemyHealthBarColor, BossHealthBarColor), all designer-owned.
+modulate = Color(0.85, 0.08, 0.08, 1)
+z_index = 41

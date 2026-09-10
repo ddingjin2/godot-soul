@@ -39,6 +39,12 @@ namespace MyGame.Gameplay
     /// </summary>
     public static class GameplayEnemySpawner
     {
+        /// <summary>Shared with <see cref="GameplayEnvironmentBuilder"/>'s arena signage.</summary>
+        private const string WorldLabelScenePath = "res://Scenes/World/WorldLabel.tscn";
+
+        /// <summary>Shared with <see cref="GameplayPlayerSpawner"/>'s attack arc.</summary>
+        private const string AttackReadoutScenePath = "res://Scenes/World/AttackReadout.tscn";
+
         public static GameplayEnemyContext Spawn(
             GameplaySceneDefaults scene,
             GameplayReadabilityDefaults readability,
@@ -514,46 +520,43 @@ namespace MyGame.Gameplay
             target.EnsureComponent<CombatResultBroadcaster>();
         }
 
+        /// <summary>
+        /// The danger disc under an attack. The texture, the disc's centring and the telegraph pulse
+        /// child are authored in <c>Scenes/World/AttackReadout.tscn</c> - the same scene
+        /// <see cref="GameplayPlayerSpawner"/> instances for the player's swing arc. Only the name,
+        /// the local position, the size and the designer-owned colour differ per readout.
+        /// </summary>
         private static void CreateAttackReadout(Node2D parent, string name, Vector2 localPosition, Vector2 size, Color color, int sortingOrder)
         {
-            var go = new Sprite2D { Name = name, Position = localPosition };
-            parent.AddChild(go);
-
-            GameplayVisualFactory.Dress(go, GameplayVisualFactory.CreateDiscSprite(), size, GameplayVisualFactory.Pivot(GameplayVisualFactory.SpriteKind.Disc));
+            var go = GD.Load<PackedScene>(AttackReadoutScenePath).Instantiate<Sprite2D>();
+            go.Name = name;
+            go.Position = localPosition;
+            go.SetSpriteSize(size);
             go.Modulate = color;
             go.ZIndex = sortingOrder;
 
-            go.AddComponent<GameplayTelegraphPulse>();
+            parent.AddChild(go);
         }
 
         /// <summary>
         /// The word under an enemy's feet saying what it is. Unity's TextMesh has no Godot twin, so this
-        /// is a Control <see cref="Label"/> under a Node2D - the same arrangement the arena's world
-        /// labels use, and it scales with the camera the way a TextMesh did.
+        /// is <c>Scenes/World/WorldLabel.tscn</c> - the very scene the arena's signage instances, since
+        /// the two builders differed only in the node name and in which pair of readability fields gave
+        /// the font size and the sorting order. Both of those are bound here.
         /// </summary>
         private static void CreateRoleMarker(Node2D parent, string label, Vector2 localPosition, Color color, GameplayReadabilityDefaults readability)
         {
-            var go = new Node2D { Name = "RoleMarker", Position = localPosition };
-            parent.AddChild(go);
+            var go = GD.Load<PackedScene>(WorldLabelScenePath).Instantiate<Node2D>();
+            go.Name = "RoleMarker";
+            go.Position = localPosition;
 
-            var text = new Label
-            {
-                Name = "Text",
-                Text = label,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                ZIndex = readability.RoleMarkerSortingOrder,
-
-                // Unity's TextAnchor.MiddleCenter: a Control is placed by its top-left, so growing both
-                // ways from a zero-sized rect centres the text on the node's origin with no measuring.
-                GrowHorizontal = Control.GrowDirection.Both,
-                GrowVertical = Control.GrowDirection.Both,
-                Size = Vector2.Zero,
-            };
-
+            Label text = go.GetNode<Label>("Text");
+            text.Text = label;
+            text.ZIndex = readability.RoleMarkerSortingOrder;
             text.AddThemeFontSizeOverride("font_size", readability.RoleMarkerFontSizePx);
             text.AddThemeColorOverride("font_color", color);
-            go.AddChild(text);
+
+            parent.AddChild(go);
         }
     }
 }
