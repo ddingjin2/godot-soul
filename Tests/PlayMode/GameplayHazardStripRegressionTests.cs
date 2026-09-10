@@ -270,8 +270,12 @@ namespace MyGame.Tests
 
         private BossHazardStrip BuildStripAt(Vector2 position, float damage, float tickInterval, float duration)
         {
-            // Unity's GameObject + AddComponent<BossHazardStrip> is one node here: the strip is a Node2D.
-            _hazard = new BossHazardStrip { Name = "HazardStripFixture", Position = position };
+            // Instanced from the shipped scene rather than built here, so the fixture is the strip the
+            // boss actually drops - sprite included. Unity's GameObject + AddComponent<BossHazardStrip>
+            // is one node here: the strip is the scene's root.
+            _hazard = GD.Load<PackedScene>(BossHazardStrip.ScenePath).Instantiate<BossHazardStrip>();
+            _hazard.Name = "HazardStripFixture";
+            _hazard.Position = position;
             FixtureRoot.AddChild(_hazard);
 
             // Configure takes a radius already in pixels, so the authored 1.5 metres converts here.

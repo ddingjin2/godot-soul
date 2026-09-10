@@ -14,11 +14,11 @@ namespace MyGame.Enemy
         [Export] private RangedCasterData tuningData;
 
         /// <summary>
-        /// The projectile template. Unity handed this class an inactive prefab GameObject; here it is a
-        /// detached node the pool duplicates per shot, which is the same "built in code, never in a
-        /// scene file" arrangement the Unity spawner used.
+        /// The projectile scene the pool instances per shot - Unity's prefab reference, which is what it
+        /// always should have been. Null is legal and means <see cref="EnemyProjectile.ScenePath"/>: a
+        /// caster nobody wired fires the same shot as one the spawner built.
         /// </summary>
-        [Export] private Node2D projectilePrefab;
+        [Export] private PackedScene projectilePrefab;
 
         [Export] private Node2D telegraphIndicator;
 
@@ -34,7 +34,15 @@ namespace MyGame.Enemy
 
         public void SetTuningData(RangedCasterData data) => tuningData = data;
 
-        public void SetProjectilePrefab(Node2D prefab) => projectilePrefab = prefab;
+        /// <param name="prefab">The shot's scene. Null falls back to <see cref="EnemyProjectile.ScenePath"/>.</param>
+        /// <param name="tint">Readability's projectile colour, or null to keep the scene's own.</param>
+        /// <param name="sortingOrder">Readability's projectile sorting order, or null to keep the scene's own.</param>
+        public void SetProjectilePrefab(PackedScene prefab, Color? tint = null, int? sortingOrder = null)
+        {
+            projectilePrefab = prefab;
+            _projectileTint = tint;
+            _projectileSortingOrder = sortingOrder;
+        }
 
         /// <summary>
         /// Frozen telegraph base: the pre-mood caster body colour. Blending from here instead of
@@ -61,6 +69,8 @@ namespace MyGame.Enemy
         private float _repositionCooldown = 1.5f;
         private bool _isRepositioning;
         private EnemyProjectilePool _projectilePool;
+        private Color? _projectileTint;
+        private int? _projectileSortingOrder;
         private static readonly float PatrolHalfWidth = World.U(3f);
 
         public override void _Ready()
@@ -80,10 +90,10 @@ namespace MyGame.Enemy
                 }
             }
 
-            if (projectilePrefab == null)
-            {
-                projectilePrefab = CreateDefaultProjectile();
-            }
+            // One source for the shot, not two. This used to build a second, divergent EnemyProjectile
+            // tree in code whose sprite had neither texture nor size; loading the shipped scene means a
+            // caster nobody wired fires exactly what the spawner's casters fire.
+            projectilePrefab ??= GD.Load<PackedScene>(EnemyProjectile.ScenePath);
 
             // Unity's Start.
             if (this.FindComponent<EnemyGroupCombat>() == null)
@@ -95,29 +105,6 @@ namespace MyGame.Enemy
             {
                 AddChild(new CombatFeedback { Name = "CombatFeedback" });
             }
-        }
-
-        /// <summary>
-        /// The fallback shot, for a caster nobody handed a template. The contact area is built by
-        /// <see cref="EnemyProjectile"/> itself, so all this owes it is a body and a colour.
-        /// </summary>
-        /// <remarks>
-        /// Never added to the scene tree, which is what Unity's <c>SetActive(false)</c> bought. Left
-        /// active there, the template sat in the scene as a live trigger collider that damaged the player
-        /// on contact and then destroyed itself - taking every future shot from this caster with it. A
-        /// detached node cannot do that: nothing ticks it and no query can find it.
-        /// </remarks>
-        private Node2D CreateDefaultProjectile()
-        {
-            var projectile = new EnemyProjectile { Name = "DefaultProjectile" };
-            var sprite = new Sprite2D
-            {
-                Name = "Sprite",
-                Modulate = new Color(0.8f, 0.4f, 1f),
-                ZIndex = 1,
-            };
-            projectile.AddChild(sprite);
-            return projectile;
         }
 
         public override void _Process(double delta)
@@ -367,7 +354,8 @@ namespace MyGame.Enemy
 
                 // Built on the first shot rather than in _Ready, because projectilePrefab can still be
                 // replaced by the spawner between the two.
-                _projectilePool ??= new EnemyProjectilePool(projectilePrefab, SpawnRoot());
+                _projectilePool ??= new EnemyProjectilePool(
+                    projectilePrefab, SpawnRoot(), _projectileTint, _projectileSortingOrder);
 
                 EnemyProjectile projectile = _projectilePool.Spawn(GlobalPosition);
                 if (projectile != null)

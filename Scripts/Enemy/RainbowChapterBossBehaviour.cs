@@ -29,18 +29,18 @@ namespace MyGame.Enemy
         [Export] private Sprite2D visual;
 
         /// <summary>
-        /// Body of a hazard strip, injected by the spawner the way <see cref="RangedCaster"/> is handed
-        /// its projectile. Null is legal: a strip is then built bare, so a boss made in a test still
-        /// burns the ground. A detached template node rather than a scene file, because everything in
-        /// this project is built in code.
+        /// The hazard strip's scene, injected by the spawner the way <see cref="RangedCaster"/> is handed
+        /// its projectile. Null is legal and means <see cref="BossHazardStrip.ScenePath"/>, so a boss made
+        /// in a test burns the ground with the same strip the spawner's bosses drop - it used to get a
+        /// bare, sprite-less one instead, which made the re-dressing below a no-op.
         /// </summary>
-        [Export] private Node2D hazardPrefab;
+        [Export] private PackedScene hazardPrefab;
 
         /// <summary>
-        /// Body of an afterimage. Null is legal for the same reason - the copies are presentation, and
-        /// the fight has to be testable without them.
+        /// The afterimage's scene. Null is legal for the same reason and falls back the same way, to
+        /// <see cref="BossAfterimage.ScenePath"/>.
         /// </summary>
-        [Export] private Node2D afterimagePrefab;
+        [Export] private PackedScene afterimagePrefab;
 
         public event Action OnBossInitialized;
         public event Action OnPhaseTwoStarted;
@@ -144,10 +144,9 @@ namespace MyGame.Enemy
         private bool _hasIntroTriggered;
         private bool _introHold;
         private float _hopTimer;
+        /// <summary>The strip instance parented at the scene root right now - see <see cref="ClearHazard"/>.</summary>
         private BossHazardStrip _lastHazard;
 
-        /// <summary>The node actually parented at the scene root for the current strip - see <see cref="ClearHazard"/>.</summary>
-        private Node2D _lastHazardBody;
         private BossAttackProfile _queuedChain;
         private float _chainTimer;
         private int _chainStepsTaken;
@@ -187,14 +186,14 @@ namespace MyGame.Enemy
         }
 
         /// <summary>
-        /// Hands the boss the body its hazard strips are built from. Injected rather than loaded here
-        /// because the visual belongs to the spawner - the same split <see cref="RangedCaster"/> makes
-        /// with its projectile, and the reason this class never learns what a sprite looks like.
+        /// Hands the boss the scene its hazard strips are instanced from. Injected rather than loaded
+        /// here because the visual belongs to the spawner - the same split <see cref="RangedCaster"/>
+        /// makes with its projectile, and the reason this class never learns what a sprite looks like.
         /// </summary>
-        public void SetHazardPrefab(Node2D prefab) => hazardPrefab = prefab;
+        public void SetHazardPrefab(PackedScene prefab) => hazardPrefab = prefab;
 
-        /// <summary>Hands the boss the body its afterimages are built from. Same injection as the hazard strip.</summary>
-        public void SetAfterimagePrefab(Node2D prefab) => afterimagePrefab = prefab;
+        /// <summary>Hands the boss the scene its afterimages are instanced from. Same injection as the hazard strip.</summary>
+        public void SetAfterimagePrefab(PackedScene prefab) => afterimagePrefab = prefab;
 
         /// <summary>
         /// The strip this boss is currently burning, or null - genuinely null, not a freed Godot object,
@@ -766,33 +765,21 @@ namespace MyGame.Enemy
             // Vector2.Down and World.Layer.GroundProbe, the probe LeapingAttacker already makes.
             position.Y = _spawnPosition.Y;
 
-            Node2D body = null;
-            if (GodotObject.IsInstanceValid(hazardPrefab))
-            {
-                body = (Node2D)hazardPrefab.Duplicate();
-                body.Visible = true;
-            }
-
-            BossHazardStrip strip = body as BossHazardStrip ?? body?.FindComponent<BossHazardStrip>();
+            // Instanced, not duplicated off a template the spawner had deactivated: a PackedScene
+            // instance is visible and processing from its first frame, so there is nothing to re-arm.
+            var strip = InstantiateEffect<BossHazardStrip>(hazardPrefab, BossHazardStrip.ScenePath);
             if (strip == null)
             {
-                strip = new BossHazardStrip { Name = "BossHazardStrip" };
-                if (body == null)
-                {
-                    body = strip;
-                }
-                else
-                {
-                    body.AddChild(strip);
-                }
+                return;
             }
 
             // Parented at the scene root and placed before it enters, never moved afterwards: a strip
-            // that slid in from the template's origin would burn a line across the floor on its frame.
-            SpawnRoot().AddChild(body);
-            body.GlobalPosition = position;
+            // that slid in from the scene's origin would burn a line across the floor on its frame.
+            SpawnRoot().AddChild(strip);
+            strip.GlobalPosition = position;
 
-            Sprite2D sprite = body.FindComponent<Sprite2D>();
+            // The scene carries only the shape; the attack that dropped it owns the colour and the size.
+            Sprite2D sprite = strip.FindComponent<Sprite2D>();
             if (sprite != null)
             {
                 sprite.Modulate = profile.HazardColor;
@@ -801,7 +788,6 @@ namespace MyGame.Enemy
 
             strip.Configure(this, profile.HazardDamage, profile.HazardRadius, profile.HazardTickInterval, profile.HazardDuration);
             _lastHazard = strip;
-            _lastHazardBody = body;
         }
 
         /// <summary>
@@ -993,27 +979,14 @@ namespace MyGame.Enemy
                 float step = bossData.AfterimageSpread * ((i / 2) + 1);
                 float offset = i % 2 == 0 ? -step : step;
 
-                Node2D body = GodotObject.IsInstanceValid(afterimagePrefab)
-                    ? (Node2D)afterimagePrefab.Duplicate()
-                    : null;
-
-                BossAfterimage image = body as BossAfterimage ?? body?.FindComponent<BossAfterimage>();
+                var image = InstantiateEffect<BossAfterimage>(afterimagePrefab, BossAfterimage.ScenePath);
                 if (image == null)
                 {
-                    image = new BossAfterimage { Name = "BossAfterimage" };
-                    if (body == null)
-                    {
-                        body = image;
-                    }
-                    else
-                    {
-                        body.AddChild(image);
-                    }
+                    continue;
                 }
 
-                body.Visible = true;
-                SpawnRoot().AddChild(body);
-                body.GlobalPosition = GlobalPosition + (Vector2.Right * offset);
+                SpawnRoot().AddChild(image);
+                image.GlobalPosition = GlobalPosition + (Vector2.Right * offset);
 
                 image.Configure(
                     visual?.Texture,
@@ -1027,15 +1000,34 @@ namespace MyGame.Enemy
         /// <summary>Puts the fire out now, wherever the boss is in its life.</summary>
         private void ClearHazard()
         {
-            // The body, not the strip: the strip may be a child of a template the spawner supplied, and
-            // freeing only the child would leave the visual burning with nothing behind it.
-            if (GodotObject.IsInstanceValid(_lastHazardBody))
+            // The strip is the scene's root, so freeing it takes its sprite with it. A template body the
+            // strip merely hung off used to be possible, which is why this needed a second field.
+            if (GodotObject.IsInstanceValid(_lastHazard))
             {
-                _lastHazardBody.QueueFree();
+                _lastHazard.QueueFree();
             }
 
             _lastHazard = null;
-            _lastHazardBody = null;
+        }
+
+        /// <summary>
+        /// One instance of an effect scene, or null if neither the injected scene nor the shipped one
+        /// yields the expected root. Nothing here re-arms visibility or process mode: unlike a
+        /// <c>Duplicate()</c> of a deactivated template, a scene instance has never been deactivated.
+        /// </summary>
+        private static T InstantiateEffect<T>(PackedScene scene, string fallbackPath) where T : Node
+        {
+            PackedScene source = GodotObject.IsInstanceValid(scene) ? scene : GD.Load<PackedScene>(fallbackPath);
+            Node body = source?.Instantiate();
+
+            if (body is T typed)
+            {
+                return typed;
+            }
+
+            GD.PushWarning($"{fallbackPath} did not instance a {typeof(T).Name}; the effect is skipped.");
+            body?.QueueFree();
+            return null;
         }
 
         /// <summary>

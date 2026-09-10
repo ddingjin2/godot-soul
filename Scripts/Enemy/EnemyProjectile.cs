@@ -7,8 +7,8 @@ namespace MyGame.Enemy
     /// <summary>
     /// A caster's shot. It moves itself rather than riding the physics solver - the Unity version wrote
     /// <c>transform.position</c> every frame - so the body is a plain <see cref="Node2D"/> and only the
-    /// contact test is a physics object: one <see cref="Area2D"/> child, built here when the spawner did
-    /// not supply one.
+    /// contact test is a physics object: one <see cref="Area2D"/> child, authored in
+    /// <see cref="ScenePath"/> along with its shape, its layer and its mask.
     ///
     /// UNITS: every distance below is in Godot pixels. The inline defaults are wrapped in
     /// <see cref="World.U"/>; the values <see cref="Initialize"/> is handed come from
@@ -16,6 +16,12 @@ namespace MyGame.Enemy
     /// </summary>
     public partial class EnemyProjectile : Node2D
     {
+        /// <summary>
+        /// The one place a shot is described. Instanced by <see cref="EnemyProjectilePool"/>, and by
+        /// <see cref="RangedCaster"/> itself when nobody handed it a scene.
+        /// </summary>
+        public const string ScenePath = "res://Scenes/Effects/EnemyProjectile.tscn";
+
         private float speed = World.U(5f);
         private float damage = 8f;
         private float knockback = World.U(3f);
@@ -35,23 +41,44 @@ namespace MyGame.Enemy
 
         public override void _Ready()
         {
+            // HitArea, its CircleShape2D, its layer (EnemyHitbox) and its mask (Player | Ground) are
+            // authored in EnemyProjectile.tscn. This used to build them per instance, because the
+            // template the pool duplicated never entered the tree and so had none.
             _hitArea = this.FindComponent<Area2D>();
 
             if (_hitArea == null)
             {
-                _hitArea = new Area2D { Name = "HitArea" };
-                var shape = new CollisionShape2D { Shape = new CircleShape2D { Radius = World.U(0.3f) } };
-                _hitArea.AddChild(shape);
-                AddChild(_hitArea);
+                // A shot built with `new` rather than instanced. It still flies and still times out; it
+                // simply cannot hit anything, which is what a body with no collider means everywhere else.
+                return;
             }
-
-            // The shot is an enemy hitbox that has to notice the player and the floor, and nothing else.
-            _hitArea.CollisionLayer = World.Layer.EnemyHitbox;
-            _hitArea.CollisionMask = World.Layer.Player | World.Layer.Ground;
-            _hitArea.SetDeferred(Area2D.PropertyName.Monitoring, true);
 
             _hitArea.BodyEntered += OnHit;
             _hitArea.AreaEntered += OnHit;
+        }
+
+        /// <summary>
+        /// Repaints the shot from <c>GameplayReadabilityDefaults</c>. The scene ships the colour the
+        /// code defaults carry; this is how an override in <c>Resources/Art/Readability.json</c> still
+        /// reaches a projectile now that there is no template left to dress.
+        /// </summary>
+        internal void SetAppearance(Color? tint, int? sortingOrder)
+        {
+            Sprite2D sprite = this.FindComponent<Sprite2D>();
+            if (sprite == null)
+            {
+                return;
+            }
+
+            if (tint.HasValue)
+            {
+                sprite.Modulate = tint.Value;
+            }
+
+            if (sortingOrder.HasValue)
+            {
+                sprite.ZIndex = sortingOrder.Value;
+            }
         }
 
         public void Initialize(Vector2 direction, float projectileSpeed, float projectileDamage, float projectileKnockback)

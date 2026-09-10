@@ -178,7 +178,13 @@ namespace MyGame.Gameplay
             CreateAttackReadout(go, "CastRange", readability.CastDangerLocalPosition, readability.CastDangerSize, readability.CastDangerColor, readability.EnemyReadoutSortingOrder);
             CreateRoleMarker(go, "Cast", readability.CastRoleLocalPosition, readability.CastRoleColor, readability);
 
-            go.SetProjectilePrefab(CreateProjectilePrefab(readability));
+            // The shot is a scene now, not a template built here and duplicated per shot. Colour and
+            // sorting order still travel: they are readability's, so Resources/Art/Readability.json
+            // keeps overriding what the scene ships with.
+            go.SetProjectilePrefab(
+                GD.Load<PackedScene>(EnemyProjectile.ScenePath),
+                readability.ProjectileColor,
+                readability.ProjectileSortingOrder);
 
             RangedCasterData tuning = SpawnTuning<RangedCasterData>(spawn) ?? (catalog?.RangedCaster
                 ?? GameplayTuningDefaults.CreateRangedCaster());
@@ -330,8 +336,11 @@ namespace MyGame.Gameplay
             PlaceInWorld(go, position);
 
             go.SetEncounterData(encounter);
-            go.SetHazardPrefab(CreateHazardPrefab(readability, go));
-            go.SetAfterimagePrefab(CreateAfterimagePrefab(go));
+            // Scenes rather than templates parented to the boss and deactivated. Nothing leaks out of a
+            // PackedScene instance, so neither of these needs re-arming where it is spawned; the hazard's
+            // colour and size come off the attack profile, and the afterimage's off the boss.
+            go.SetHazardPrefab(GD.Load<PackedScene>(BossHazardStrip.ScenePath));
+            go.SetAfterimagePrefab(GD.Load<PackedScene>(BossAfterimage.ScenePath));
             go.SetBossData(data);
 
             // After SetBossData, which is where this boss's max health is decided.
@@ -420,67 +429,6 @@ namespace MyGame.Gameplay
                 sr, GameplayVisualFactory.CreateActorSprite(spriteKind), size, GameplayVisualFactory.Pivot(spriteKind));
             sr.Modulate = color;
             sr.ZIndex = sortingOrder;
-        }
-
-        /// <summary>
-        /// The template a caster duplicates per shot. Deliberately <b>not</b> added to the tree: Unity's
-        /// <c>SetActive(false)</c> bought the same thing, and a live template in the scene is a trigger
-        /// that damages the player on contact and then destroys itself, taking every future shot with it.
-        /// </summary>
-        private static Node2D CreateProjectilePrefab(GameplayReadabilityDefaults readability)
-        {
-            var go = new EnemyProjectile { Name = GameplayPrefabNames.EnemyProjectile };
-
-            var sr = new Sprite2D { Name = "Sprite" };
-            go.AddChild(sr);
-            GameplayVisualFactory.Dress(
-                sr,
-                GameplayVisualFactory.CreateDiscSprite(),
-                new Vector2(World.U(0.42f), World.U(0.42f)),
-                GameplayVisualFactory.Pivot(GameplayVisualFactory.SpriteKind.Disc));
-            sr.Modulate = readability.ProjectileColor;
-            sr.ZIndex = readability.ProjectileSortingOrder;
-
-            return go;
-        }
-
-        /// <summary>
-        /// The body a hazard strip wears. Colour and size come off the attack that drops it, so this is
-        /// only the shape; the readout sorting order puts it above the floor and under the actors
-        /// standing on it, which is where a danger marker on the ground belongs.
-        /// </summary>
-        /// <remarks>
-        /// Parented to the boss so it dies with it. As a root object it was one leaked object per spawn,
-        /// and <see cref="GameplayEnemyRespawner"/> respawns on every death and every rest - the leak was
-        /// unbounded across a session. Duplicating from it still produces a detached node, because a
-        /// duplicate has no parent until someone gives it one.
-        /// </remarks>
-        private static Node2D CreateHazardPrefab(GameplayReadabilityDefaults readability, Node2D owner)
-        {
-            var go = new BossHazardStrip { Name = "BossHazardStripTemplate" };
-            owner.AddChild(go);
-
-            Sprite2D sr = go.AddComponent<Sprite2D>("Sprite");
-            GameplayVisualFactory.Dress(sr, GameplayVisualFactory.CreateDiscSprite(), Vector2.Zero, GameplayVisualFactory.Pivot(GameplayVisualFactory.SpriteKind.Disc));
-            sr.ZIndex = readability.EnemyReadoutSortingOrder;
-
-            go.SetActive(false);
-            return go;
-        }
-
-        /// <summary>
-        /// The body an afterimage wears. Sprite, colour, size and sorting order all come off the boss at
-        /// the moment it casts one, so this is only the shell - and it is parented to the boss for the
-        /// same reason the hazard template is. <c>BossAfterimage</c> is itself a Sprite2D here, so it is
-        /// one node rather than Unity's component plus renderer.
-        /// </summary>
-        private static Node2D CreateAfterimagePrefab(Node2D owner)
-        {
-            var go = new BossAfterimage { Name = "BossAfterimageTemplate" };
-            owner.AddChild(go);
-
-            go.SetActive(false);
-            return go;
         }
 
         private static void ApplyEnemyHealth(Node2D go, float maxHealth, Vector2 barSize, Vector2 barOffset, Color barColor, bool destroyOnDeath)

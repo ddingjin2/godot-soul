@@ -24,6 +24,9 @@ namespace MyGame.Enemy
     /// </remarks>
     public sealed partial class BossAfterimage : Sprite2D
     {
+        /// <summary>The one place a BossAfterimage is described. Instanced by RainbowChapterBossBehaviour.</summary>
+        public const string ScenePath = "res://Scenes/Effects/BossAfterimage.tscn";
+
         private float _remaining;
         private float _lifetime;
         private Color _startColor = Colors.White;

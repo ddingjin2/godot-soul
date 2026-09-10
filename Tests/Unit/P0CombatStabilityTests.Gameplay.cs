@@ -546,11 +546,10 @@ namespace MyGame.Tests
             // Y FLIP: Unity's (3, 1) is a metre *up*, which is -Y here. This port's EnemyProjectile moves
             // its own transform instead of riding a rigidbody, so there is no linearVelocity to author -
             // the probe reports zero velocity for a non-body and nothing here reads it.
-            var projectile = new EnemyProjectile
-            {
-                Name = "ContextProjectile",
-                Position = new Vector2(World.U(3f), -World.U(1f)),
-            };
+            EnemyProjectile projectile = GD.Load<PackedScene>(EnemyProjectile.ScenePath)
+                .Instantiate<EnemyProjectile>();
+            projectile.Name = "ContextProjectile";
+            projectile.Position = new Vector2(World.U(3f), -World.U(1f));
             Spawn(projectile);
 
             var checkpoint = new Checkpoint { Name = "ContextCheckpoint", Position = new Vector2(World.U(0.25f), 0f) };
