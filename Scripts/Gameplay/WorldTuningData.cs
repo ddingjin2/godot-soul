@@ -13,7 +13,9 @@ namespace MyGame.Gameplay
     /// <c>lockOnRange</c>, <c>lockOnBreakRange</c>, <c>enemyGravity</c> (m/s^2 -> px/s^2),
     /// <c>enemyDisengageDistance</c>, <c>enemyLedgeProbeForward</c>, <c>enemyLedgeProbeDepth</c> and
     /// <c>actorMoveAnimThreshold</c> (m/s -> px/s), <c>cameraDeadZone</c> (a half-extent, so both
-    /// components scale and neither flips) and <c>cameraMaxFollowSpeed</c> (m/s -> px/s).
+    /// components scale and neither flips), <c>cameraMaxFollowSpeed</c> (m/s -> px/s),
+    /// <c>worldEdgeWallThickness</c>, <c>worldEdgeWallHeight</c> and <c>gatePortalOffsetX</c> (an X
+    /// offset, so no flip).
     /// <c>cameraLookAhead</c> is the one field that is scaled <b>and</b> Y-flipped, through
     /// <see cref="World.V"/>: it is an offset, and an authored +1.2 (up) has to arrive as -120.
     /// Left alone, because they are seconds: <c>enemyIdleToPatrolTime</c>,
@@ -91,6 +93,18 @@ namespace MyGame.Gameplay
         /// <summary>Fastest the camera may move to catch up, in metres per second.</summary>
         [Export] public float cameraMaxFollowSpeed = 12f;
 
+        // --- Arena furniture every chapter shares. Metres. GameplayEnvironmentBuilder keeps the
+        // fallback twins.
+
+        /// <summary>The invisible slab at each end of the floor, so walking off the side is not a death.</summary>
+        [Export] public float worldEdgeWallThickness = 0.5f;
+
+        /// <summary>Tall on purpose: chapter eight's climbs reach 9 units, and a wall a player can clear at the top of a tower is the same bug one screen higher.</summary>
+        [Export] public float worldEdgeWallHeight = 40f;
+
+        /// <summary>How far to the right of a bonfire its gate portal stands.</summary>
+        [Export] public float gatePortalOffsetX = 3f;
+
         /// <summary>
         /// Guards against a second pass over the same instance - the scaling rewrites the authored
         /// fields in place, so running it twice would put every reach a hundred times too far out.
@@ -120,6 +134,10 @@ namespace MyGame.Gameplay
             cameraDeadZone = new Vector2(World.U(cameraDeadZone.X), World.U(cameraDeadZone.Y));
             cameraLookAhead = World.V(cameraLookAhead);
             cameraMaxFollowSpeed = World.U(cameraMaxFollowSpeed);
+
+            worldEdgeWallThickness = World.U(worldEdgeWallThickness);
+            worldEdgeWallHeight = World.U(worldEdgeWallHeight);
+            gatePortalOffsetX = World.U(gatePortalOffsetX);
         }
 
         /// <summary>

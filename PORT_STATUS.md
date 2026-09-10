@@ -459,3 +459,48 @@ key in the file turned `Cutscene_PutsTheZoomBackToTheSceneDefault_OnCompletionAn
 - **Not migrated:** `CutsceneOverlay`'s two colours, caption font size and caption box offsets
   (§2.5a's last row). The overlay is a saved scene since S1 and authors all of them; a design key
   would be a second owner.
+
+### Numbers stage S10 - readability layout
+
+A new file, `Resources/Design/ReadabilityLayout.json`, beside the artist's `Resources/Art/Readability.json`
+and deliberately not inside it: colour is the artist's, size is the designer's, and
+`GameplayTuningCatalog` already loaded the palette from its owner's folder for exactly that reason.
+The audit planned to regenerate `Readability.json` as a superset; a sibling file costs nothing and
+keeps the artist's file byte-identical, so that is what landed. 46 keys - the ten collider and visual
+sizes, the hitbox radius and offset, the sword and arc sizes, the eight health-bar geometries, the ten
+danger-readout positions and sizes, the four role-marker positions, the four label sizes - plus the
+lock-on hover height, the health bar's frame margin and low-health read, and the platform rim. All
+transcribed from `GameplayReadabilityDefaults.CreateBase`, which keeps the same numbers as the
+fallback. Conversion happens once, in `GameplayReadabilityLayoutData.ApplyTo`: sizes, radii and
+thicknesses through `World.U`; offsets and local positions through `World.V`, scaled and flipped;
+point sizes and fractions untouched. Proven read: `bossVisualSize.x` set to 9.75 turned the identity
+test red with `Expected <175>, was <975>`; the file was restored. Three tests hold the file to the
+code the way the palette's do, including one that hands every field a distinct metre value and
+demands the pixel value its kind implies.
+
+- **Four dead properties deleted rather than migrated.** `PlayerHitboxAnchorLocalPosition`,
+  `SwordLocalPosition`, `SwordLocalRotation` and `AttackArcLocalPosition` had no reader since the
+  actor scenes (stage 8) started authoring those transforms in `Player.tscn`. A key nothing reads is
+  worse than a literal - it looks like tuning.
+- **The spawners still overwrite the scenes.** Every actor scene also authors a collider radius, a
+  visual scale, a bar offset and the readout positions, and `GameplayEnemySpawner` / `GameplayPlayerSpawner`
+  write the readability numbers over them on every spawn - stage 8's deliberate "designer-owned, bound
+  per spawn" decision. So the file is the live owner and the scene values are mirrors that never win.
+  That is a standing debt from stage 8, not new here, and it is named so the mirrors are not mistaken
+  for tuning.
+- **`WorldTuning.json` gained the arena furniture** (3 keys): `worldEdgeWallThickness` 0.5 m,
+  `worldEdgeWallHeight` 40 m and `gatePortalOffsetX` 3 m, all scaled in `ScaleToPixels`, consumed by
+  `GameplayEnvironmentBuilder` with the shipped metres kept there as the fallback for a run with no
+  file. Proven read: the portal offset set to 7 printed 700 px on a headless boot. The platform rim
+  (`platformRimThickness` 0.05 m, `platformRimHeightFraction` 0.58) went to the readability file
+  instead, beside the rim colour it dresses.
+- **`ShortcutGate.OpenAlpha` is an `[Export]`** at its shipped 0.25, so `ShortcutGate.tscn` owns it
+  the way the rule asks for presentation numbers. The scene file is unchanged - Godot writes only
+  non-default values.
+- **Not migrated, because a scene already owns them:** the six `GameplayTelegraphPulse` /
+  `ActorIdleBob` feel numbers (`[Export]` on nodes the marker, readout and actor scenes author since
+  stages 5 and 8), `GameplayLockOnMarker`'s size and `SoulPickup`'s stain (both authored in their
+  scenes), the grunt attack-point offset and the caster projectile size (S7 already skipped them for
+  the same reason), and `GameplayWorldHealthBar`'s frame colour and low-health tint (the frame colour
+  is authored on `WorldHealthBar.tscn`; both are palette, and the palette file was not to be touched).
+  The 20 sorting orders stay in code pending §3.6.

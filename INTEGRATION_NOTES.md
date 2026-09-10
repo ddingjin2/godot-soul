@@ -271,3 +271,20 @@ unchanged. `GameplaySystemBootstrapper.ConfigureCameraFollow` calls it right bef
 it takes is already pixels - `WorldTuningData.ScaleToPixels` did the conversion, including the Y flip
 on `cameraLookAhead`. The four bound fallbacks the follow used to initialise itself with are gone; a
 follow that was never `Initialize`d is unbounded rather than pinned to numbers from no arena.
+
+### The readability layout is data, and four properties are gone
+
+`GameplayReadabilityLayoutData` is new (`Resources/Design/ReadabilityLayout.json`), reached as
+`GameplayTuningCatalog.Load()?.ReadabilityLayout` and applied by `GameplayReadabilityDefaults.Create()`
+after the palette. Every number it hands the defaults is **already pixels**, flipped where the property
+is an offset - the same contract the defaults always had, so no consumer changed.
+
+**Removed from `GameplayReadabilityDefaults`:** `PlayerHitboxAnchorLocalPosition`, `SwordLocalPosition`,
+`SwordLocalRotation`, `AttackArcLocalPosition`. Nothing in the repository read them; `Player.tscn`
+authors those transforms. **Added:** `HealthBarFrameMargin`, `HealthBarLowHealthThreshold`,
+`HealthBarLowHealthTintBlend`, `LockOnMarkerOffset`, `PlatformRimThickness`, `PlatformRimHeightFraction`.
+
+`WorldTuningData` gained `worldEdgeWallThickness`, `worldEdgeWallHeight` and `gatePortalOffsetX`, all
+pixels after `ScaleToPixels`. `GameplayWorldHealthBar` and `GameplayLockOnMarker` now call
+`GameplayReadabilityDefaults.Create()` themselves for their few numbers, as the lock-on marker already
+did for its colour; no `Initialize` signature changed.

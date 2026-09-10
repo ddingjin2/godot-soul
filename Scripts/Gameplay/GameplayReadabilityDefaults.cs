@@ -77,17 +77,11 @@ namespace MyGame.Gameplay
         public Vector2 BossColliderSize { get; internal set; }
         public Vector2 BossVisualSize { get; internal set; }
 
-        public Vector2 PlayerHitboxAnchorLocalPosition { get; internal set; }
+        // The hitbox anchor's, the sword's and the attack arc's local transforms are authored in
+        // Scenes/Actors/Player.tscn and have no property here: a number nothing reads is worse than
+        // a literal, because it looks like tuning.
         public float PlayerHitboxRadius { get; internal set; }
         public Vector2 PlayerHitboxOffset { get; internal set; }
-        public Vector2 SwordLocalPosition { get; internal set; }
-
-        /// <summary>
-        /// Was Unity's <c>SwordLocalEulerAngles</c>, a Vector3 whose x and y were always zero. Godot's
-        /// <c>Node2D.Rotation</c> is a single value in radians, and it turns the other way because +Y
-        /// is down - so Unity's -28 degrees is +28 here.
-        /// </summary>
-        public float SwordLocalRotation { get; internal set; }
         public Vector2 SwordSize { get; internal set; }
 
         public Vector2 PlayerHealthBarSize { get; internal set; }
@@ -99,7 +93,15 @@ namespace MyGame.Gameplay
         public Vector2 CasterHealthBarOffset { get; internal set; }
         public Vector2 BossHealthBarOffset { get; internal set; }
 
-        public Vector2 AttackArcLocalPosition { get; internal set; }
+        /// <summary>Pixels the frame extends past the fill on every side.</summary>
+        public float HealthBarFrameMargin { get; internal set; }
+
+        /// <summary>Normalised health at or below which the fill lifts toward bone.</summary>
+        public float HealthBarLowHealthThreshold { get; internal set; }
+
+        /// <summary>How far toward bone the fill lifts, 0-1.</summary>
+        public float HealthBarLowHealthTintBlend { get; internal set; }
+
         public Vector2 AttackArcSize { get; internal set; }
         public Vector2 MeleeDangerLocalPosition { get; internal set; }
         public Vector2 MeleeDangerSize { get; internal set; }
@@ -124,6 +126,13 @@ namespace MyGame.Gameplay
         public int WorldLabelFontSize { get; internal set; }
         public float RoleMarkerCharacterSize { get; internal set; }
         public int RoleMarkerFontSize { get; internal set; }
+
+        /// <summary>Where the lock-on disc hovers relative to its target, in pixels with +Y down.</summary>
+        public Vector2 LockOnMarkerOffset { get; internal set; }
+
+        /// <summary>The bright edge along the top of a platform: its thickness in pixels, and where it sits as a fraction of the platform's height above centre.</summary>
+        public float PlatformRimThickness { get; internal set; }
+        public float PlatformRimHeightFraction { get; internal set; }
 
         /// <summary>
         /// The pixel font size a Godot <see cref="Label"/> needs to render a world label at the height
@@ -159,16 +168,18 @@ namespace MyGame.Gameplay
         public int RoleMarkerSortingOrder { get; internal set; }
 
         /// <summary>
-        /// The greybox read, with the artist-owned palette applied over it. Sizes, offsets and sorting
-        /// orders are deliberately not in that file: they are readability engineering - what overlaps
-        /// what, how big a danger zone has to be to be seen - and moving them would hand out a knob that
-        /// silently breaks the reads the whole slice is built to prove. Colour is the palette; the rest
-        /// is layout.
+        /// The greybox read, with the artist-owned palette (<c>Resources/Art/Readability.json</c>) and
+        /// the designer-owned layout (<c>Resources/Design/ReadabilityLayout.json</c>) applied over it.
+        /// Two files because two owners. Sorting orders are in neither: they are readability
+        /// engineering - what overlaps what - and a knob there silently breaks the reads the whole
+        /// slice is built to prove.
         /// </summary>
         public static GameplayReadabilityDefaults Create()
         {
             GameplayReadabilityDefaults defaults = CreateBase();
-            GameplayTuningCatalog.Load()?.ReadabilityTheme?.ApplyTo(defaults);
+            GameplayTuningCatalog catalog = GameplayTuningCatalog.Load();
+            catalog?.ReadabilityTheme?.ApplyTo(defaults);
+            catalog?.ReadabilityLayout?.ApplyTo(defaults);
             return defaults;
         }
 
@@ -178,9 +189,11 @@ namespace MyGame.Gameplay
         private static Vector2 S(float x, float y) => new Vector2(World.U(x), World.U(y));
 
         /// <summary>
-        /// The shipped values with no theme applied. This is what <c>Readability.json</c> is generated
-        /// from, so the file starts life identical to the code and any drift is the artist's edit rather
-        /// than a transcription mistake.
+        /// The shipped values with neither file applied. <c>Readability.json</c> is generated from this
+        /// and <c>ReadabilityLayout.json</c> was transcribed from it, so both files start life identical
+        /// to the code and any drift is an owner's edit rather than a transcription mistake -
+        /// <c>GameplayReadabilityThemeTests</c> and <c>GameplayReadabilityLayoutTests</c> hold each to
+        /// that.
         /// </summary>
         public static GameplayReadabilityDefaults CreateBase()
         {
@@ -235,12 +248,8 @@ namespace MyGame.Gameplay
                 BossColliderSize = S(1.2f, 2f),
                 BossVisualSize = S(1.75f, 2.35f),
 
-                PlayerHitboxAnchorLocalPosition = P(0.4f, 0f),
                 PlayerHitboxRadius = World.U(0.4f),
                 PlayerHitboxOffset = P(0.4f, 0f),
-                SwordLocalPosition = P(0.12f, 0.22f),
-                // Unity: new Vector3(0f, 0f, -28f) euler. Sign flips with the Y axis.
-                SwordLocalRotation = Mathf.DegToRad(28f),
                 SwordSize = S(0.95f, 0.22f),
 
                 PlayerHealthBarSize = S(1.2f, 0.12f),
@@ -251,8 +260,10 @@ namespace MyGame.Gameplay
                 LeaperHealthBarOffset = P(0f, 0.86f),
                 CasterHealthBarOffset = P(0f, 0.84f),
                 BossHealthBarOffset = P(0f, 1.65f),
+                HealthBarFrameMargin = World.U(0.08f),
+                HealthBarLowHealthThreshold = 0.3f,
+                HealthBarLowHealthTintBlend = 0.35f,
 
-                AttackArcLocalPosition = Vector2.Zero,
                 AttackArcSize = S(1.05f, 0.75f),
                 MeleeDangerLocalPosition = P(0.55f, 0f),
                 MeleeDangerSize = S(1.55f, 1.05f),
@@ -273,6 +284,10 @@ namespace MyGame.Gameplay
                 WorldLabelFontSize = 42,
                 RoleMarkerCharacterSize = World.U(0.16f),
                 RoleMarkerFontSize = 34,
+
+                LockOnMarkerOffset = P(0f, 1.3f),
+                PlatformRimThickness = World.U(0.05f),
+                PlatformRimHeightFraction = 0.58f,
 
                 BackdropSortingOrder = -100,
                 MoonSortingOrder = -95,

@@ -43,8 +43,8 @@ namespace MyGame.Gameplay
     {
         private const string TriggerObjectName = "ShortcutGateTrigger";
 
-        /// <summary>How much of the door is left visible once it is open. Not zero: the way through is worth seeing.</summary>
-        private const float OpenAlpha = 0.25f;
+        /// <summary>How much of the door is left visible once it is open. Not zero: the way through is worth seeing. Authored on the scene.</summary>
+        [Export] private float openAlpha = 0.25f;
 
         /// <summary>Raised when the door opens, as the seam for a HUD line or a sound.</summary>
         public event Action OnOpened;
@@ -218,7 +218,7 @@ namespace MyGame.Gameplay
                 return;
 
             Color color = _renderer.Modulate;
-            color.A = open ? OpenAlpha : 1f;
+            color.A = open ? openAlpha : 1f;
             _renderer.Modulate = color;
         }
 

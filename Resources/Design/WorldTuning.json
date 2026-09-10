@@ -14,5 +14,8 @@
     "cameraDeadZone": { "x": 1.2, "y": 0.6 },
     "cameraLookAhead": { "x": 1.4, "y": 1.2 },
     "cameraSmoothTime": 0.25,
-    "cameraMaxFollowSpeed": 12.0
+    "cameraMaxFollowSpeed": 12.0,
+    "worldEdgeWallThickness": 0.5,
+    "worldEdgeWallHeight": 40.0,
+    "gatePortalOffsetX": 3.0
 }

@@ -37,8 +37,11 @@ namespace MyGame.Gameplay
         /// <summary>BONE_100 #C3BDB1. Low health lifts the fill toward bone, not toward white.</summary>
         private static readonly Color LowHealthTint = new(0.7647059f, 0.7411765f, 0.69411767f);
 
-        /// <summary>The frame's margin around the fill. A literal of this file's own, so Unity metres.</summary>
-        private const float FrameMargin = 0.08f;
+        // Read off GameplayReadabilityDefaults in Build, already pixels; these are what a bar gets
+        // before that runs.
+        private float _frameMarginPx = World.U(0.08f);
+        private float _lowHealthThreshold = 0.3f;
+        private float _lowHealthTintBlend = 0.35f;
 
         private Health _health;
         private Node2D _barRoot;
@@ -111,6 +114,13 @@ namespace MyGame.Gameplay
             if (_barRoot != null)
                 return;
 
+            // The designer's frame margin and low-health read, from ReadabilityLayout.json by way of the
+            // same boundary the spawners use for the bar's size and offset.
+            GameplayReadabilityDefaults readability = GameplayReadabilityDefaults.Create();
+            _frameMarginPx = readability.HealthBarFrameMargin;
+            _lowHealthThreshold = readability.HealthBarLowHealthThreshold;
+            _lowHealthTintBlend = readability.HealthBarLowHealthTintBlend;
+
             // Reused when the actor was built with the bar already under it; _barRoot is not exported
             // and is null on every fresh instance.
             _barRoot = GetNodeOrNull<Node2D>("HealthBar");
@@ -141,7 +151,7 @@ namespace MyGame.Gameplay
 
             if (_frameRenderer != null)
             {
-                _frameRenderer.SetSpriteSize(sizePx + new Vector2(World.U(FrameMargin), World.U(FrameMargin)));
+                _frameRenderer.SetSpriteSize(sizePx + new Vector2(_frameMarginPx, _frameMarginPx));
 
                 // The scene authors this same colour; re-applying it is what keeps an authored bar and a
                 // freshly instanced one identical, and it is what the P0 suite reads back.
@@ -170,7 +180,7 @@ namespace MyGame.Gameplay
             _fill.Scale = new Vector2(normalized, 1f);
             _fill.Position = new Vector2(-_baseFillWidth * (1f - normalized) * 0.5f, 0f);
             if (_fillRenderer != null)
-                _fillRenderer.Modulate = normalized <= 0.3f ? _fillColor.Lerp(LowHealthTint, 0.35f) : _fillColor;
+                _fillRenderer.Modulate = normalized <= _lowHealthThreshold ? _fillColor.Lerp(LowHealthTint, _lowHealthTintBlend) : _fillColor;
         }
 
     }

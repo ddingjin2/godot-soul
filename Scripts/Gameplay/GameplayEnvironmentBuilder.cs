@@ -25,10 +25,10 @@ namespace MyGame.Gameplay
     ///
     /// UNITS: everything read off <see cref="GameplaySceneDefaults"/> and
     /// <see cref="GameplayReadabilityDefaults"/> is already in Godot pixels with +Y down - those two
-    /// classes are the conversion boundary. The handful of literals that live only in this file (the
-    /// world-edge slab, the platform rim, the gate portal offset) are still written as Unity metres and
-    /// wrapped in <see cref="World.U"/> at the point of use, with the vertical ones negated because up
-    /// is -Y here.
+    /// classes are the conversion boundary, as is <see cref="WorldTuningData"/> for the world-edge slab
+    /// and the gate portal offset. The fallbacks those keep here, for a run with no
+    /// <c>WorldTuning.json</c>, are the only metres left in this file and are wrapped in
+    /// <see cref="World.U"/> where they stand.
     ///
     /// Solid geometry is an instance of <c>Scenes/World/SolidBox.tscn</c> - a
     /// <see cref="StaticBody2D"/> on <see cref="World.Layer.Ground"/> carrying a
@@ -194,12 +194,10 @@ namespace MyGame.Gameplay
         /// </summary>
         private static void CreateWorldEdge(GameplaySceneDefaults scene, string name, int side)
         {
-            // Unity metres; the only two spatial literals in this file that are not on the defaults.
-            const float Thickness = 0.5f;
-            const float Height = 40f;
-
-            float thicknessPx = World.U(Thickness);
-            float heightPx = World.U(Height);
+            // WorldTuning.json's, already pixels; the metres here are the fallback for a run without it.
+            WorldTuningData world = GameplayTuningCatalog.Load()?.WorldTuning;
+            float thicknessPx = world?.worldEdgeWallThickness ?? World.U(0.5f);
+            float heightPx = world?.worldEdgeWallHeight ?? World.U(40f);
 
             // Half the wall's height *above* the floor, and up is -Y here, so this subtracts.
             var position = new Vector2(
@@ -223,9 +221,10 @@ namespace MyGame.Gameplay
         {
             CreateSolidBox(platform.Name, platform.Position, platform.Size, readability.PlatformColor, readability.PlatformSortingOrder);
 
-            // 0.58 of a half-height above the platform's centre; up is -Y.
-            var rimPosition = new Vector2(platform.Position.X, platform.Position.Y - platform.Size.Y * 0.58f);
-            var rimSize = new Vector2(platform.Size.X, World.U(0.05f));
+            // A fraction of the platform's height above its centre; up is -Y. Both numbers are the
+            // designer's, from ReadabilityLayout.json, and the thickness is already pixels.
+            var rimPosition = new Vector2(platform.Position.X, platform.Position.Y - platform.Size.Y * readability.PlatformRimHeightFraction);
+            var rimSize = new Vector2(platform.Size.X, readability.PlatformRimThickness);
             CreateSceneryPiece(platform.Name + "Rim", rimPosition, GameplayVisualFactory.CreateSquareSprite(Colors.White), rimSize, readability.PlatformRimColor, readability.PlatformRimSortingOrder);
         }
 
@@ -244,7 +243,9 @@ namespace MyGame.Gameplay
 
             // Positioned before it enters the tree, as GameplayBuildShim.NewObject did. The scene
             // already names the root "GatePortal", so nothing is renamed here.
-            go.Position = checkpoint.GlobalPosition + new Vector2(World.U(GatePortalOffsetX), 0f);
+            // WorldTuning.json's, already pixels, with the shipped 3 m as the fallback for a run without it.
+            float portalOffsetX = GameplayTuningCatalog.Load()?.WorldTuning?.gatePortalOffsetX ?? World.U(3f);
+            go.Position = checkpoint.GlobalPosition + new Vector2(portalOffsetX, 0f);
 
             // Bound while the instance is still detached: the marker's pulse caches the colour it finds
             // at _Ready and writes it back every frame, so a tint applied afterwards is invisible.
@@ -252,9 +253,6 @@ namespace MyGame.Gameplay
 
             GameplayBuildShim.SceneRoot?.AddChild(go);
         }
-
-        /// <summary>Unity metres - scaled at the one place it is used.</summary>
-        private const float GatePortalOffsetX = 3f;
 
         /// <summary>
         /// Every bonfire the chapter authored, numbered in the order they are met, and the one the player

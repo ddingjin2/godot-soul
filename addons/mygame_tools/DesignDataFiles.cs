@@ -62,6 +62,10 @@ namespace MyGame.EditorTools
             new Entry("CutsceneTuning", "MyGame.Gameplay.CutsceneTuningData"),
             new Entry("WorldTuning", "MyGame.Gameplay.WorldTuningData"),
             new Entry("SceneLayout", "MyGame.Gameplay.GameplaySceneLayoutData"),
+
+            // The designer's half of the readability read. The artist's half, Readability.json, lives in
+            // Resources/Art and is not on this table - it is not a design file.
+            new Entry("ReadabilityLayout", "MyGame.Gameplay.GameplayReadabilityLayoutData"),
             new Entry("MeleeGrunt", "MyGame.Enemy.MeleeGruntData"),
             new Entry("LeapingAttacker", "MyGame.Enemy.LeapingAttackerData"),
             new Entry("RangedCaster", "MyGame.Enemy.RangedCasterData"),

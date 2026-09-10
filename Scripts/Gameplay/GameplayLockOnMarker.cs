@@ -15,11 +15,11 @@ namespace MyGame.Gameplay
     {
         private const string ScenePath = "res://Scenes/World/LockOnMarker.tscn";
 
-        /// <summary>Hover height above the target, in Unity metres. The marker's own size is authored in the scene.</summary>
-        private const float MarkerHeight = 1.3f;
-
         private PlayerLockOn _lockOn;
         private Node2D _marker;
+
+        /// <summary>Where the disc hovers relative to its target, in pixels with +Y down - readability already flipped it.</summary>
+        private Vector2 _markerOffset;
 
         public override void _Ready()
         {
@@ -67,7 +67,7 @@ namespace MyGame.Gameplay
                 return;
             }
 
-            _marker.GlobalPosition = target.GlobalPosition + World.V(new Vector2(0f, MarkerHeight));
+            _marker.GlobalPosition = target.GlobalPosition + _markerOffset;
         }
 
         private void OnTargetChanged(Node2D target)
@@ -77,13 +77,13 @@ namespace MyGame.Gameplay
 
             _marker.Visible = target != null;
             if (target != null)
-                _marker.GlobalPosition = target.GlobalPosition + World.V(new Vector2(0f, MarkerHeight));
+                _marker.GlobalPosition = target.GlobalPosition + _markerOffset;
         }
 
         /// <summary>
         /// One instance of <c>Scenes/World/LockOnMarker.tscn</c>, which carries the texture, the 0.45 m
-        /// size and the hidden-at-rest state. Only the designer-owned colour and the sorting order are
-        /// bound, so Resources/Art/Readability.json still wins.
+        /// size and the hidden-at-rest state. The colour, the sorting order and the hover height are
+        /// bound here, so Readability.json and ReadabilityLayout.json still win.
         /// </summary>
         private void BuildMarker()
         {
@@ -91,6 +91,7 @@ namespace MyGame.Gameplay
                 return;
 
             GameplayReadabilityDefaults readability = GameplayReadabilityDefaults.Create();
+            _markerOffset = readability.LockOnMarkerOffset;
 
             // Not parented to the player either: the player's own transform is flipped by facing, and
             // the marker would swing across the screen with every turn.

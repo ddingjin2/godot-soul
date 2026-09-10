@@ -44,6 +44,7 @@ namespace MyGame.Gameplay
         private WorldTuningData worldTuning;
         private GameplaySceneLayoutData sceneLayout;
         private GameplayReadabilityThemeData readabilityTheme;
+        private GameplayReadabilityLayoutData readabilityLayout;
 
         private MeleeGruntData meleeGrunt;
         private LeapingAttackerData leapingAttacker;
@@ -65,6 +66,9 @@ namespace MyGame.Gameplay
         public WorldTuningData WorldTuning => worldTuning;
         public GameplaySceneLayoutData SceneLayout => sceneLayout;
         public GameplayReadabilityThemeData ReadabilityTheme => readabilityTheme;
+
+        /// <summary>The designer's half of the read - sizes and offsets - from the design folder, beside the artist's palette above.</summary>
+        public GameplayReadabilityLayoutData ReadabilityLayout => readabilityLayout;
 
         /// <summary>
         /// A chapter boss's authored stats and attacks, by design file name. Not a stored field like
@@ -132,6 +136,7 @@ namespace MyGame.Gameplay
         public const string SinTuningFile = "SinTuning";
         public const string WorldTuningFile = "WorldTuning";
         public const string SceneLayoutFile = "SceneLayout";
+        public const string ReadabilityLayoutFile = GameplayReadabilityLayoutData.FileName;
         public const string MeleeGruntFile = "MeleeGrunt";
         public const string LeapingAttackerFile = "LeapingAttacker";
         public const string RangedCasterFile = "RangedCaster";
@@ -159,6 +164,7 @@ namespace MyGame.Gameplay
                 worldTuning = WorldTuningData.Load(DesignResourceFolder + WorldTuningFile),
                 sceneLayout = GameplaySceneLayoutData.Load(DesignResourceFolder + SceneLayoutFile),
                 readabilityTheme = GameplayReadabilityThemeData.Load(ArtResourceFolder + ReadabilityThemeFile),
+                readabilityLayout = GameplayReadabilityLayoutData.Load(DesignResourceFolder + ReadabilityLayoutFile),
                 meleeGrunt = MeleeGruntData.Load(DesignResourceFolder + MeleeGruntFile),
                 leapingAttacker = LeapingAttackerData.Load(DesignResourceFolder + LeapingAttackerFile),
                 rangedCaster = RangedCasterData.Load(DesignResourceFolder + RangedCasterFile),
