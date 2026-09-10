@@ -30,14 +30,36 @@ namespace MyGame.Gameplay
     /// wrapped in <see cref="World.U"/> at the point of use, with the vertical ones negated because up
     /// is -Y here.
     ///
-    /// Solid geometry is a <see cref="StaticBody2D"/> on <see cref="World.Layer.Ground"/> carrying a
-    /// <see cref="CollisionShape2D"/> and a <see cref="Sprite2D"/>; decoration is a bare Sprite2D,
-    /// which is exactly the split Unity had between "collider plus renderer" and "renderer only".
+    /// Solid geometry is an instance of <c>Scenes/World/SolidBox.tscn</c> - a
+    /// <see cref="StaticBody2D"/> on <see cref="World.Layer.Ground"/> carrying a
+    /// <see cref="CollisionShape2D"/> and a <see cref="Sprite2D"/> - and decoration is a bare Sprite2D
+    /// still built here, which is exactly the split Unity had between "collider plus renderer" and
+    /// "renderer only". A one-node scene whose only content is a Sprite2D would be a file and a load
+    /// for no structure, so <see cref="CreateSceneryPiece"/> stays code on purpose.
+    ///
+    /// This file no longer builds nodes for the pieces that have a scene: it loads them, binds the
+    /// designer-owned numbers, and places them. The names it writes are the ones the rest of the
+    /// project reaches for - a platform takes the layout's own <c>platform.Name</c>, not the scene
+    /// root's - so the instance is renamed before it enters the tree.
     /// </summary>
     public static class GameplayEnvironmentBuilder
     {
         /// <summary>World-space text, shared with <see cref="GameplayEnemySpawner"/>'s role markers.</summary>
         private const string WorldLabelScenePath = "res://Scenes/World/WorldLabel.tscn";
+
+        /// <summary>Every piece of static collision in the arena: floor, platforms, edges, spirit platform.</summary>
+        private const string SolidBoxScenePath = "res://Scenes/World/SolidBox.tscn";
+
+        /// <summary>The same box with the gate's lever hung on it - an inherited scene.</summary>
+        private const string ShortcutGateScenePath = "res://Scenes/World/ShortcutGate.tscn";
+
+        private const string CheckpointScenePath = "res://Scenes/World/Checkpoint.tscn";
+        private const string GatePortalScenePath = "res://Scenes/World/GatePortal.tscn";
+
+        /// <summary>The two children <c>SolidBox.tscn</c> authors. Reached by name, as the scene guarantees them.</summary>
+        private const string SolidBoxShapeName = "Shape";
+
+        private const string SolidBoxSpriteName = "Sprite";
 
         /// <summary>
         /// Builds the arena and hands back the checkpoint the player belongs at. On a resumed slot that
@@ -184,12 +206,11 @@ namespace MyGame.Gameplay
                 scene.GroundPosition.X + side * (scene.GroundSize.X * 0.5f + thicknessPx * 0.5f),
                 scene.GroundPosition.Y - heightPx * 0.5f);
 
-            StaticBody2D edge = GameplayBuildShim.NewObject<StaticBody2D>(name, position);
-            edge.CollisionLayer = World.Layer.Ground;
-            edge.CollisionMask = 0;
-
-            CollisionShape2D shape = edge.AddComponent<CollisionShape2D>("Shape");
-            shape.Shape = new RectangleShape2D { Size = new Vector2(thicknessPx, heightPx) };
+            // The same SolidBox.tscn the floor and the platforms use, with the renderer switched off:
+            // a world edge is a boundary rather than a thing to look at, and Unity's version carried no
+            // SpriteRenderer either. Hidden rather than freed, because the scene owns the tree.
+            StaticBody2D edge = CreateSolidBox(name, position, new Vector2(thicknessPx, heightPx), Colors.White, 0);
+            edge.GetNode<Sprite2D>(SolidBoxSpriteName).Visible = false;
         }
 
         private static void CreatePlatforms(GameplaySceneDefaults scene, GameplayReadabilityDefaults readability)
@@ -219,9 +240,17 @@ namespace MyGame.Gameplay
         /// </remarks>
         private static void CreateGatePortal(Node2D checkpoint)
         {
-            Node2D go = GameplayBuildShim.NewObject<Node2D>(
-                "GatePortal", checkpoint.GlobalPosition + new Vector2(World.U(GatePortalOffsetX), 0f));
-            go.AddComponent<GateTravelZone>();
+            var go = GD.Load<PackedScene>(GatePortalScenePath).Instantiate<Node2D>();
+
+            // Positioned before it enters the tree, as GameplayBuildShim.NewObject did. The scene
+            // already names the root "GatePortal", so nothing is renamed here.
+            go.Position = checkpoint.GlobalPosition + new Vector2(World.U(GatePortalOffsetX), 0f);
+
+            // Bound while the instance is still detached: the marker's pulse caches the colour it finds
+            // at _Ready and writes it back every frame, so a tint applied afterwards is invisible.
+            go.GetNode<GateTravelZone>("GateTravelZone").BindAuthoredTriggerAndMarker();
+
+            GameplayBuildShim.SceneRoot?.AddChild(go);
         }
 
         /// <summary>Unity metres - scaled at the one place it is used.</summary>
@@ -266,12 +295,24 @@ namespace MyGame.Gameplay
         /// </summary>
         private static Node2D CreateCheckpointAt(Vector2 position, int index)
         {
-            Node2D go = GameplayBuildShim.NewObject<Node2D>(index == 0 ? "Checkpoint" : $"Checkpoint{index}", position);
-            go.AddComponent<Checkpoint>().Configure(index == 0 ? "Gameplay-start" : $"Gameplay-checkpoint-{index}", Vector2.Zero);
+            var go = GD.Load<PackedScene>(CheckpointScenePath).Instantiate<Node2D>();
+
+            // Name and position before it enters the tree, as GameplayBuildShim.NewObject did. The
+            // scene root ships as "Checkpoint"; only the numbered ones are renamed.
+            go.Name = index == 0 ? "Checkpoint" : $"Checkpoint{index}";
+            go.Position = position;
+
+            go.GetNode<Checkpoint>("Checkpoint").Configure(index == 0 ? "Gameplay-start" : $"Gameplay-checkpoint-{index}", Vector2.Zero);
 
             // Inert until CheckpointZone.InitializeAll wires it, which the bootstrap does once the player
-            // and the respawner exist.
-            go.AddComponent<CheckpointZone>().SetCheckpointIndex(index);
+            // and the respawner exist. The bind below is not that wiring: it is the designer-owned trigger
+            // radius and marker colour, which have to land before the marker's pulse readies and caches
+            // the colour it will write back every frame.
+            CheckpointZone zone = go.GetNode<CheckpointZone>("CheckpointZone");
+            zone.SetCheckpointIndex(index);
+            zone.BindAuthoredTriggerAndMarker();
+
+            GameplayBuildShim.SceneRoot?.AddChild(go);
             return go;
         }
 
@@ -285,10 +326,13 @@ namespace MyGame.Gameplay
                 return;
 
             StaticBody2D go = CreateSolidBox(
-                "ShortcutGate", scene.ShortcutGatePosition, scene.ShortcutGateSize, readability.ArenaGateColor, readability.GateSortingOrder);
+                "ShortcutGate", scene.ShortcutGatePosition, scene.ShortcutGateSize, readability.ArenaGateColor, readability.GateSortingOrder,
+                ShortcutGateScenePath);
 
-            // Added after the body and the sprite: the gate caches both, and SetOpen writes them.
-            ShortcutGate gate = go.AddComponent<ShortcutGate>();
+            // Authored as a child of the door body by Scenes/World/ShortcutGate.tscn, under the name
+            // AddComponent gave it - the gate's log line reads off it. Told which way it opens only
+            // after the body and the sprite exist: the gate caches both, and SetOpen writes them.
+            ShortcutGate gate = go.GetNode<ShortcutGate>("ShortcutGate");
             gate.SetOpensFromRight(scene.ShortcutOpensFromRight);
             gate.SetOpen(startsOpen);
         }
@@ -305,24 +349,41 @@ namespace MyGame.Gameplay
         }
 
         /// <summary>
-        /// A solid box of ground: <see cref="StaticBody2D"/> on <see cref="World.Layer.Ground"/>, one
-        /// rectangle collider and one stretched white sprite tinted to the wanted colour. Unity did the
-        /// same thing with a BoxCollider2D, a sliced SpriteRenderer and a static Rigidbody2D.
+        /// One instance of <c>Scenes/World/SolidBox.tscn</c>: a <see cref="StaticBody2D"/> on
+        /// <see cref="World.Layer.Ground"/> carrying one rectangle collider and one stretched white
+        /// sprite tinted to the wanted colour. Unity did the same thing with a BoxCollider2D, a sliced
+        /// SpriteRenderer and a static Rigidbody2D on one GameObject.
+        ///
+        /// <paramref name="name"/> is the layout's own name for the piece - <c>platform.Name</c>,
+        /// <c>Ground</c>, <c>SpiritPlatform</c> - and never the scene root's, because tests and
+        /// diagnostics look the built arena up by those names. Written, like the position, before the
+        /// node enters the tree, as <c>GameplayBuildShim.NewObject</c> did.
         /// </summary>
-        private static StaticBody2D CreateSolidBox(string name, Vector2 position, Vector2 size, Color color, int sortingOrder)
+        /// <param name="scenePath">
+        /// <c>SolidBox.tscn</c>, or the shortcut gate's inherited scene - the same box with a lever
+        /// hung on it.
+        /// </param>
+        private static StaticBody2D CreateSolidBox(
+            string name, Vector2 position, Vector2 size, Color color, int sortingOrder, string scenePath = SolidBoxScenePath)
         {
-            StaticBody2D body = GameplayBuildShim.NewObject<StaticBody2D>(name, position);
-            body.CollisionLayer = World.Layer.Ground;
-            body.CollisionMask = 0;
+            var body = GD.Load<PackedScene>(scenePath).Instantiate<StaticBody2D>();
+            body.Name = name;
+            body.Position = position;
 
-            CollisionShape2D shape = body.AddComponent<CollisionShape2D>("Shape");
-            shape.Shape = new RectangleShape2D { Size = size };
+            // The scene marks its RectangleShape2D resource_local_to_scene, so this resizes this box
+            // and not every other one in the arena.
+            ((RectangleShape2D)body.GetNode<CollisionShape2D>(SolidBoxShapeName).Shape).Size = size;
 
-            Sprite2D sprite = body.AddComponent<Sprite2D>("Sprite");
+            // The white square is generated at runtime - there is no baked Resources/Art/Square.png for
+            // the scene to carry - and the stretch is per instance, so the texture and the size are the
+            // two things Dress still has to write. Pivot (0.5, 0.5) is Sprite2D's own centring, which the
+            // scene authors, so the offset it computes is zero.
+            Sprite2D sprite = body.GetNode<Sprite2D>(SolidBoxSpriteName);
             GameplayVisualFactory.Dress(sprite, GameplayVisualFactory.CreateSquareSprite(Colors.White), size, new Vector2(0.5f, 0.5f));
             sprite.Modulate = color;
             sprite.ZIndex = sortingOrder;
 
+            GameplayBuildShim.SceneRoot?.AddChild(body);
             return body;
         }
 

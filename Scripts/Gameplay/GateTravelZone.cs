@@ -292,6 +292,29 @@ namespace MyGame.Gameplay
             return false;
         }
 
+        /// <summary>
+        /// Binds what <c>Scenes/World/GatePortal.tscn</c> authors but must not own: the marker colour
+        /// from <c>Readability.json</c>. The reach is this class's own constant, not designer data, so
+        /// the scene keeps it.
+        /// </summary>
+        /// <remarks>
+        /// Called by the arena builder while the instance is still detached, and that timing is the
+        /// whole reason this is public: <see cref="GameplayTelegraphPulse"/> caches the colour it finds
+        /// when it readies and writes that back every frame after, so a tint applied once the marker is
+        /// in the tree never shows.
+        /// </remarks>
+        public void BindAuthoredTriggerAndMarker()
+        {
+            EnsureTrigger();
+            EnsureMarker();
+        }
+
+        /// <summary>
+        /// The trigger <c>Scenes/World/GatePortal.tscn</c> authors, or one built here when there is
+        /// none - a portal with no trigger never answers Interact and gives no sign why, and the test
+        /// fixtures build a bare <see cref="GateTravelZone"/> by hand. Unlike the bonfire's, this reach
+        /// is the zone's own constant rather than designer data, so an authored shape is left alone.
+        /// </summary>
         private void EnsureTrigger()
         {
             CollisionLayer = World.Layer.Trigger;
@@ -314,24 +337,31 @@ namespace MyGame.Gameplay
         /// rather than as a second bonfire. That colour is the only thing that ever differed between
         /// the two, and it is designer-owned, so it stays bound here.
         /// </summary>
+        /// <remarks>
+        /// A portal from <c>Scenes/World/GatePortal.tscn</c> already carries the marker, so this binds
+        /// the authored one; a zone built by hand gets one instanced. Either way it is sized and tinted
+        /// before it is in the tree, because the pulse caches both when it is readied.
+        /// </remarks>
         private void EnsureMarker()
         {
-            if (GetNodeOrNull(MarkerObjectName) != null)
-                return;
+            var marker = GetNodeOrNull<GameplayTelegraphPulse>(MarkerObjectName);
+            bool authored = marker != null;
+            if (!authored)
+            {
+                marker = GD.Load<PackedScene>(MarkerScenePath).Instantiate<GameplayTelegraphPulse>();
+                marker.Name = MarkerObjectName;
+            }
 
             var shape = this.GetComponent<CollisionShape2D>()?.Shape as CircleShape2D;
             float radius = shape != null ? shape.Radius : World.U(ZoneRadius);
             GameplayReadabilityDefaults readability = GameplayReadabilityDefaults.Create();
 
-            var marker = GD.Load<PackedScene>(MarkerScenePath).Instantiate<GameplayTelegraphPulse>();
-            marker.Name = MarkerObjectName;
-
             Sprite2D disc = marker.GetNode<Sprite2D>("Disc");
             disc.SetSpriteSize(new Vector2(radius * 2f, radius * 2f));
             disc.Modulate = readability.ArenaGateColor;
 
-            // Sized and tinted before it enters the tree: the pulse caches both when it is readied.
-            AddChild(marker);
+            if (!authored)
+                AddChild(marker);
         }
     }
 }

@@ -91,6 +91,23 @@ namespace MyGame.Gameplay
                 _input.OnInteract += TryActivate;
         }
 
+        /// <summary>
+        /// Binds what <c>Scenes/World/Checkpoint.tscn</c> authors but must not own: the reach from
+        /// <c>WorldTuning.json</c> and the marker colour from <c>Readability.json</c>. Both are
+        /// designer data, so the scene carries only the shipped values and these overwrite them.
+        /// </summary>
+        /// <remarks>
+        /// Called by the arena builder while the instance is still detached, and that timing is the
+        /// whole reason this is public rather than folded into <see cref="_Ready"/>:
+        /// <see cref="GameplayTelegraphPulse"/> caches the colour it finds when it readies and writes
+        /// that back every frame after, so a tint applied once the marker is in the tree never shows.
+        /// </remarks>
+        public void BindAuthoredTriggerAndMarker()
+        {
+            EnsureTrigger();
+            EnsureMarker();
+        }
+
         public override void _Ready()
         {
             EnsureTrigger();
@@ -209,9 +226,13 @@ namespace MyGame.Gameplay
         }
 
         /// <summary>
-        /// A zone with no trigger shape never fires and gives no sign why, so one is added. Unity had to
-        /// warn about an authored *solid* collider it must not convert; an <see cref="Area2D"/> cannot be
-        /// solid, so that branch has nothing left to guard and is gone.
+        /// Binds the designer's reach onto the trigger <c>Scenes/World/Checkpoint.tscn</c> authors. The
+        /// shape is still built here when there is none, because a zone with no trigger never fires and
+        /// gives no sign why - and the test fixtures build a bare <see cref="CheckpointZone"/> by hand.
+        /// The radius is rewritten either way: the scene carries the shipped 1.5 m so it is valid on its
+        /// own, but <c>WorldTuning.json</c> is what owns the number.
+        /// Unity had to warn about an authored *solid* collider it must not convert; an
+        /// <see cref="Area2D"/> cannot be solid, so that branch has nothing left to guard and is gone.
         /// </summary>
         private void EnsureTrigger()
         {
@@ -219,43 +240,53 @@ namespace MyGame.Gameplay
             CollisionMask = World.Layer.Player;
             SetDeferred(Area2D.PropertyName.Monitoring, true);
 
-            if (this.GetComponent<CollisionShape2D>() != null)
-                return;
-
-            AddChild(new CollisionShape2D
+            CollisionShape2D trigger = this.GetComponent<CollisionShape2D>();
+            if (trigger == null)
             {
-                Name = "Trigger",
-                Shape = new CircleShape2D { Radius = AuthoredRadius() }
-            });
+                trigger = new CollisionShape2D { Name = "Trigger", Shape = new CircleShape2D() };
+                AddChild(trigger);
+            }
+
+            // The scene marks its CircleShape2D resource_local_to_scene, so this is this bonfire's reach
+            // and not every bonfire's.
+            if (trigger.Shape is CircleShape2D circle)
+                circle.Radius = AuthoredRadius();
         }
 
         /// <summary>
         /// Greybox marker: <c>Scenes/World/MarkerDisc.tscn</c>, the same scene
         /// <see cref="GateTravelZone"/> instances. The pulse owns the transform and the disc hangs
         /// under it - that is how Unity's "two components on one marker GameObject" comes apart, and
-        /// the scene authors it. Only the marker's name, its size (this zone's own trigger radius) and
-        /// the designer-owned colour are bound here.
+        /// the scene authors it. Only the marker's size (this zone's own trigger radius) and the
+        /// designer-owned colour are bound here.
         /// </summary>
+        /// <remarks>
+        /// A checkpoint from <c>Scenes/World/Checkpoint.tscn</c> already carries the marker, so this
+        /// binds the authored one; a zone built by hand - which is every fixture - gets one instanced.
+        /// Either way the disc is sized and tinted before the marker is in the tree, and that order is
+        /// load-bearing for the same reason it was in Unity: the pulse caches the colour it finds when
+        /// it is readied and writes it back every frame after that.
+        /// </remarks>
         private void EnsureMarker()
         {
-            if (GetNodeOrNull(MarkerObjectName) != null)
-                return;
+            var marker = GetNodeOrNull<GameplayTelegraphPulse>(MarkerObjectName);
+            bool authored = marker != null;
+            if (!authored)
+            {
+                marker = GD.Load<PackedScene>(MarkerScenePath).Instantiate<GameplayTelegraphPulse>();
+                marker.Name = MarkerObjectName;
+            }
 
             var shape = this.GetComponent<CollisionShape2D>()?.Shape as CircleShape2D;
             float radius = shape != null ? shape.Radius : AuthoredRadius();
             GameplayReadabilityDefaults readability = GameplayReadabilityDefaults.Create();
 
-            var marker = GD.Load<PackedScene>(MarkerScenePath).Instantiate<GameplayTelegraphPulse>();
-            marker.Name = MarkerObjectName;
-
             Sprite2D disc = marker.GetNode<Sprite2D>("Disc");
             disc.SetSpriteSize(new Vector2(radius * 2f, radius * 2f));
             disc.Modulate = readability.CheckpointLabelColor;
 
-            // Attached last, and the order is load-bearing for the same reason it was in Unity: the
-            // pulse caches the colour and scale it finds when it is readied, so the disc has to be
-            // sized and tinted before the marker enters the tree.
-            AddChild(marker);
+            if (!authored)
+                AddChild(marker);
         }
     }
 }

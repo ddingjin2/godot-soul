@@ -32,27 +32,16 @@ namespace MyGame.Gameplay
     /// only the earlier, explicit way to do the same thing.
     ///
     /// In Unity one GameObject carried the door's solid collider, its sprite and this component. Here the
-    /// door is the <see cref="StaticBody2D"/> the environment builder made and the gate is a child node
-    /// of it - the port's standard shape for "another component on the same object" - so the body and the
-    /// sprite it drives are reached with <c>GetComponentInParent</c>. A Godot node cannot be solid and a
-    /// trigger at once either, so the Interact reach is a child <see cref="Area2D"/> of its own.
+    /// whole door is <c>Scenes/World/ShortcutGate.tscn</c> - <c>SolidBox.tscn</c> inherited, so the body
+    /// is the same <see cref="StaticBody2D"/> every platform is - and the gate is a child node of it,
+    /// the port's standard shape for "another component on the same object", so the body and the sprite
+    /// it drives are reached with <c>GetComponentInParent</c>. A Godot node cannot be solid and a
+    /// trigger at once either, so the Interact reach is a child <see cref="Area2D"/> of its own, and
+    /// that reach is authored in the same scene.
     /// </remarks>
     public sealed partial class ShortcutGate : Node2D
     {
         private const string TriggerObjectName = "ShortcutGateTrigger";
-
-        /// <summary>
-        /// Reach of the lever, in Unity metres. Wider than the portal's 1.4 because a door is not always
-        /// met on foot: a player who clears this one by dropping from a ledge lands ahead of it, and the
-        /// drift is bounded below rather than tunable. Chapter two measures 3.47 units between the door
-        /// and where the fall puts the player down, and the geometry says the gap can never be under 2.79
-        /// for any ledge height - so a 1.4 reach makes a shortcut that literally cannot be opened by
-        /// playing the level. Five rather than the four that just covers chapter two: at four the landing
-        /// sits 0.55 units inside the reach, and a level whose completability rests on half a unit of
-        /// slack is one platform edit away from being unfinishable with nothing red to say so. Reaching
-        /// too far costs nothing, because the side is judged where the player stands when they press.
-        /// </summary>
-        private const float ZoneRadius = 5f;
 
         /// <summary>How much of the door is left visible once it is open. Not zero: the way through is worth seeing.</summary>
         private const float OpenAlpha = 0.25f;
@@ -270,9 +259,16 @@ namespace MyGame.Gameplay
         }
 
         /// <summary>
-        /// A gate with no trigger never answers Interact and gives no sign why, so one is added. The
-        /// solid body is left alone - it is the door.
+        /// Subscribes to the reach <c>Scenes/World/ShortcutGate.tscn</c> authors - the Area2D and its
+        /// 5 m circle, whose size and the reasoning behind it now live in that file. The solid body is
+        /// left alone; it is the door.
         /// </summary>
+        /// <remarks>
+        /// A gate with no trigger never answers Interact and gives no sign why, which on this component
+        /// means a level nobody can finish - so the missing case is a warning rather than silence.
+        /// Nothing in the project builds a <see cref="ShortcutGate"/> by hand; the arena instances the
+        /// scene, which is what carries the reach.
+        /// </remarks>
         private void EnsureTrigger()
         {
             if (_trigger != null)
@@ -281,18 +277,11 @@ namespace MyGame.Gameplay
             _trigger = GetNodeOrNull<Area2D>(TriggerObjectName);
             if (_trigger == null)
             {
-                _trigger = new Area2D
-                {
-                    Name = TriggerObjectName,
-                    CollisionLayer = World.Layer.Trigger,
-                    CollisionMask = World.Layer.Player
-                };
-                _trigger.AddChild(new CollisionShape2D
-                {
-                    Name = "Reach",
-                    Shape = new CircleShape2D { Radius = World.U(ZoneRadius) }
-                });
-                AddChild(_trigger);
+                GD.PushWarning(
+                    $"ShortcutGate on {Name} has no {TriggerObjectName} child, so the door can never be opened and the " +
+                    "chapter behind it cannot be finished. Instance Scenes/World/ShortcutGate.tscn rather than adding " +
+                    "the component to a bare body.");
+                return;
             }
 
             _trigger.BodyEntered += OnBodyEntered;

@@ -1,0 +1,52 @@
+; The one-way door: a solid box that stops being solid once it has been opened from the far side.
+; An inherited scene, because the door IS a piece of arena geometry - same StaticBody2D, same shape,
+; same sprite - with a lever hung on it. Replaces GameplayEnvironmentBuilder.CreateShortcutGate's
+; construction and ShortcutGate.EnsureTrigger's construction branch.
+;
+; The gate script is a child Node2D of the door body rather than the body itself, which is this
+; port's standard shape for "another component on the same object": ShortcutGate.Cache reaches the
+; body's shape with GetParent().GetComponent<CollisionShape2D>() and its sprite with
+; GetComponentInParent<Sprite2D>(). Nothing calls Initialize on it - it subscribes off the player
+; body that walks into its own Area2D - so the tree below is the whole wiring.
+;
+; A Godot node cannot be solid and a trigger at once, so the Interact reach is a child Area2D of its
+; own. The door's shape is what SetOpen disables (deferred - Godot refuses to disable a
+; CollisionObject inside a physics callback); the reach stays live either way.
+;
+; WHAT IS BOUND PER INSTANCE: everything SolidBox.tscn binds - position, size, colour, sorting order,
+; texture - plus which side opens the door (SceneLayout_*.json shortcutOpensFromRight) and whether it
+; starts open (the save slot).
+;
+; UNITS: 1 Unity metre = 100 px (World.Ppu).
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="PackedScene" path="res://Scenes/World/SolidBox.tscn" id="1"]
+[ext_resource type="Script" path="res://Scripts/Gameplay/ShortcutGate.cs" id="2"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_reach"]
+; Reach of the lever: 5 m -> World.U -> 500 px. Wider than the portal's 1.4 m because a door is not
+; always met on foot - a player who clears this one by dropping from a ledge lands ahead of it, and
+; the drift is bounded below rather than tunable. Chapter two measures 3.47 units between the door
+; and where the fall puts the player down, and the geometry says the gap can never be under 2.79 for
+; any ledge height, so a 1.4 reach makes a shortcut that literally cannot be opened by playing the
+; level. Five rather than the four that just covers chapter two: at four the landing sits 0.55 units
+; inside the reach, and a level whose completability rests on half a unit of slack is one platform
+; edit away from being unfinishable with nothing red to say so. Reaching too far costs nothing,
+; because the side is judged where the player stands when they press.
+radius = 500.0
+
+[node name="ShortcutGate" instance=ExtResource("1")]
+
+; Named "ShortcutGate" like its parent - AddComponent<ShortcutGate>() named it after the type, and
+; the "ShortcutGate: opened {Name}" log line reads off it.
+[node name="ShortcutGate" type="Node2D" parent="."]
+script = ExtResource("2")
+
+[node name="ShortcutGateTrigger" type="Area2D" parent="ShortcutGate"]
+; World.Layer.Trigger = 1 << 6 = 64, watching World.Layer.Player = 1 << 1 = 2. The name is what
+; ShortcutGate.EnsureTrigger looks up before it subscribes to BodyEntered/BodyExited.
+collision_layer = 64
+collision_mask = 2
+
+[node name="Reach" type="CollisionShape2D" parent="ShortcutGate/ShortcutGateTrigger"]
+shape = SubResource("CircleShape2D_reach")
