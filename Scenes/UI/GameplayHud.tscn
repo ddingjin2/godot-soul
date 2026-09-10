@@ -1,0 +1,267 @@
+[gd_scene load_steps=10 format=3]
+
+; The gameplay HUD. In Unity this was an authored screen-space Canvas with uGUI prefabs under it;
+; the port rebuilt the whole hierarchy in GameplayHud.CreateUi and this scene puts it back. Every
+; static property is here - the layer's process mode, every anchor and offset, every colour, every
+; font size, every mouse filter - and what is left in GameplayHud.cs is binding, the per-frame
+; readouts and the two timers.
+;
+; PROCESS MODE. process_mode = 3 (Always) on the CanvasLayer is load-bearing and is half of a pair:
+; the warning line expires on unscaled time and the menus have to keep answering while the world is
+; stopped at TimeScale 0, so the HUD ticks through a pause. The other half is deliberately NOT here
+; - the ghost gauge and the hit flash run on scaled time inside TickHealthGauge and freeze dead at
+; TimeScale 0, which is what stops a hit taken on the frame before Escape from draining away behind
+; the pause menu. Setting the layer to Always does not change that; Godot still scales the delta it
+; hands _Process.
+;
+; DRAW ORDER IS TREE ORDER. A Control draws its children in the order they appear here, so the order
+; below is a layout decision, not a listing:
+;   - the plate first, then the three gauges, then the eleven text rows. The numbers have to land on
+;     top of the strip they describe.
+;   - the warning line above the rows, because it is the one line allowed to be read over anything.
+;   - then the panels: victory, level-up, pause, gate travel. Level-up before pause because it is the
+;     one panel here that does not stop the world, so Escape has to be able to put the pause menu on
+;     top of it.
+;
+; The two controllers are children of the layer rather than of HudRoot: they are plain Nodes with no
+; rectangle, and GameplayHudSpawner binds them by name instead of adding them.
+;
+; UNITS: every number in this file is a screen pixel, exactly as it was in uGUI. World.Ppu is a
+; world-space conversion and has no business in the HUD. Colours are MoodDirection.md section 2 -
+; Bone100 #C3BDB1, Bone200 #9A9488, Bone300 #6E685C, Cold200 #8492A0, Ember300 #A84B33.
+
+[ext_resource type="Script" path="res://Scripts/UI/GameplayHud.cs" id="1_hud"]
+[ext_resource type="Script" path="res://Scripts/Gameplay/GameplayVictoryController.cs" id="2_victory"]
+[ext_resource type="Script" path="res://Scripts/Gameplay/GameplayPauseController.cs" id="3_pause"]
+[ext_resource type="Theme" path="res://Resources/UI/MenuTheme.tres" id="4_theme"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/HudBar.tscn" id="5_bar"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/VictoryPanel.tscn" id="6_victory"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/LevelUpPanel.tscn" id="7_levelup"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/PausePanel.tscn" id="8_pause"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/GateTravelPanel.tscn" id="9_gate"]
+
+[node name="HUD" type="CanvasLayer"]
+process_mode = 3
+script = ExtResource("1_hud")
+
+[node name="GameplayVictoryController" type="Node" parent="."]
+script = ExtResource("2_victory")
+
+[node name="GameplayPauseController" type="Node" parent="."]
+process_mode = 3
+script = ExtResource("3_pause")
+
+[node name="HudRoot" type="Control" parent="."]
+; A CanvasLayer has no rectangle of its own, so everything with a rect hangs off this.
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+; Ignore, unlike a panel's Stop: the readouts must not eat clicks meant for the world or for a
+; panel. Children are hit-tested on their own, so the panels below still block.
+mouse_filter = 2
+; The labels take their face from this theme's default_font, which GameplayHud.LoadMenuTheme writes
+; at runtime - see the note at the top of MenuTheme.tres for why no font is named in the resource.
+theme = ExtResource("4_theme")
+
+[node name="HUDBackground" type="ColorRect" parent="HudRoot"]
+; Sits behind the text column - rows run from y 40 down to y 370 at x 20 - with a 10px margin.
+anchors_preset = -1
+offset_left = 10.0
+offset_top = 30.0
+offset_right = 290.0
+offset_bottom = 380.0
+mouse_filter = 2
+color = Color(0, 0, 0, 0.45)
+
+[node name="HealthGauge" parent="HudRoot" instance=ExtResource("5_bar")]
+offset_left = 20.0
+offset_top = 40.0
+offset_right = 260.0
+offset_bottom = 66.0
+
+[node name="GhostFill" parent="HudRoot/HealthGauge" index="0"]
+; Health alone shows the ghost. Stamina and poise refill in under a second, so a trailing strip on
+; those two would be lit for most of a fight and read as noise rather than as damage. HudBar authors
+; the layer on every bar, ahead of the live fill so it draws behind it, and rests it hidden.
+visible = true
+
+[node name="StaminaGauge" parent="HudRoot" instance=ExtResource("5_bar")]
+offset_left = 20.0
+offset_top = 220.0
+offset_right = 260.0
+offset_bottom = 246.0
+
+[node name="Fill" parent="HudRoot/StaminaGauge" index="1"]
+; Cold200, at the alpha every bar shares.
+color = Color(0.5176471, 0.57254905, 0.627451, 0.55)
+
+[node name="PoiseGauge" parent="HudRoot" instance=ExtResource("5_bar")]
+offset_left = 20.0
+offset_top = 250.0
+offset_right = 260.0
+offset_bottom = 276.0
+
+[node name="Fill" parent="HudRoot/PoiseGauge" index="1"]
+; Bone300. UpdatePoise rewrites this to Ember300 at 0.75 while the player is staggered - brighter as
+; well as red, because the strip is the peripheral read.
+color = Color(0.43137255, 0.40784314, 0.36078432, 0.55)
+
+[node name="HealthText" type="Label" parent="HudRoot"]
+anchors_preset = -1
+offset_left = 20.0
+offset_top = 40.0
+offset_right = 280.0
+offset_bottom = 70.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+theme_override_font_sizes/font_size = 22
+text = ""
+
+[node name="HumanityText" type="Label" parent="HudRoot"]
+anchors_preset = -1
+offset_left = 20.0
+offset_top = 70.0
+offset_right = 280.0
+offset_bottom = 100.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.6039216, 0.5803922, 0.53333336, 1)
+theme_override_font_sizes/font_size = 22
+text = ""
+
+[node name="ResonanceText" type="Label" parent="HudRoot"]
+anchors_preset = -1
+offset_left = 20.0
+offset_top = 100.0
+offset_right = 280.0
+offset_bottom = 130.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.6039216, 0.5803922, 0.53333336, 1)
+theme_override_font_sizes/font_size = 22
+text = ""
+
+[node name="ActiveSinText" type="Label" parent="HudRoot"]
+; Recoloured per sin at runtime - GameplayHud.GetSinColor is the table, and it is behaviour rather
+; than styling, so it stays in script.
+anchors_preset = -1
+offset_left = 20.0
+offset_top = 130.0
+offset_right = 280.0
+offset_bottom = 160.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+theme_override_font_sizes/font_size = 22
+text = ""
+
+[node name="DeathCountText" type="Label" parent="HudRoot"]
+anchors_preset = -1
+offset_left = 20.0
+offset_top = 160.0
+offset_right = 280.0
+offset_bottom = 190.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.43137255, 0.40784314, 0.36078432, 1)
+theme_override_font_sizes/font_size = 20
+text = ""
+
+[node name="SpiritStateText" type="Label" parent="HudRoot"]
+anchors_preset = -1
+offset_left = 20.0
+offset_top = 190.0
+offset_right = 280.0
+offset_bottom = 220.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.5176471, 0.57254905, 0.627451, 1)
+theme_override_font_sizes/font_size = 20
+text = ""
+
+[node name="StaminaText" type="Label" parent="HudRoot"]
+anchors_preset = -1
+offset_left = 20.0
+offset_top = 220.0
+offset_right = 280.0
+offset_bottom = 250.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.6039216, 0.5803922, 0.53333336, 1)
+theme_override_font_sizes/font_size = 20
+text = ""
+
+[node name="PoiseText" type="Label" parent="HudRoot"]
+anchors_preset = -1
+offset_left = 20.0
+offset_top = 250.0
+offset_right = 280.0
+offset_bottom = 280.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.6039216, 0.5803922, 0.53333336, 1)
+theme_override_font_sizes/font_size = 20
+text = ""
+
+[node name="SoulsText" type="Label" parent="HudRoot"]
+anchors_preset = -1
+offset_left = 20.0
+offset_top = 280.0
+offset_right = 280.0
+offset_bottom = 310.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.5176471, 0.57254905, 0.627451, 1)
+theme_override_font_sizes/font_size = 22
+text = ""
+
+[node name="FlaskText" type="Label" parent="HudRoot"]
+anchors_preset = -1
+offset_left = 20.0
+offset_top = 310.0
+offset_right = 280.0
+offset_bottom = 340.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.6039216, 0.5803922, 0.53333336, 1)
+theme_override_font_sizes/font_size = 22
+text = ""
+
+[node name="ActionText" type="Label" parent="HudRoot"]
+anchors_preset = -1
+offset_left = 20.0
+offset_top = 340.0
+offset_right = 280.0
+offset_bottom = 370.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.43137255, 0.40784314, 0.36078432, 1)
+theme_override_font_sizes/font_size = 18
+text = ""
+
+[node name="WarningText" type="Label" parent="HudRoot"]
+; Centred on the screen rather than in the column: this is the YOU DIED / HUMANITY FADING line, and
+; the anchors put it in the middle without a half-viewport offset on top.
+anchors_preset = -1
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -200.0
+offset_top = 40.0
+offset_right = 200.0
+offset_bottom = 70.0
+mouse_filter = 2
+; Ember300. ShowCheckpointSaved drops it to Bone200 for the save confirmation it borrows this line
+; for; the two never compete in practice, and humanity should win if they ever do.
+theme_override_colors/font_color = Color(0.65882355, 0.29411766, 0.2, 1)
+theme_override_font_sizes/font_size = 28
+text = ""
+horizontal_alignment = 1
+
+[node name="VictoryPanel" parent="HudRoot" instance=ExtResource("6_victory")]
+; The four panels rest hidden and are shown by a visibility flip rather than by a burst of
+; allocation on the frame the player presses the key. That is why they are authored here at all
+; instead of being instanced on demand.
+visible = false
+
+[node name="LevelUpPanel" parent="HudRoot" instance=ExtResource("7_levelup")]
+visible = false
+
+[node name="PausePanel" parent="HudRoot" instance=ExtResource("8_pause")]
+visible = false
+
+[node name="GateTravelPanel" parent="HudRoot" instance=ExtResource("9_gate")]
+visible = false

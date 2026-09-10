@@ -1,0 +1,80 @@
+[gd_scene load_steps=2 format=3]
+
+; The shared plate every HUD modal is drawn on: a full-screen ink rectangle that swallows clicks, a
+; title line and a second line under it. Replaces GameplayHud.CreatePanel, which built this same
+; ColorRect four times, and GameplayHud.CreateVictoryText, which built the two labels seven times.
+;
+; The four panels INHERIT this scene rather than instancing it, so the plate and the two lines are
+; one authored thing and each panel only says what is different about it. That also means the two
+; labels keep the names they have here - Godot does not let an inherited node be renamed - which is
+; why they are called Title and Subtitle rather than VictoryTitle/VictorySubtitle,
+; PauseTitle/PauseStatus, GateTravelTitle and LevelUpTitle/LevelUpSouls. One name per role, four
+; panels; GameplayVictoryPanelTests followed the rename.
+;
+; Subtitle carries whatever the panel's second line is: the boss that fell, the save confirmation,
+; the karma on hand. GateTravelPanel has no second line and hides it.
+;
+; MouseFilter is Stop here and Ignore on the two labels: a modal panel is supposed to swallow clicks
+; aimed at whatever is behind it, while the text inside it must not steal them from the buttons.
+;
+; The theme is on the root so every button and label inside a panel inherits it - the plates, the
+; five button states and the font sizes are all MenuTheme.tres, and its default_font is written at
+; runtime by GameplayHud.LoadMenuTheme (an ext_resource to an unimported .otf is a hard load
+; failure, so the font is the one thing the resource does not name).
+;
+; Alpha 0.92 is what three of the four panels ship with; VictoryPanel (0.94) and PausePanel (0.88)
+; override it. PanelInk is #0A0B0E - MoodDirection.md section 2.
+;
+; UNITS: screen pixels. World.Ppu is a world-space conversion and has no business in the HUD.
+
+[ext_resource type="Theme" path="res://Resources/UI/MenuTheme.tres" id="1_theme"]
+
+[node name="Panel" type="ColorRect"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+mouse_filter = 0
+theme = ExtResource("1_theme")
+color = Color(0.039215688, 0.043137256, 0.05490196, 0.92)
+
+[node name="Title" type="Label" parent="."]
+; 560x70 centred, 300px above the middle - the rect CreateVictoryText gave every panel line. The two
+; panels whose title sits lower (victory, pause) move offset_top/offset_bottom and nothing else.
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -280.0
+offset_top = -335.0
+offset_right = 280.0
+offset_bottom = -265.0
+mouse_filter = 2
+; Bone100 #C3BDB1, text primary.
+theme_override_colors/font_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+theme_override_font_sizes/font_size = 44
+text = ""
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Subtitle" type="Label" parent="."]
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -280.0
+offset_top = -271.0
+offset_right = 280.0
+offset_bottom = -201.0
+mouse_filter = 2
+; Cold200 #8492A0 - the souls/spirit colour, which is what three of the four second lines say.
+theme_override_colors/font_color = Color(0.5176471, 0.57254905, 0.627451, 1)
+theme_override_font_sizes/font_size = 24
+text = ""
+horizontal_alignment = 1
+vertical_alignment = 1
