@@ -392,3 +392,14 @@ restored all 36 design files byte-identical (SHA-256 compared) and, with `WorldT
   now (`telegraphColor`), but the yellow and red it blends *toward* are the shared danger language and
   belong with the rest of the palette; authoring half of the pair here would make two owners of one
   read. Named so a later stage does not think it was missed.
+
+### Numbers stage S12 - difficulty and New Game+
+
+A new file, `Resources/Design/DifficultyTuning.json`, with the five multipliers `DifficultySettings`
+used to type inline: `easyPlayerDamageTaken` 0.7, `hardPlayerDamageTaken` 1.4, `easyEnemyHealth`
+0.85, `hardEnemyHealth` 1.25, `newGamePlusEnemyHealthPerCycle` 0.25. Nothing spatial, nothing
+scaled; Normal stays the implicit 1.0 with no key. `DifficultySettings` keeps its public surface and
+reads `DifficultyTuningData.Shared` - a lazily read singleton, the same shape as `CombatTuningData` -
+so no bootstrap call was needed. Proven read: `easyPlayerDamageTaken` set to 0.5 turned the shipped
+`100 - 10 * 0.7 = 93` assertion into `95`, then the file was restored. The `ponytail:` note that
+asked for exactly this migration is retired with it.

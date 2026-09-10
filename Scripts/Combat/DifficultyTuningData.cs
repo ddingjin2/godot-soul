@@ -1,0 +1,43 @@
+using Godot;
+using MyGame.Core;
+
+namespace MyGame.Combat
+{
+    /// <summary>
+    /// Designer-owned difficulty weights: what the player takes and what the enemies have on Easy
+    /// and Hard, and how much each New Game+ lap adds. Loaded from
+    /// <c>Resources/Design/DifficultyTuning.json</c>; a missing file yields the shipped defaults
+    /// below, so the fallback is the same game.
+    /// </summary>
+    /// <remarks>
+    /// UNITS: nothing here is spatial. Every field is a multiplier, so no field is scaled by
+    /// <see cref="World.Ppu"/>. Normal is the implicit 1.0 and has no key - a Normal knob would be a
+    /// second place to define what "unmodified" means.
+    /// </remarks>
+    public partial class DifficultyTuningData : Resource
+    {
+        /// <summary>Base name of the design file.</summary>
+        public const string FileName = "DifficultyTuning";
+
+        /// <summary>How much of an incoming hit the player takes.</summary>
+        [Export] public float easyPlayerDamageTaken = 0.7f;
+        [Export] public float hardPlayerDamageTaken = 1.4f;
+
+        /// <summary>Enemy and boss health.</summary>
+        [Export] public float easyEnemyHealth = 0.85f;
+        [Export] public float hardEnemyHealth = 1.25f;
+
+        /// <summary>Added to the enemy health multiplier per completed cycle of the road.</summary>
+        [Export] public float newGamePlusEnemyHealthPerCycle = 0.25f;
+
+        public static DifficultyTuningData Load(string path = "Design/" + FileName)
+        {
+            return Res.LoadJson<DifficultyTuningData>(path) ?? new DifficultyTuningData();
+        }
+
+        /// <summary>The file, read once per run.</summary>
+        public static DifficultyTuningData Shared => _shared ??= Load();
+
+        private static DifficultyTuningData _shared;
+    }
+}

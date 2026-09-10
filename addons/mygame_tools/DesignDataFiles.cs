@@ -58,6 +58,7 @@ namespace MyGame.EditorTools
             // from the port; the file did not, so until it was written every one of those numbers
             // rested on a C# field.
             new Entry("CombatTuning", "MyGame.Combat.CombatTuningData"),
+            new Entry("DifficultyTuning", "MyGame.Combat.DifficultyTuningData"),
             new Entry("WorldTuning", "MyGame.Gameplay.WorldTuningData"),
             new Entry("SceneLayout", "MyGame.Gameplay.GameplaySceneLayoutData"),
             new Entry("MeleeGrunt", "MyGame.Enemy.MeleeGruntData"),
