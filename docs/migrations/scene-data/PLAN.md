@@ -155,6 +155,11 @@ S10은 감사가 예고한 `Readability.json` 재생성 대신 `Resources/Design
 - `GameplayVisualFactory`와 `DebugVisualization`은 감사에서 **무혐의**다. 전자는 `Texture2D`
   팩토리이고 후자는 즉시 모드 `_Draw`다. 씬으로 만들 대상이 아니다.
 
+## 2차 — 완료 기준의 나머지 절반
+
+이 문서의 단계가 끝난 뒤 정본 스킬의 완료 기준에 대조한 잔여(코드 fallback 232+63+179, 씬 거울, 누락 시
+처리 미정의)와 그 계획은 [PLAN_CLOSEOUT.md](PLAN_CLOSEOUT.md)에 있다. 미승인 초안이다.
+
 ## 하지 않는 것
 
 - `Resources/Design/*.json`의 값을 코드에 맞추려고 고치지 않는다. JSON이 틀렸다고 판단되면
