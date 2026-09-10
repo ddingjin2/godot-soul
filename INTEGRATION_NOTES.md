@@ -214,3 +214,27 @@ booting it (the test does) instantiates `TitleScreen.tscn`.
 Widgets on that screen are named `<localisation key><role>` - `UI_TITLE_QUITButton`,
 `UI_OPTION_VSYNCToggle`, `UI_OPTION_MSAARow` - never after the translated caption, which a change of
 locale would rewrite.
+
+
+### `CombatTuning.json` exists now, and three signatures moved with it
+
+`CombatTuningData` lost eight fields nothing read - `hitStopDurationBoss`, `knockbackMedium`,
+`knockbackHeavy`, `knockbackDecayRate`, `telegraphScalePulseMin/Max`,
+`telegraphColorFlashInterval` - and the six stamina fields that duplicated `PlayerResources.json`
+(`attackCost`, `dodgeCost`, `parryCost`, `maxStamina`, `staminaRegenRate`, `staminaRegenDelay`). It
+gained `hitStopDurationParry`, `hitStopPauseScale`, `shakeIntensity/DurationInvulnerable`,
+`shakeIntensity/DurationBossPhase`, `shakeDefaultDuration`, `shakeFrequency`, `audioFallbackVolume`
+and `alignmentForce`, plus `FileName` and a cached `CombatTuningData.Shared` that every consumer
+reads so the file is parsed once per run.
+
+**`CameraShake.TriggerShake(float intensity, float duration)` now takes pixels, not metres.** The
+`World.U` pass moved out of `_Process` and into `CombatTuningData.Load`, where the project's boundary
+rule puts it. Every caller in the repository uses the `CameraShakePreset` overload, so nothing else
+changed; a new caller passing a raw authored metre value would be 100x too small.
+
+`HumanityController.Configure(float max, float lowThreshold, float lossOnHit, float regenRate, float regenDelay)`
+is new - `MyGame.Combat` may not read `PlayerResources.json` itself, so `GameplayPlayerSpawner` pushes
+the five humanity numbers in, exactly as it does for `Poise.Configure`.
+
+`DeathStateController.ApplyTuning(PlayerResourceData resources)` is new and must be called **before**
+`Initialize`; a null argument leaves the shipped defaults standing.

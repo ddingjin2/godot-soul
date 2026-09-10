@@ -137,6 +137,11 @@ namespace MyGame.Gameplay
             attackAnimator.Initialize(player, attackAnimator.GetComponent<AnimationPlayer>());
 
             var humanity = go.GetComponent<HumanityController>();
+            if (resources != null)
+            {
+                humanity.Configure(resources.maxHumanity, resources.lowHumanityThreshold,
+                    resources.humanityLossOnHit, resources.humanityRegenRate, resources.humanityRegenDelay);
+            }
             humanity.SetHumanity(startingHumanity);
 
             var sin = go.GetComponent<SinResonanceController>();
@@ -150,6 +155,7 @@ namespace MyGame.Gameplay
             AddHealthBar(go, health, readability.PlayerHealthBarSize, readability.PlayerHealthBarOffset, readability.PlayerHealthBarColor);
 
             DeathStateController deathController = go.EnsureComponent<DeathStateController>();
+            deathController.ApplyTuning(resources);
             deathController.Initialize(health, humanity, checkpoint, spiritPlatform);
             player.SetDeathStateController(deathController);
 

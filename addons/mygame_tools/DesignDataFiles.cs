@@ -53,6 +53,11 @@ namespace MyGame.EditorTools
             // ScriptableObjects, so that column is gone with the seeder that used it.)
             new Entry("ProgressionTuning", "MyGame.Player.ProgressionTuningData"),
             new Entry("SinTuning", "MyGame.Combat.SinTuningData"),
+
+            // Combat feel - hit stop, shake, flash, pack spacing, swing knockback. The class existed
+            // from the port; the file did not, so until it was written every one of those numbers
+            // rested on a C# field.
+            new Entry("CombatTuning", "MyGame.Combat.CombatTuningData"),
             new Entry("WorldTuning", "MyGame.Gameplay.WorldTuningData"),
             new Entry("SceneLayout", "MyGame.Gameplay.GameplaySceneLayoutData"),
             new Entry("MeleeGrunt", "MyGame.Enemy.MeleeGruntData"),

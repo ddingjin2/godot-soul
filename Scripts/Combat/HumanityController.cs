@@ -12,6 +12,25 @@ namespace MyGame.Combat
         [Export] private float humanityRegenRate = 0.5f;
         [Export] private float humanityRegenDelay = 5f;
 
+        /// <summary>
+        /// Writes the authored humanity numbers. Gauge points and seconds - no unit conversion, and
+        /// none is wanted: nothing here is a distance.
+        ///
+        /// Pushed in from the outside rather than loaded here, because these live in
+        /// <c>PlayerResources.json</c> and <c>MyGame.Combat</c> must not learn about
+        /// <c>MyGame.Player</c> (see CLAUDE.md). <c>GameplayPlayerSpawner</c> owns the call, exactly as
+        /// it does for <see cref="Poise.Configure"/>.
+        /// </summary>
+        public void Configure(float max, float lowThreshold, float lossOnHit, float regenRate, float regenDelay)
+        {
+            maxHumanity = Mathf.Max(0f, max);
+            lowHumanityThreshold = lowThreshold;
+            humanityLossOnHit = lossOnHit;
+            humanityRegenRate = regenRate;
+            humanityRegenDelay = regenDelay;
+            currentHumanity = Mathf.Min(currentHumanity, maxHumanity);
+        }
+
         public event Action<float> OnHumanityChanged;
         public event Action OnHumanityDepleted;
         public event Action OnHumanityRestored;

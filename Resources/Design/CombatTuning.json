@@ -1,0 +1,39 @@
+{
+    "hitStopDurationLight": 0.07999999821186066,
+    "hitStopDurationHeavy": 0.11999999731779099,
+    "hitStopDurationParry": 0.07999999821186066,
+    "hitStopPauseScale": 0.05000000074505806,
+    "shakeIntensityLight": 0.15000000596046449,
+    "shakeIntensityMedium": 0.25,
+    "shakeIntensityHeavy": 0.40000000596046448,
+    "shakeIntensityInvulnerable": 0.05000000074505806,
+    "shakeIntensityBossPhase": 0.5,
+    "shakeDurationLight": 0.11999999731779099,
+    "shakeDurationMedium": 0.11999999731779099,
+    "shakeDurationHeavy": 0.25,
+    "shakeDurationInvulnerable": 0.07999999821186066,
+    "shakeDurationBossPhase": 0.5,
+    "shakeDefaultDuration": 0.20000000298023225,
+    "shakeFrequency": 25.0,
+    "knockbackLight": 4.0,
+    "flashDuration": 0.07999999821186066,
+    "hitFlashColor": {
+        "r": 1.0,
+        "g": 1.0,
+        "b": 1.0,
+        "a": 1.0
+    },
+    "invulnFlashColor": {
+        "r": 0.5,
+        "g": 0.5,
+        "b": 1.0,
+        "a": 1.0
+    },
+    "impactScaleDuration": 0.10000000149011612,
+    "impactScaleAmount": 1.2999999523162842,
+    "audioFallbackVolume": 0.75,
+    "preferredSpacing": 2.0,
+    "spacingForce": 2.0,
+    "spacingRadius": 3.0,
+    "alignmentForce": 0.5
+}

@@ -205,6 +205,23 @@ re-arm on a freshly instanced shot was dropped.
   Measured before and after through the spawner's own `Configure` path: 3 px, then 400 px.
   `PlayerController2D.AttackKnockback` (400, x1.4 heavy) exists and has **zero consumers** - that
   dead property is the shape the bug really had, and it is still dead.
+
+  **Finished later: `Resources/Design/CombatTuning.json` now exists.** The fix above left the
+  authored 4 m resting on a C# field, because the file `CombatTuningData.Load()` had always pointed
+  at was never written. It is there now, registered in `addons/mygame_tools/DesignDataFiles.cs`, and
+  it owns hit stop, screen shake, the hit flash and squash, the audio fallback gain, the pack spacing
+  and that knockback - 27 keys, every one seeded from the literal the game was actually running, not
+  from the orphaned class's own defaults, which disagreed on three values (hit stop 0.04/0.08 vs the
+  live 0.08/0.12, medium shake duration 0.2 vs the live 0.12). The class's six stamina fields were
+  deleted rather than authored: `PlayerResources.json` owns those and a third copy is what the fix
+  was for. So were `hitStopDurationBoss`, `knockbackMedium`, `knockbackHeavy`, `knockbackDecayRate`
+  and the three `telegraph*` fields - nothing read them, and a key nothing reads looks like tuning
+  without being any. **No shipped value changed.**
+
+  One conversion moved: the five shake intensities are authored in metres and are now scaled inside
+  `CombatTuningData.Load()` instead of at the far end in `CameraShake._Process`, which is where the
+  project's boundary rule puts it. `CameraShake.TriggerShake(float, float)` therefore takes **pixels**
+  now; every caller in the repository goes through `CameraShakePreset`, so nothing else moved.
 - **The HUD divided by a literal.** The resonance readout used `/ 100` instead of the tuned maximum.
   It now reads `SinResonanceController.MaxResonance`, a new accessor beside the existing
   `ResonancePerHit` / `PerParry` / `PerDamage`. Same number today; it stops lying the moment a

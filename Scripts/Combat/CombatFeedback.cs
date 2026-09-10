@@ -9,14 +9,15 @@ namespace MyGame.Combat
     /// </summary>
     public partial class CombatFeedback : Node2D
     {
-        // Hit Flash
-        [Export] private float hitFlashDuration = 0.08f;
-        [Export] private Color hitFlashColor = Colors.White;
-        [Export] private Color invulnFlashColor = new Color(0.5f, 0.5f, 1f, 1f);
+        // Hit Flash. Seconds and colours, authored in CombatTuning.json - nothing spatial here, so
+        // nothing crosses the World.Ppu boundary.
+        [Export] private float hitFlashDuration = CombatTuningData.Shared.flashDuration;
+        [Export] private Color hitFlashColor = CombatTuningData.Shared.hitFlashColor;
+        [Export] private Color invulnFlashColor = CombatTuningData.Shared.invulnFlashColor;
 
-        // Attack Impact
-        [Export] private float impactScaleDuration = 0.1f;
-        [Export] private float impactScaleAmount = 1.3f;
+        // Attack Impact. Seconds and a scale multiplier - also unscaled.
+        [Export] private float impactScaleDuration = CombatTuningData.Shared.impactScaleDuration;
+        [Export] private float impactScaleAmount = CombatTuningData.Shared.impactScaleAmount;
 
         public event Action OnHitFeedback;
         public event Action OnInvulnerableHit;

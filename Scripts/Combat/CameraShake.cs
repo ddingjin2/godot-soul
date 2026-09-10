@@ -17,8 +17,11 @@ namespace MyGame.Combat
     /// a plain node that writes <see cref="Camera2D.Offset"/> on whatever camera is current, so it does
     /// not have to be re-parented every time the camera is rebuilt.
     ///
-    /// Shake intensities are authored in Unity units and converted to pixels here, at the one place the
-    /// offset is written - which is why <see cref="CombatTuningData"/> leaves them unscaled.
+    /// UNITS: shake intensities are authored in Unity metres in <c>CombatTuning.json</c> and converted
+    /// to pixels once, inside <see cref="CombatTuningData.Load"/>. They used to be converted down here
+    /// instead, at the moment the offset is written; the conversion moved to the boundary the project's
+    /// rule names, so <see cref="TriggerShake(float, float)"/> now takes <b>pixels</b>. Durations are
+    /// seconds and <c>shakeFrequency</c> is a unitless noise sampling rate; neither is scaled.
     /// </summary>
     public partial class CameraShake : Node
     {
@@ -38,6 +41,8 @@ namespace MyGame.Combat
             Frequency = 1f,
         };
 
+        private static readonly CombatTuningData Tuning = CombatTuningData.Shared;
+
         public override void _Ready()
         {
             if (Instance != null && Instance != this)
@@ -53,6 +58,8 @@ namespace MyGame.Combat
             ProcessMode = ProcessModeEnum.Always;
         }
 
+        /// <param name="intensity">Peak offset in <b>pixels</b> - already through World.U.</param>
+        /// <param name="duration">Seconds.</param>
         public void TriggerShake(float intensity, float duration)
         {
             if (intensity <= 0f || duration <= 0f) return;
@@ -66,7 +73,7 @@ namespace MyGame.Combat
 
         public void TriggerShake(float intensity)
         {
-            TriggerShake(intensity, 0.2f);
+            TriggerShake(intensity, Tuning.shakeDefaultDuration);
         }
 
         public void TriggerShake(CameraShakePreset preset)
@@ -74,19 +81,19 @@ namespace MyGame.Combat
             switch (preset)
             {
                 case CameraShakePreset.LightHit:
-                    TriggerShake(0.15f, 0.12f);
+                    TriggerShake(Tuning.shakeIntensityLight, Tuning.shakeDurationLight);
                     break;
                 case CameraShakePreset.HeavyHit:
-                    TriggerShake(0.25f, 0.12f);
+                    TriggerShake(Tuning.shakeIntensityMedium, Tuning.shakeDurationMedium);
                     break;
                 case CameraShakePreset.Invulnerable:
-                    TriggerShake(0.05f, 0.08f);
+                    TriggerShake(Tuning.shakeIntensityInvulnerable, Tuning.shakeDurationInvulnerable);
                     break;
                 case CameraShakePreset.BossPhase:
-                    TriggerShake(0.5f, 0.5f);
+                    TriggerShake(Tuning.shakeIntensityBossPhase, Tuning.shakeDurationBossPhase);
                     break;
                 case CameraShakePreset.BossSlam:
-                    TriggerShake(0.4f, 0.25f);
+                    TriggerShake(Tuning.shakeIntensityHeavy, Tuning.shakeDurationHeavy);
                     break;
             }
         }
@@ -115,10 +122,12 @@ namespace MyGame.Combat
             }
 
             float decay = 1f - (_elapsed / _currentDuration);
-            float intensity = World.U(_currentIntensity * decay);
 
-            float x = _noise.GetNoise2D(GameClock.Time * 25f, 0f) * intensity;
-            float y = _noise.GetNoise2D(0f, GameClock.Time * 25f) * intensity;
+            // Already pixels: CombatTuningData.Load did the World.U pass. Do not re-scale here.
+            float intensity = _currentIntensity * decay;
+
+            float x = _noise.GetNoise2D(GameClock.Time * Tuning.shakeFrequency, 0f) * intensity;
+            float y = _noise.GetNoise2D(0f, GameClock.Time * Tuning.shakeFrequency) * intensity;
 
             _lastOffset = new Vector2(x, y);
             camera.Offset += _lastOffset;

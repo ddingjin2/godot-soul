@@ -2,6 +2,11 @@
     "maxHealth": 100.0,
     "startingHealth": 100.0,
     "startingHumanity": 100.0,
+    "maxHumanity": 100.0,
+    "lowHumanityThreshold": 30.0,
+    "humanityLossOnHit": 5.0,
+    "humanityRegenRate": 0.5,
+    "humanityRegenDelay": 5.0,
     "maxStamina": 100.0,
     "staminaRegenRate": 30.0,
     "staminaRegenDelay": 1.5,
@@ -17,5 +22,9 @@
     "healAmount": 40.0,
     "maxHealCharges": 3,
     "healWindup": 0.9,
-    "soulStainPickupDelay": 0.35
+    "soulStainPickupDelay": 0.35,
+    "spiritStateDuration": 3.0,
+    "spiritEntryHealthPercent": 0.25,
+    "respawnHealthPercent": 0.5,
+    "respawnHumanityPercent": 0.5
 }

@@ -14,8 +14,28 @@ namespace MyGame.Player
         [Export] private float spiritStateDuration = 3f;
         [Export] private Color spiritTint = new Color(0.4862745f, 0.50980395f, 0.5647059f, 0.55f);
 
+        /// <summary>Fraction of max health the player keeps on entering spirit form.</summary>
+        [Export] private float spiritEntryHealthPercent = 0.25f;
+
         [Export] private float respawnHealthPercent = 0.5f;
         [Export] private float respawnHumanityPercent = 0.5f;
+
+        /// <summary>
+        /// Writes the authored death numbers from <c>PlayerResources.json</c>. Seconds and 0..1
+        /// fractions - none of them is a distance, so nothing is scaled here or in
+        /// <see cref="PlayerResourceData.Load"/>. A null <paramref name="resources"/> (design file
+        /// missing) leaves the shipped defaults above standing.
+        /// </summary>
+        public void ApplyTuning(PlayerResourceData resources)
+        {
+            if (resources == null)
+                return;
+
+            spiritStateDuration = resources.spiritStateDuration;
+            spiritEntryHealthPercent = resources.spiritEntryHealthPercent;
+            respawnHealthPercent = resources.respawnHealthPercent;
+            respawnHumanityPercent = resources.respawnHumanityPercent;
+        }
 
         public event Action OnDeath;
         public event Action OnEnterSpiritState;
@@ -117,7 +137,7 @@ namespace MyGame.Player
                 _spriteRenderer.Modulate = spiritTint;
             }
 
-            _health?.SetHealth(_health.MaxHealth * 0.25f);
+            _health?.SetHealth(_health.MaxHealth * spiritEntryHealthPercent);
 
             OnEnterSpiritState?.Invoke();
 

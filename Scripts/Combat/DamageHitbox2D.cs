@@ -29,7 +29,7 @@ namespace MyGame.Combat
         /// <c>MyGame.Player</c> (see CLAUDE.md), and <see cref="CombatTuningData"/> is the Combat-owned
         /// loader for the same authored number.
         /// </summary>
-        private static readonly float DefaultKnockbackForce = CombatTuningData.Load().knockbackLight;
+        private static readonly float DefaultKnockbackForce = CombatTuningData.Shared.knockbackLight;
 
         [Export] private float knockbackForce = DefaultKnockbackForce;
         [Export] private DamageType damageType;
