@@ -192,13 +192,14 @@ namespace MyGame.Gameplay
         [Export] public GameplaySceneryRow[] backdropScenery;
 
         /// <summary>
-        /// The authored layout, or null when the file is missing - which is normal and means the arena
-        /// keeps the shipped values in <see cref="GameplaySceneDefaults.Create"/>.
+        /// The authored layout, or null when the file is missing. For the shared file that is an error;
+        /// for a scene's own <c>SceneLayout_&lt;Name&gt;</c> it is normal - the catalog passes
+        /// <paramref name="required"/> false there and falls back to the shared file.
         /// No unit conversion here: the object holds the file, and <see cref="ApplyTo"/> converts.
         /// </summary>
-        public static GameplaySceneLayoutData Load(string designPath)
+        public static GameplaySceneLayoutData Load(string designPath, bool required = true)
         {
-            GameplaySceneLayoutData data = Res.LoadJson<GameplaySceneLayoutData>(designPath);
+            GameplaySceneLayoutData data = Res.LoadJson<GameplaySceneLayoutData>(designPath, required);
             if (data != null)
             {
                 data.ResourceName = designPath.GetFile();

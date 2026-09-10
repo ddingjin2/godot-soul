@@ -136,7 +136,7 @@ namespace MyGame.Gameplay
                 return;
             }
 
-            CutsceneShot shot = Tuning.Shot(key);
+            CutsceneShot shot = Tuning?.Shot(key);
             if (shot == null)
             {
                 // A missing shot is a missing shot, not a stuck game: clear the overlay, hand the caller

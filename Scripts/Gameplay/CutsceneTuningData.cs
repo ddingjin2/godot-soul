@@ -50,9 +50,11 @@ namespace MyGame.Gameplay
     /// <item><description><b>Crosses untouched:</b> every time (seconds), <c>fade</c> (alpha 0-1),
     /// <c>cameraSize</c> (a fraction of the resting size).</description></item>
     /// </list>
-    /// The scalar fields keep the shipped literals as their defaults. The shots do not: a missing file
-    /// has no shots, and every <c>Play</c> takes the director's missing-shot path - clear the overlay,
-    /// hand the continuation back, carry on. Duplicating four keyframe tables in C# would be the
+    /// A missing file is an error: <see cref="Load"/> returns null, <c>Res.LoadJson</c> has said which
+    /// file, and <c>GameplayBootstrap</c> refuses to build the arena. Should a director still be asked
+    /// to <c>Play</c> with no file, it takes its missing-shot path - clear the overlay, hand the
+    /// continuation back, carry on. The scalar initialisers are what a key the file leaves out reads
+    /// as; the shots have no such twin, because duplicating four keyframe tables in C# would be the
     /// fallback drift the numbers audit (§2.8) exists to stop.
     /// </remarks>
     public partial class CutsceneTuningData : Resource
@@ -100,7 +102,9 @@ namespace MyGame.Gameplay
 
         public static CutsceneTuningData Load(string path = "Design/" + FileName)
         {
-            CutsceneTuningData data = Res.LoadJson<CutsceneTuningData>(path) ?? new CutsceneTuningData();
+            CutsceneTuningData data = Res.LoadJson<CutsceneTuningData>(path);
+            if (data == null)
+                return null;
 
             data.enterSettleHeight = World.U(data.enterSettleHeight);
             data.deathMoveDistance = World.U(data.deathMoveDistance);
@@ -108,7 +112,7 @@ namespace MyGame.Gameplay
             return data;
         }
 
-        /// <summary>The file, read once per run.</summary>
+        /// <summary>The file, read once per run. Null while it is missing.</summary>
         public static CutsceneTuningData Shared => _shared ??= Load();
 
         private static CutsceneTuningData _shared;

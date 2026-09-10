@@ -102,7 +102,7 @@ keep-in-code 목록, `GameplayVisualFactory`, `DebugVisualization`. 이들은 "�
 
 | 단계 | 내용 | 파일 | 위험 | 병렬 |
 |---|---|---|---|---|
-| **K0** | D1 정책 코드화: `Res.LoadJson` 누락 `PushError`; `GameplayTuningCatalog.Load()` null 항목 `PushError`; `.Shared` 3종 `?? new` 삭제 → null 시 `PushError`+중단. **행동 변화 없음**(파일 전부 존재) | 5 | 낮음 | 단독 |
+| **K0** | **완료.** `Res.LoadJson(path, required)`가 누락을 `PushError`로 말한다(선택적 조회 2곳만 `required: false`); `.Shared` 3종은 `?? new` 대신 null; `GameplayBootstrap`이 `GameplayTuningCatalog.IsComplete` + `.Shared` 3종을 확인하고 하나라도 없으면 아레나를 만들지 않는다. 파일이 전부 있으므로 행동 변화 없음 — `WorldTuning.json`을 치우고 부팅해 오류 2줄과 빈 아레나를 확인한 뒤 복원 | 8 | 낮음 | 단독 |
 | **K1** | **테스트 fixture 경로 확보 — 선행.** 맨손 액터를 만드는 12 테스트 파일이 `SetTuningData(XData.Load())`·씬 인스턴스·실제 JSON을 쓰게. `GameplayTuningDefaults.CreateX` 소비 3 테스트 전환. 이 단계 뒤 스위트가 fallback을 **한 번도 안 타야** K2~K5가 안전 | 12 테스트 + `GameplayTuningDefaults.cs` 삭제 | **최고** — 어서션 숫자가 바뀌는 곳이 나올 수 있다. 바뀌면 그 차이가 fallback 드리프트의 증거이므로 기록 후 출하 값으로 | 단독 |
 | **K2** | 아키타입 `?? 리터럴` 63건 제거. `tuningData` 필수, 미설정 시 `_Ready`에서 `PushError` + `SetProcess(false)`. 프로퍼티 `DetectionRange => tuningData.detectionRange` | `Scripts/Enemy` 5 | 높음 | K3·K4와 병렬 가능(파일 서로소) |
 | **K3** | Data 클래스 `[Export]` 기본값 232개 삭제. **선행 소단계 K3a:** `SceneLayout*.json` 8파일에 빠진 키 3개(`shortcutGatePosition`·`shortcutGateSize`·`shortcutOpensFromRight`)를 현재 기본값으로 추가 — 추가적, diff 증명. 그 뒤 기본값 제거 | 13 클래스 + 8 JSON | 중간 — K3a를 빼먹으면 챕터 7개의 숏컷 게이트가 (0,0) 크기 0으로 | K2·K4와 병렬 |

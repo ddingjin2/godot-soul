@@ -7,8 +7,9 @@ namespace MyGame.Combat
     /// Designer-owned combat feel: hit stop, screen shake, the hit flash and squash, the audio
     /// fallback gain, the pack spacing, and the swing knockback. Was a Unity ScriptableObject asset;
     /// here it is a Godot <see cref="Resource"/> loaded from
-    /// <c>Resources/Design/CombatTuning.json</c>. A missing file is not an error - every field below
-    /// is the value the game shipped with, so the fallback is the same game.
+    /// <c>Resources/Design/CombatTuning.json</c>. A missing file is an error: <see cref="Load"/> returns
+    /// null, <c>Res.LoadJson</c> has already said which file, and <c>GameplayBootstrap</c> refuses to
+    /// build the arena. The field initialisers below are what a key the file leaves out reads as.
     /// </summary>
     /// <remarks>
     /// <b>Every field here is what the runtime actually ran before the file existed.</b> The class
@@ -88,12 +89,14 @@ namespace MyGame.Combat
         [Export] public float alignmentForce = 0.5f;
 
         /// <summary>
-        /// Reads the authored numbers, converting the spatial ones to pixels once, here. A missing
-        /// file is not an error - it yields the shipped defaults, scaled the same way.
+        /// Reads the authored numbers, converting the spatial ones to pixels once, here. Null when the
+        /// file is missing.
         /// </summary>
         public static CombatTuningData Load(string path = "Design/" + FileName)
         {
-            CombatTuningData data = Res.LoadJson<CombatTuningData>(path) ?? new CombatTuningData();
+            CombatTuningData data = Res.LoadJson<CombatTuningData>(path);
+            if (data == null)
+                return null;
 
             data.knockbackLight = World.U(data.knockbackLight);
             data.shakeIntensityLight = World.U(data.shakeIntensityLight);
@@ -110,7 +113,8 @@ namespace MyGame.Combat
 
         /// <summary>
         /// The file, read once per run. Every consumer initialises its fields from this, so the JSON
-        /// is parsed a single time no matter how many actors are spawned.
+        /// is parsed a single time no matter how many actors are spawned. Null while the file is
+        /// missing - and the bootstrap has stopped before any consumer runs.
         /// </summary>
         public static CombatTuningData Shared => _shared ??= Load();
 

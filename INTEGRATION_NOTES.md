@@ -295,3 +295,12 @@ did for its colour; no `Initialize` signature changed.
 referenced it apart from `MyGameStateProbe`, whose `CaptureEnemyTelegraphState` lost its
 `GameplayEnemy2D` parameter. An external caller that still had one should build a `MeleeGrunt` - the
 archetype that replaced it - through `GameplayEnemySpawner`.
+
+### `Res.LoadJson` reports a missing file; three `.Shared` singletons can be null
+
+`Res.LoadJson<T>(string path, bool required = true)` pushes an error when the file is absent; pass
+`required: false` only for a lookup that is allowed to miss. `GameplaySceneLayoutData.Load` gained the
+same parameter. `CombatTuningData.Shared`, `DifficultyTuningData.Shared` and `CutsceneTuningData.Shared`
+are **null** while their file is missing rather than a default-filled object; `GameplayBootstrap` checks
+all three and `GameplayTuningCatalog.IsComplete` (new) before it builds, so a consumer that runs at all
+can still assume non-null. A tool or test that reads `.Shared` without the bootstrap must handle null.

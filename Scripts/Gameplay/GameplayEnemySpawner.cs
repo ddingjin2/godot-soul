@@ -244,7 +244,7 @@ namespace MyGame.Gameplay
             // Deserialized into the archetype's own data type rather than the shared base, so a variant
             // file can carry the fields that archetype actually reads - a grunt's telegraph pulse, a
             // leaper's arc - instead of only the four everything shares.
-            var data = Res.LoadJson<T>(DesignResourceFolder + dataFile);
+            var data = Res.LoadJson<T>(DesignResourceFolder + dataFile, required: false);
             if (data == null)
             {
                 // Said once rather than on every respawn, and said at all: a placement whose data file was

@@ -6,8 +6,9 @@ namespace MyGame.Combat
     /// <summary>
     /// Designer-owned difficulty weights: what the player takes and what the enemies have on Easy
     /// and Hard, and how much each New Game+ lap adds. Loaded from
-    /// <c>Resources/Design/DifficultyTuning.json</c>; a missing file yields the shipped defaults
-    /// below, so the fallback is the same game.
+    /// <c>Resources/Design/DifficultyTuning.json</c>; a missing file is an error - <see cref="Load"/>
+    /// returns null and the bootstrap refuses to build the arena. The initialisers below are what a
+    /// key the file leaves out reads as.
     /// </summary>
     /// <remarks>
     /// UNITS: nothing here is spatial. Every field is a multiplier, so no field is scaled by
@@ -32,10 +33,10 @@ namespace MyGame.Combat
 
         public static DifficultyTuningData Load(string path = "Design/" + FileName)
         {
-            return Res.LoadJson<DifficultyTuningData>(path) ?? new DifficultyTuningData();
+            return Res.LoadJson<DifficultyTuningData>(path);
         }
 
-        /// <summary>The file, read once per run.</summary>
+        /// <summary>The file, read once per run. Null while it is missing.</summary>
         public static DifficultyTuningData Shared => _shared ??= Load();
 
         private static DifficultyTuningData _shared;

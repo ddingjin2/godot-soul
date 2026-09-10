@@ -532,3 +532,15 @@ Measured rather than assumed - product code calls `NewObject` twice (the cutscen
 the deliberately bare decoration sprite), `AddComponent` never, and `EnsureComponent` only as a
 get-or-add that adds nothing to a scene-built actor. What is left is not a world builder, so there is
 nothing to retire; the class comment and `PLAN.md` carry the reasoning.
+
+### Second phase K0 - a missing design file is an error
+
+Until now a missing file under `Resources/Design` was silent: `Res.LoadJson` returned null and every
+loader either fell back to its `[Export]` defaults or conjured a `new XData()`, so the game ran on
+numbers nobody had authored and nothing said so. Now `Res.LoadJson` pushes an error naming the file
+(the two lookups that miss by design - a scene's own `SceneLayout_<Name>` and a spawn row's variant
+file - pass `required: false` and report in their own words), the three `.Shared` loaders return null
+instead of an empty object, and `GameplayBootstrap._Ready` checks `GameplayTuningCatalog.IsComplete`
+plus the three `.Shared` before building anything. One file missing means two error lines and no
+arena. Proven by moving `WorldTuning.json` aside for one headless boot, then restoring it. With every
+file present - which is every shipped build, since they travel in the PCK - nothing changed.

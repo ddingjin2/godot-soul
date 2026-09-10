@@ -112,7 +112,7 @@ namespace MyGame.Gameplay
                 return cached;
 
             GameplaySceneLayoutData layout =
-                GameplaySceneLayoutData.Load(DesignResourceFolder + SceneLayoutFile + "_" + sceneName) ?? sceneLayout;
+                GameplaySceneLayoutData.Load(DesignResourceFolder + SceneLayoutFile + "_" + sceneName, required: false) ?? sceneLayout;
 
             _sceneLayouts[sceneName] = layout;
             return layout;
@@ -142,6 +142,18 @@ namespace MyGame.Gameplay
         public const string RangedCasterFile = "RangedCaster";
         public const string WrathMiniBossFile = "WrathMiniBoss";
         public const string WrathEncounterFile = "WrathEncounter";
+
+        /// <summary>
+        /// True when every file on the fixed table loaded. The bootstrap refuses to build an arena on
+        /// anything less: a missing design file is a broken build, not a game with different numbers,
+        /// and the loader has already said which file it was.
+        /// </summary>
+        public bool IsComplete =>
+            playerMovement != null && playerCombat != null && playerResources != null && progression != null
+            && sinTuning != null && worldTuning != null && sceneLayout != null
+            && readabilityTheme != null && readabilityLayout != null
+            && meleeGrunt != null && leapingAttacker != null && rangedCaster != null
+            && wrathMiniBoss != null && wrathEncounter != null;
 
         private static GameplayTuningCatalog _cached;
 

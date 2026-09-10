@@ -35,6 +35,15 @@ namespace MyGame.Gameplay
             // anything renders. Without this call the options screen writes settings nothing reads.
             GraphicsOptions.LoadAndApply();
 
+            // Every design file, or no arena. Res.LoadJson has already named the missing one; this is
+            // the line that turns "a file is missing" from a game with different numbers into a boot
+            // that stops, which is the whole of the missing-data policy (PLAN_CLOSEOUT D1).
+            if (!DesignFilesPresent())
+            {
+                GD.PushError("GameplayBootstrap: a design file under Resources/Design is missing (see the error above); the arena is not built.");
+                return;
+            }
+
             _player = ValidateScene();
             BindLevelUpToTheSlot();
 
@@ -43,6 +52,14 @@ namespace MyGame.Gameplay
             // bootstrap does it, and the node parents itself to the tree root so it survives the jump.
             GameplayDebugSceneJump.Install(this);
 #endif
+        }
+
+        private static bool DesignFilesPresent()
+        {
+            return GameplayTuningCatalog.Load().IsComplete
+                && CombatTuningData.Shared != null
+                && DifficultyTuningData.Shared != null
+                && CutsceneTuningData.Shared != null;
         }
 
         public override void _ExitTree()
