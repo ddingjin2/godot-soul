@@ -1,4 +1,19 @@
+# Godot editor/import cache and the C# build output
 .godot/
 bin/
 obj/
 *.user
+
+# Export output
+/build/
+/dist/
+*.exe
+*.pck
+*.zip
+
+# Scratch: logs, local verification working notes, editor backups
+*.log
+*.tmp
+*.bak
+*~
+docs/work/
