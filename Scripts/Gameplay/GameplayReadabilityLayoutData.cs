@@ -16,8 +16,7 @@ namespace MyGame.Gameplay
     /// </summary>
     /// <remarks>
     /// UNITS - every spatial field is authored in Unity metres with +Y up and converted once, in
-    /// <see cref="ApplyTo"/>, exactly as <see cref="GameplayReadabilityDefaults.CreateBase"/> converts
-    /// its own literals:
+    /// <see cref="ApplyTo"/>, which is the only place these numbers are converted:
     /// <list type="bullet">
     /// <item><description><c>*Size</c>, <c>*Radius</c>, <c>*CharacterSize</c>, <c>*Thickness</c> and
     /// <c>*Margin</c> are scaled by <see cref="World.U"/> - no sign change, a size has none;</description></item>
@@ -28,10 +27,10 @@ namespace MyGame.Gameplay
     /// fraction and the four <c>markerPulse*</c> feel numbers are not spatial and cross
     /// untouched.</description></item>
     /// </list>
-    /// No field carries a default: a missing file leaves the code defaults standing (the loader returns
-    /// null and <see cref="GameplayReadabilityDefaults.Create"/> skips the apply), and a missing key
-    /// reads as zero, which <c>GameplayReadabilityLayoutTests</c> catches by demanding the shipped file
-    /// reproduce the code defaults exactly.
+    /// No field carries a default and there is no copy of these numbers in code: a missing file is an
+    /// error the loader reports and <see cref="GameplayReadabilityDefaults.Create"/> passes on as null,
+    /// and a missing key reads as zero, which <c>DesignFileCompletenessTests</c> catches by demanding
+    /// the shipped file name every field here.
     /// </remarks>
     public sealed partial class GameplayReadabilityLayoutData : Resource
     {
@@ -102,7 +101,7 @@ namespace MyGame.Gameplay
         [Export] public float markerPulseAlphaMin;
         [Export] public float markerPulseAlphaMax;
 
-        /// <summary>The authored layout, or null when the file is missing - which leaves the code defaults standing.</summary>
+        /// <summary>The authored layout, or null when the file is missing - which the loader has reported and <see cref="GameplayReadabilityDefaults.Create"/> passes on as null.</summary>
         public static GameplayReadabilityLayoutData Load(string resourcePath = GameplayTuningCatalog.DesignResourceFolder + FileName)
         {
             return Res.LoadJson<GameplayReadabilityLayoutData>(resourcePath);

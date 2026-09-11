@@ -8,17 +8,14 @@ using MyGame.Gameplay;
 namespace MyGame.Tests
 {
     /// <summary>
-    /// The layout half of the read moved out of code and into a designer-owned file, the sibling of the
-    /// artist's palette. The same two silent failures apply: the file could stop being read, or a field
-    /// could land on the wrong property - the caster's danger disc sized like the boss slam, say - and
-    /// both produce a game that runs.
-    ///
-    /// The shipped file was transcribed from the code defaults, so "applied layout equals code" checks
-    /// the transcription and the read at once. It stops being an identity the moment a designer edits a
-    /// number - and that is the moment to update this test, deliberately.
+    /// The layout half of the read lives in a designer-owned file, the sibling of the artist's palette,
+    /// with no copy in code. The same two silent failures apply: the file could stop being read, or a
+    /// field could land on the wrong property - the caster's danger disc sized like the boss slam, say
+    /// - and both produce a game that runs. (That the file names every field at all is
+    /// <c>DesignFileCompletenessTests</c>' job.)
     ///
     /// UNITS: this is the one place the conversion is asserted rather than trusted. The file is Unity
-    /// metres with +Y up; the third test hands every field a distinct metre value and demands the
+    /// metres with +Y up; the second test hands every field a distinct metre value and demands the
     /// pixel value the property's kind implies - scaled for a size, scaled and flipped for an offset,
     /// untouched for a point size or a fraction.
     /// </summary>
@@ -34,31 +31,10 @@ namespace MyGame.Tests
             Assert.AreNotEqual(Vector2.Zero, layout.bossVisualSize, "A layout of all-zero sizes is an empty file, not a layout.");
         }
 
-        [Test]
-        public void AppliedLayout_ReproducesEveryShippedNumber()
-        {
-            GameplayReadabilityDefaults code = GameplayReadabilityDefaults.CreateBase();
-            GameplayReadabilityDefaults applied = GameplayReadabilityDefaults.Create();
-
-            PropertyInfo[] numbers = typeof(GameplayReadabilityDefaults)
-                .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Where(p => p.PropertyType != typeof(Color))
-                .ToArray();
-
-            Assert.Greater(numbers.Length, 40, "The defaults should still carry every size, offset and order the slice reads.");
-
-            foreach (PropertyInfo property in numbers)
-            {
-                object expected = property.GetValue(code);
-                object actual = property.GetValue(applied);
-                AssertNumber(expected, actual, property.Name);
-            }
-        }
-
         /// <summary>
-        /// The check the two above cannot make: "applied equals code" is also what an <c>ApplyTo</c>
-        /// that did nothing would produce. Every field gets a value nothing else has and must arrive at
-        /// its namesake property, converted the way that property's kind demands.
+        /// The check the one above cannot make: a file that loads is also what an <c>ApplyTo</c> that
+        /// did nothing would produce. Every field gets a value nothing else has and must arrive at its
+        /// namesake property, converted the way that property's kind demands.
         /// </summary>
         [Test]
         public void EveryLayoutField_LandsOnItsNamesake_ThroughTheRightConversion()
@@ -80,7 +56,7 @@ namespace MyGame.Tests
                     : fields[i].FieldType == typeof(int) ? (object)(10 + i) : v);
             }
 
-            GameplayReadabilityDefaults defaults = GameplayReadabilityDefaults.CreateBase();
+            GameplayReadabilityDefaults defaults = GameplayReadabilityDefaults.Create();
             layout.ApplyTo(defaults);
 
             foreach (FieldInfo field in fields)

@@ -27,7 +27,6 @@ namespace MyGame.EditorTools
 
             Heading(root, "Art");
             Button(root, "Bake Generated Sprites", GameplaySpriteBaker.BakeAll);
-            Button(root, "Write Readability Theme (missing only)", ReadabilityThemeWriter.Run);
             Button(root, "Fix Pixel Art Import Settings", PixelActorTextureImportSettings.Run);
 
             Heading(root, "Animations");
