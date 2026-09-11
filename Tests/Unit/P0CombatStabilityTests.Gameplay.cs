@@ -363,21 +363,25 @@ namespace MyGame.Tests
             Assert.NotNull(typeof(RainbowChapterBossBehaviour).GetProperty("IsAttackRunning"), "Rainbow boss should expose IsAttackRunning.");
         }
 
+        /// <summary>
+        /// Used to look for a platform named <c>CheckpointRunPlatform</c>. That name only ever existed in
+        /// the code copy of the layout that K4 deleted; <c>SceneLayout.json</c> has
+        /// <c>overridePlatforms: true</c> and never shipped one, so the test was checking a fixture the
+        /// game did not use. What ships is a named list, and the instanced platforms are found by those
+        /// names (see the scene audit), so that is the contract kept here.
+        /// </summary>
         [Test]
-        public void GameplaySceneIncludesCheckpointRunSection()
+        public void GameplaySceneNamesEveryPlatformItShips()
         {
             GameplaySceneDefaults scene = GameplaySceneDefaults.Create();
-            bool found = false;
+            Assert.NotNull(scene, "SceneLayout.json should load; without it there is no arena.");
+            Assert.Greater(scene.Platforms.Length, 0, "SceneLayout.json should ship at least one platform.");
 
             foreach (GameplaySceneDefaults.PlatformDefinition platform in scene.Platforms)
             {
-                if (platform.Name == "CheckpointRunPlatform")
-                {
-                    found = true;
-                }
+                Assert.IsFalse(string.IsNullOrEmpty(platform.Name),
+                    "Every shipped platform needs a name; the instanced node takes it and other tests find platforms by it.");
             }
-
-            Assert.IsTrue(found, "Gameplay test room should include a checkpoint run platform.");
         }
 
         [Test]
