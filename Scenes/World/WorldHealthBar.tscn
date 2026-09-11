@@ -37,9 +37,9 @@ texture = SubResource("GradientTexture2D_white")
 ; Default bar 1.2 x 0.12 m = 120 x 12 px, grown by the frame's FrameMargin of 0.08 m = 8 px on each
 ; axis -> 128 x 20 px, / 8 = (16, 2.5).
 scale = Vector2(16, 2.5)
-; GameplayWorldHealthBar.FrameColor - INK_950 #06070A at a 0.92. A literal of that file's own, not
-; part of the designer palette.
-modulate = Color(0.023529412, 0.02745098, 0.039215688, 0.92)
+; No modulate: the frame's colour is Art/Readability.json's healthBarFrameColor, and
+; GameplayWorldHealthBar.ApplyLayout writes it onto this sprite on every bar. Authoring it here too
+; was a second place to edit one colour and never a second source (PLAN_CLOSEOUT B3, decision D4).
 z_index = 40
 
 [node name="Fill" type="Node2D" parent="."]

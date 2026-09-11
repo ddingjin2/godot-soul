@@ -1,5 +1,4 @@
 using Godot;
-using MyGame.Core;
 
 namespace MyGame.Gameplay
 {
@@ -11,19 +10,22 @@ namespace MyGame.Gameplay
     /// <remarks>
     /// The dead zone, the look-ahead, the smooth time and the follow speed are authored in
     /// <c>WorldTuning.json</c> and arrive through <see cref="ApplyTuning"/> already in pixels -
-    /// <c>WorldTuningData.ScaleToPixels</c> is the boundary. The initialisers below are the fallback a
-    /// rig with no file keeps, written as Unity metres and converted the same way. The bounds come off
-    /// <c>GameplaySceneDefaults</c>, which has already converted them.
+    /// <c>WorldTuningData.ScaleToPixels</c> is the boundary. There is no second copy of them here: a
+    /// rig that was never given the file does not follow, which is what a missing design file is
+    /// supposed to look like (PLAN_CLOSEOUT D1). The bounds come off <c>GameplaySceneDefaults</c>,
+    /// which has already converted them.
     /// </remarks>
     public sealed partial class GameplayCameraFollow2D : Node2D
     {
         [Export] private Node2D target;
 
-        // A dead zone is a half-extent, not a point, so it scales with World.U and stays positive.
-        private Vector2 _deadZone = new(World.Ppu * 1.2f, World.Ppu * 0.6f);
-        private Vector2 _lookAhead = World.V(new Vector2(1.4f, 1.2f));
-        private float _smoothTime = 0.25f;
-        private float _maxFollowSpeed = World.Ppu * 12f;
+        // All four are WorldTuning.json's, already in pixels when ApplyTuning hands them over. A dead
+        // zone is a half-extent, not a point, so it stays positive; the look-ahead is an offset and has
+        // been Y-flipped on the way in.
+        private Vector2 _deadZone;
+        private Vector2 _lookAhead;
+        private float _smoothTime;
+        private float _maxFollowSpeed;
 
         // Unbounded until Initialize hands over the arena's own. There is no authored fallback for
         // these: every arena's bounds are on its SceneLayout, and a rig that was never told them
@@ -37,12 +39,16 @@ namespace MyGame.Gameplay
 
         /// <summary>
         /// The feel, from <c>WorldTuning.json</c>. Every value is already pixels - do not convert here.
-        /// A null argument keeps the shipped defaults.
+        /// A null argument is a missing design file, and the rig keeps a zero follow speed rather than
+        /// a set of numbers nobody authored.
         /// </summary>
         public void ApplyTuning(WorldTuningData world)
         {
             if (world == null)
+            {
+                GD.PushError("GameplayCameraFollow2D: Design/WorldTuning.json is missing; the camera keeps no dead zone, look-ahead, smooth time or follow speed.");
                 return;
+            }
 
             _deadZone = world.cameraDeadZone;
             _lookAhead = world.cameraLookAhead;

@@ -45,6 +45,7 @@ namespace MyGame.Gameplay
         private GameplaySceneLayoutData sceneLayout;
         private GameplayReadabilityThemeData readabilityTheme;
         private GameplayReadabilityLayoutData readabilityLayout;
+        private UiTuningData uiTuning;
 
         private MeleeGruntData meleeGrunt;
         private LeapingAttackerData leapingAttacker;
@@ -65,6 +66,9 @@ namespace MyGame.Gameplay
 
         /// <summary>The designer's half of the read - sizes and offsets - from the design folder, beside the artist's palette above.</summary>
         public GameplayReadabilityLayoutData ReadabilityLayout => readabilityLayout;
+
+        /// <summary>The HUD's animation timings, in seconds. The colour half of the same move is the Theme, not this.</summary>
+        public UiTuningData UiTuning => uiTuning;
 
         /// <summary>
         /// A chapter boss's authored stats and attacks, by design file name. Not a stored field like
@@ -133,6 +137,7 @@ namespace MyGame.Gameplay
         public const string WorldTuningFile = "WorldTuning";
         public const string SceneLayoutFile = "SceneLayout";
         public const string ReadabilityLayoutFile = GameplayReadabilityLayoutData.FileName;
+        public const string UiTuningFile = UiTuningData.FileName;
         public const string MeleeGruntFile = "MeleeGrunt";
         public const string LeapingAttackerFile = "LeapingAttacker";
         public const string RangedCasterFile = "RangedCaster";
@@ -147,7 +152,7 @@ namespace MyGame.Gameplay
         public bool IsComplete =>
             playerMovement != null && playerCombat != null && playerResources != null && progression != null
             && sinTuning != null && worldTuning != null && sceneLayout != null
-            && readabilityTheme != null && readabilityLayout != null
+            && readabilityTheme != null && readabilityLayout != null && uiTuning != null
             && meleeGrunt != null && leapingAttacker != null && rangedCaster != null
             && wrathMiniBoss != null && wrathEncounter != null;
 
@@ -171,6 +176,7 @@ namespace MyGame.Gameplay
                 sceneLayout = GameplaySceneLayoutData.Load(DesignResourceFolder + SceneLayoutFile),
                 readabilityTheme = GameplayReadabilityThemeData.Load(ArtResourceFolder + ReadabilityThemeFile),
                 readabilityLayout = GameplayReadabilityLayoutData.Load(DesignResourceFolder + ReadabilityLayoutFile),
+                uiTuning = UiTuningData.Load(DesignResourceFolder + UiTuningFile),
                 meleeGrunt = MeleeGruntData.Load(DesignResourceFolder + MeleeGruntFile),
                 leapingAttacker = LeapingAttackerData.Load(DesignResourceFolder + LeapingAttackerFile),
                 rangedCaster = RangedCasterData.Load(DesignResourceFolder + RangedCasterFile),

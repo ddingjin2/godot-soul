@@ -108,3 +108,27 @@ SegmentActive/styles/hover = SubResource("SegmentActiveLit")
 SegmentActive/styles/focus = SubResource("SegmentActiveLit")
 SegmentActive/styles/pressed = SubResource("SegmentActivePressed")
 SegmentActive/styles/disabled = SubResource("SegmentActiveDisabled")
+
+; --- Palette: the mood tokens themselves, Docs/MoodDirection.md section 2. Not a Control type - no
+; node is ever given the type name "Palette" - it is the Theme used as what Godot has instead of a
+; colour asset, read by GameplayHud through Theme.GetColor (PLAN_CLOSEOUT A8/B2, decision D5). They
+; were five `static readonly Color` fields in GameplayHud.cs, which is a second copy of the four
+; Button font colours above and put the look of the HUD behind a code change.
+;
+; Written as hex/255 so that round(v * 255) reproduces the documented hex exactly; a two-decimal
+; literal does not always land on the right byte (0.68 * 255 rounds to 0xAD, not 0xAE).
+Palette/colors/bone_100 = Color(0.7647059, 0.7411765, 0.69411767, 1)
+Palette/colors/bone_200 = Color(0.6039216, 0.5803922, 0.53333336, 1)
+Palette/colors/bone_300 = Color(0.43137255, 0.40784314, 0.36078432, 1)
+Palette/colors/cold_200 = Color(0.5176471, 0.57254905, 0.627451, 1)
+Palette/colors/ember_300 = Color(0.65882355, 0.29411766, 0.2, 1)
+
+; The four alpha variants the HUD's two gauges draw with. Their own items rather than an alpha
+; arithmetic in code, because the alpha is as much of the look as the hue is: a fill at 0.55 and one
+; at 0.75 are what "hurt" and "staggered" read as.
+; Health fill: bone while the hit flash holds, ember the rest of the time.
+Palette/colors/bone_100_hit_flash = Color(0.7647059, 0.7411765, 0.69411767, 0.85)
+Palette/colors/ember_300_health_fill = Color(0.65882355, 0.29411766, 0.2, 0.55)
+; Poise strip: brighter as well as red while staggered, because the strip is the peripheral read.
+Palette/colors/ember_300_poise_staggered = Color(0.65882355, 0.29411766, 0.2, 0.75)
+Palette/colors/bone_300_poise_fill = Color(0.43137255, 0.40784314, 0.36078432, 0.55)

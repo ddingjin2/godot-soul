@@ -210,19 +210,24 @@ namespace MyGame.Gameplay
         }
 
         /// <summary>
-        /// The designer-owned reach in Godot pixels, or the constant when no design file is loadable -
-        /// which is the case for every synthetic zone the test runners build. Reads through the cached
-        /// catalog, so the cost is one dictionary hit after the first zone in a scene.
+        /// The designer-owned reach in Godot pixels. There is no constant behind it any more: a build
+        /// with no <c>WorldTuning.json</c> gets a zone of no reach and an error saying why, rather than
+        /// a bonfire that lights up at a distance nobody authored (PLAN_CLOSEOUT A4, decision D1).
+        /// Reads through the cached catalog, so the cost is one dictionary hit after the first zone in a
+        /// scene.
         /// </summary>
         /// <remarks>
-        /// Both sources are already in Godot pixels - <c>WorldTuningData</c> scales its spatial fields
-        /// when the JSON loads, and <see cref="GameplayTuningDefaults.CheckpointZoneRadius"/> carries its
-        /// own <c>World.Ppu</c> - so nothing is scaled here.
+        /// Already in Godot pixels: <c>WorldTuningData</c> scales its spatial fields when the JSON
+        /// loads, so nothing is scaled here.
         /// </remarks>
         private static float AuthoredRadius()
         {
             WorldTuningData world = GameplayTuningCatalog.Load()?.WorldTuning;
-            return world != null ? world.checkpointZoneRadius : GameplayTuningDefaults.CheckpointZoneRadius;
+            if (world != null)
+                return world.checkpointZoneRadius;
+
+            GD.PushError("CheckpointZone: Design/WorldTuning.json is missing; the zone has no reach.");
+            return 0f;
         }
 
         /// <summary>
@@ -283,7 +288,13 @@ namespace MyGame.Gameplay
 
             Sprite2D disc = marker.GetNode<Sprite2D>("Disc");
             disc.SetSpriteSize(new Vector2(radius * 2f, radius * 2f));
-            disc.Modulate = readability.CheckpointLabelColor;
+
+            // Null when either readability file is missing, which the loader has already named. The disc
+            // keeps the scene's own tint rather than being painted a colour from nowhere.
+            if (readability == null)
+                GD.PushError("CheckpointZone: Art/Readability.json or Design/ReadabilityLayout.json is missing; the bonfire marker keeps no designer colour.");
+            else
+                disc.Modulate = readability.CheckpointLabelColor;
 
             if (!authored)
                 AddChild(marker);

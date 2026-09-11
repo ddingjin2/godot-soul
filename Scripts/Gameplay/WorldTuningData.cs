@@ -4,9 +4,9 @@ using MyGame.Core;
 namespace MyGame.Gameplay
 {
     /// <summary>
-    /// Gameplay reach and range numbers that belong to no single actor. These were constants on
-    /// <see cref="GameplayTuningDefaults"/>, which put them out of a designer's hands; this file is what
-    /// the game reads.
+    /// Gameplay reach and range numbers that belong to no single actor. These were constants on a
+    /// <c>GameplayTuningDefaults</c> table, which put them out of a designer's hands; that class is gone
+    /// (PLAN_CLOSEOUT A4) and this file is the only place they exist.
     ///
     /// UNITS: <c>WorldTuning.json</c> is authored in Unity metres. <see cref="ScaleToPixels"/> runs once
     /// at load and multiplies the spatial fields by <see cref="World.Ppu"/>: <c>checkpointZoneRadius</c>,

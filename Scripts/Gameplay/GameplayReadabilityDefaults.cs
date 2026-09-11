@@ -66,6 +66,15 @@ namespace MyGame.Gameplay
         /// </summary>
         public Color EnemyHealthBarColor { get; internal set; }
         public Color BossHealthBarColor { get; internal set; }
+
+        /// <summary>
+        /// The bar's frame, and the bone its fill lifts toward at low health. Both were
+        /// <c>static readonly Color</c> on <see cref="GameplayWorldHealthBar"/>, with the frame's copy
+        /// authored a second time in <c>Scenes/World/WorldHealthBar.tscn</c> (PLAN_CLOSEOUT B3).
+        /// </summary>
+        public Color HealthBarFrameColor { get; internal set; }
+        public Color HealthBarLowHealthTint { get; internal set; }
+
         public Color MeleeRoleColor { get; internal set; }
         public Color LeapRoleColor { get; internal set; }
         public Color CastRoleColor { get; internal set; }

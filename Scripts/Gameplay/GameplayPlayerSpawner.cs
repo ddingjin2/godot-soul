@@ -175,8 +175,10 @@ namespace MyGame.Gameplay
             PlayerProgression.EnsureOn(go);
 
             GameplaySoulDrop soulDrop = go.EnsureComponent<GameplaySoulDrop>();
-            soulDrop.Initialize(wallet, deathController, player,
-                resources != null ? resources.soulStainPickupDelay : GameplayTuningDefaults.SoulStainPickupDelay);
+            if (resources == null)
+                GD.PushError("GameplayPlayerSpawner: Design/PlayerResources.json is missing; the soul stain is not wired and nothing is dropped on death.");
+            else
+                soulDrop.Initialize(wallet, deathController, player, resources.soulStainPickupDelay);
 
             // Cosmetic and last: pixel frames when the player has them, the greybox breathing when it
             // does not. Both only read what every line above has finished writing.
@@ -192,12 +194,18 @@ namespace MyGame.Gameplay
         private static void EnsureLockOn(Node target, WorldTuningData world)
         {
             PlayerLockOn lockOn = target.EnsureComponent<PlayerLockOn>();
-
-            lockOn.Configure(
-                world != null ? world.lockOnRange : GameplayTuningDefaults.LockOnRange,
-                world != null ? world.lockOnBreakRange : GameplayTuningDefaults.LockOnBreakRange);
-
             target.EnsureComponent<GameplayLockOnMarker>();
+
+            // Both reaches are WorldTuning.json's, already in pixels. No constant behind them: a build
+            // with no design file gets a lock-on that grabs nothing and an error saying why, rather than
+            // a reach nobody authored (PLAN_CLOSEOUT A4, decision D1).
+            if (world == null)
+            {
+                GD.PushError("GameplayPlayerSpawner: Design/WorldTuning.json is missing; lock-on keeps no reach.");
+                return;
+            }
+
+            lockOn.Configure(world.lockOnRange, world.lockOnBreakRange);
         }
 
         private static Poise EnsurePoise(Node target, PlayerResourceData resources)

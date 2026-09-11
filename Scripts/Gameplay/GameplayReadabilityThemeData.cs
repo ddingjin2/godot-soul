@@ -58,6 +58,17 @@ namespace MyGame.Gameplay
         [Export] public Color playerHealthBarColor;
         [Export] public Color enemyHealthBarColor;
         [Export] public Color bossHealthBarColor;
+
+        /// <summary>
+        /// The world health bar's frame, and the bone the fill lifts toward at low health. Both were
+        /// <c>static readonly Color</c> on <see cref="GameplayWorldHealthBar"/>, with the frame's copy
+        /// authored a second time in <c>Scenes/World/WorldHealthBar.tscn</c> - which put the bar's look
+        /// behind a code change while the three fill colours beside them were already the artist's
+        /// (PLAN_CLOSEOUT B3).
+        /// </summary>
+        [Export] public Color healthBarFrameColor;
+        [Export] public Color healthBarLowHealthTint;
+
         [Export] public Color meleeRoleColor;
         [Export] public Color leapRoleColor;
         [Export] public Color castRoleColor;
@@ -109,6 +120,8 @@ namespace MyGame.Gameplay
             defaults.PlayerHealthBarColor = playerHealthBarColor;
             defaults.EnemyHealthBarColor = enemyHealthBarColor;
             defaults.BossHealthBarColor = bossHealthBarColor;
+            defaults.HealthBarFrameColor = healthBarFrameColor;
+            defaults.HealthBarLowHealthTint = healthBarLowHealthTint;
             defaults.MeleeRoleColor = meleeRoleColor;
             defaults.LeapRoleColor = leapRoleColor;
             defaults.CastRoleColor = castRoleColor;

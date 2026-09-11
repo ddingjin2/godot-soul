@@ -194,10 +194,17 @@ namespace MyGame.Gameplay
         /// </summary>
         private static void CreateWorldEdge(GameplaySceneDefaults scene, string name, int side)
         {
-            // WorldTuning.json's, already pixels; the metres here are the fallback for a run without it.
+            // WorldTuning.json's, already pixels. No fallback: an arena missing its design file gets no
+            // walls and an error saying so, rather than walls nobody authored (PLAN_CLOSEOUT D1).
             WorldTuningData world = GameplayTuningCatalog.Load()?.WorldTuning;
-            float thicknessPx = world?.worldEdgeWallThickness ?? World.U(0.5f);
-            float heightPx = world?.worldEdgeWallHeight ?? World.U(40f);
+            if (world == null)
+            {
+                GD.PushError($"GameplayEnvironmentBuilder: Design/WorldTuning.json is missing; '{name}' is not built.");
+                return;
+            }
+
+            float thicknessPx = world.worldEdgeWallThickness;
+            float heightPx = world.worldEdgeWallHeight;
 
             // Half the wall's height *above* the floor, and up is -Y here, so this subtracts.
             var position = new Vector2(
@@ -243,8 +250,13 @@ namespace MyGame.Gameplay
 
             // Positioned before it enters the tree, as GameplayBuildShim.NewObject did. The scene
             // already names the root "GatePortal", so nothing is renamed here.
-            // WorldTuning.json's, already pixels, with the shipped 3 m as the fallback for a run without it.
-            float portalOffsetX = GameplayTuningCatalog.Load()?.WorldTuning?.gatePortalOffsetX ?? World.U(3f);
+            // WorldTuning.json's, already pixels. Missing means the portal lands on the bonfire and an
+            // error says why, rather than an offset nobody authored (PLAN_CLOSEOUT D1).
+            WorldTuningData world = GameplayTuningCatalog.Load()?.WorldTuning;
+            if (world == null)
+                GD.PushError("GameplayEnvironmentBuilder: Design/WorldTuning.json is missing; the gate portal has no offset from its bonfire.");
+
+            float portalOffsetX = world != null ? world.gatePortalOffsetX : 0f;
             go.Position = checkpoint.GlobalPosition + new Vector2(portalOffsetX, 0f);
 
             // Bound while the instance is still detached: the marker's pulse caches the colour it finds

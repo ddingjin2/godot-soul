@@ -31,17 +31,21 @@ namespace MyGame.Gameplay
 
         private Color _fillColor = new(0.85f, 0.08f, 0.08f);
 
-        /// <summary>INK_950 #06070A a0.92.</summary>
-        private static readonly Color FrameColor = new(0.023529412f, 0.02745098f, 0.039215688f, 0.92f);
+        /// <summary>
+        /// The frame, and the bone the fill lifts toward at low health - INK_950 #06070A a0.92 and
+        /// BONE_100 #C3BDB1 as shipped, but the numbers are the artist's, in
+        /// <c>Resources/Art/Readability.json</c>, and <see cref="Build"/> is what reads them.
+        /// Static because one palette serves every bar in the scene; written rather than readonly
+        /// because the file is what writes them.
+        /// </summary>
+        private static Color FrameColor;
+        private static Color LowHealthTint;
 
-        /// <summary>BONE_100 #C3BDB1. Low health lifts the fill toward bone, not toward white.</summary>
-        private static readonly Color LowHealthTint = new(0.7647059f, 0.7411765f, 0.69411767f);
-
-        // Read off GameplayReadabilityDefaults in Build, already pixels; these are what a bar gets
-        // before that runs.
-        private float _frameMarginPx = World.U(0.08f);
-        private float _lowHealthThreshold = 0.3f;
-        private float _lowHealthTintBlend = 0.35f;
+        // Read off GameplayReadabilityDefaults and the palette in Build, already pixels. Zero until
+        // then: a missing design file is an error, not a bar with different numbers (PLAN_CLOSEOUT D1).
+        private float _frameMarginPx;
+        private float _lowHealthThreshold;
+        private float _lowHealthTintBlend;
 
         private Health _health;
         private Node2D _barRoot;
@@ -115,11 +119,22 @@ namespace MyGame.Gameplay
                 return;
 
             // The designer's frame margin and low-health read, from ReadabilityLayout.json by way of the
-            // same boundary the spawners use for the bar's size and offset.
+            // same boundary the spawners use for the bar's size and offset; the frame and tint colours
+            // off the artist's palette beside it. Create() is null when either file is missing, which is
+            // a broken build rather than a bar with other numbers (PLAN_CLOSEOUT D1).
             GameplayReadabilityDefaults readability = GameplayReadabilityDefaults.Create();
-            _frameMarginPx = readability.HealthBarFrameMargin;
-            _lowHealthThreshold = readability.HealthBarLowHealthThreshold;
-            _lowHealthTintBlend = readability.HealthBarLowHealthTintBlend;
+            if (readability == null)
+            {
+                GD.PushError("GameplayWorldHealthBar: Art/Readability.json or Design/ReadabilityLayout.json is missing; the bar has no margin, threshold or frame colour.");
+            }
+            else
+            {
+                _frameMarginPx = readability.HealthBarFrameMargin;
+                _lowHealthThreshold = readability.HealthBarLowHealthThreshold;
+                _lowHealthTintBlend = readability.HealthBarLowHealthTintBlend;
+                FrameColor = readability.HealthBarFrameColor;
+                LowHealthTint = readability.HealthBarLowHealthTint;
+            }
 
             // Reused when the actor was built with the bar already under it; _barRoot is not exported
             // and is null on every fresh instance.
@@ -153,8 +168,9 @@ namespace MyGame.Gameplay
             {
                 _frameRenderer.SetSpriteSize(sizePx + new Vector2(_frameMarginPx, _frameMarginPx));
 
-                // The scene authors this same colour; re-applying it is what keeps an authored bar and a
-                // freshly instanced one identical, and it is what the P0 suite reads back.
+                // The scene used to author this same colour and no longer does (PLAN_CLOSEOUT B3): this
+                // line ran over it on every bar anyway, so the copy in the .tscn was a second place to
+                // edit the frame and never a second source. It is what the P0 suite reads back.
                 _frameRenderer.Modulate = FrameColor;
             }
 

@@ -49,6 +49,7 @@ namespace MyGame.Tests
             ["CutsceneTuning"] = typeof(CutsceneTuningData),
             ["SceneLayout"] = typeof(GameplaySceneLayoutData),
             ["ReadabilityLayout"] = typeof(GameplayReadabilityLayoutData),
+            ["UiTuning"] = typeof(UiTuningData),
             ["MeleeGrunt"] = typeof(MeleeGruntData),
             ["LeapingAttacker"] = typeof(LeapingAttackerData),
             ["RangedCaster"] = typeof(RangedCasterData),

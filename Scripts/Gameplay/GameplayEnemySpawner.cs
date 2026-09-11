@@ -415,8 +415,8 @@ namespace MyGame.Gameplay
 
         /// <summary>
         /// <c>WorldTuning.json</c>'s enemy block and <c>PlayerCombat.json</c>'s perfect-parry reward, into
-        /// the state machine every archetype shares. A missing design file leaves the class's own
-        /// initialisers standing, which is the fallback contract every other loader here keeps.
+        /// the state machine every archetype shares. A missing design file leaves the machine unconfigured
+        /// and says so - there is no copy of either file's numbers here (PLAN_CLOSEOUT D1).
         /// </summary>
         /// <remarks>
         /// UNITS: every distance handed over is already <b>pixels</b>. <c>WorldTuningData.Load</c> ran
@@ -431,8 +431,10 @@ namespace MyGame.Gameplay
 
             GameplayTuningCatalog catalog = GameplayTuningCatalog.Load();
             WorldTuningData world = catalog?.WorldTuning;
-            if (world == null)
+            MyGame.Player.PlayerCombatData combat = catalog?.PlayerCombat;
+            if (world == null || combat == null)
             {
+                GD.PushError($"GameplayEnemySpawner: Design/WorldTuning.json or Design/PlayerCombat.json is missing; '{machine.Name}' keeps no shared behaviour.");
                 return;
             }
 
@@ -444,7 +446,7 @@ namespace MyGame.Gameplay
                 world.enemyRecoveryDuration,
                 world.enemyLedgeProbeForward,
                 world.enemyLedgeProbeDepth,
-                catalog.PlayerCombat?.perfectParryStunMultiplier ?? 1.6f);
+                combat.perfectParryStunMultiplier);
         }
 
         /// <summary>

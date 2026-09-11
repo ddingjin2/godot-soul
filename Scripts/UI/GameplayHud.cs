@@ -2,6 +2,7 @@ using System;
 using Godot;
 using MyGame.Combat;
 using MyGame.Core;
+using MyGame.Gameplay;
 using MyGame.Player;
 
 namespace MyGame.UI
@@ -27,14 +28,32 @@ namespace MyGame.UI
     /// </summary>
     public partial class GameplayHud : CanvasLayer
     {
-        // Mood palette tokens - Docs/MoodDirection.md section 2. Written as hex/255 so that
-        // round(v * 255) reproduces the documented hex exactly; a two-decimal literal does not
-        // always land on the right byte (0.68 * 255 rounds to 0xAD, not 0xAE).
-        private static readonly Color Bone100 = new Color(0.7647059f, 0.7411765f, 0.69411767f);   // #C3BDB1 text primary
-        private static readonly Color Bone200 = new Color(0.6039216f, 0.5803922f, 0.53333336f);   // #9A9488 text secondary
-        private static readonly Color Bone300 = new Color(0.43137255f, 0.40784314f, 0.36078432f); // #6E685C text dim
-        private static readonly Color Cold200 = new Color(0.5176471f, 0.57254905f, 0.627451f);    // #8492A0 souls / spirit
-        private static readonly Color Ember300 = new Color(0.65882355f, 0.29411766f, 0.2f);       // #A84B33 warning
+        /// <summary>
+        /// The Theme type the mood palette is filed under in <c>Resources/UI/MenuTheme.tres</c>. No node
+        /// carries it: a Theme is what Godot has instead of a colour asset, and this is the HUD reading
+        /// the palette out of it rather than typing it a second time (PLAN_CLOSEOUT A8/B2, decision D5).
+        /// </summary>
+        private const string PaletteType = "Palette";
+
+        private static Theme _palette;
+
+        /// <summary>
+        /// One mood token, by its name in the Theme. A dictionary hit per read, on a Theme the loader
+        /// has already cached - cheap enough for the handful of tints a frame does, and the point is
+        /// that there is nowhere else the colour could have come from.
+        /// </summary>
+        private static Color Hue(string token)
+        {
+            _palette ??= LoadMenuTheme();
+            return _palette != null ? _palette.GetColor(token, PaletteType) : default;
+        }
+
+        // Mood palette tokens - Docs/MoodDirection.md section 2, authored in MenuTheme.tres.
+        private static Color Bone100 => Hue("bone_100");   // #C3BDB1 text primary
+        private static Color Bone200 => Hue("bone_200");   // #9A9488 text secondary
+        private static Color Bone300 => Hue("bone_300");   // #6E685C text dim
+        private static Color Cold200 => Hue("cold_200");   // #8492A0 souls / spirit
+        private static Color Ember300 => Hue("ember_300"); // #A84B33 warning
 
         /// <summary>The full-rect <see cref="Control"/> every widget hangs off - a CanvasLayer has no rect of its own.</summary>
         private Control _root;
@@ -63,9 +82,12 @@ namespace MyGame.UI
         // Ghost gauge and hit flash, on scaled time on purpose: at timeScale 0 the pause menu freezes
         // both, which is what stops a hit taken on the last frame before Escape from draining behind
         // the menu and being over by the time the player looks again.
-        private const float GhostHoldSeconds = 0.4f;
-        private const float GhostDrainSeconds = 0.5f;
-        private const float HitFlashSeconds = 0.15f;
+        // Seconds, from Resources/Design/UiTuning.json, read once in Bind. Zero until then and zero if
+        // the file is missing, which is an error rather than a second set of numbers (D1) - a missing
+        // file shows as no hold and an instant drain, not as the shipped feel.
+        private float _ghostHoldSeconds;
+        private float _ghostDrainSeconds;
+        private float _hitFlashSeconds;
         private float _ghostRatio;
         private float _ghostHoldUntil;
         private float _hitFlashUntil;
@@ -187,6 +209,20 @@ namespace MyGame.UI
             // ext_resource - it is the same cached instance, and the resource deliberately names no font
             // of its own. Has to happen before the first draw or every label falls back to Godot's face.
             LoadMenuTheme();
+
+            // The two timers' seconds, from the designer's file. The bootstrap has already refused to
+            // build an arena on an incomplete catalog, so null here means a HUD stood up outside one.
+            UiTuningData ui = GameplayTuningCatalog.Load()?.UiTuning;
+            if (ui == null)
+            {
+                GD.PushError("GameplayHud: Resources/Design/UiTuning.json is missing; the ghost gauge and the hit flash have no timings.");
+            }
+            else
+            {
+                _ghostHoldSeconds = ui.ghostHoldSeconds;
+                _ghostDrainSeconds = ui.ghostDrainSeconds;
+                _hitFlashSeconds = ui.hitFlashSeconds;
+            }
 
             var healthGauge = _root.GetNode<Control>("HealthGauge");
             _healthFill = healthGauge.GetNode<ColorRect>("Fill");
@@ -694,8 +730,8 @@ namespace MyGame.UI
             {
                 // Damage: leave the ghost where it was and start both timers. TickHealthGauge does the
                 // rest, so a hit that lands during a hitstop still holds for its full 0.4s afterwards.
-                _ghostHoldUntil = GameClock.Time + GhostHoldSeconds;
-                _hitFlashUntil = GameClock.Time + HitFlashSeconds;
+                _ghostHoldUntil = GameClock.Time + _ghostHoldSeconds;
+                _hitFlashUntil = GameClock.Time + _hitFlashSeconds;
             }
             else if (ratio > _ghostRatio)
             {
@@ -718,10 +754,10 @@ namespace MyGame.UI
             float ratio = _healthFill.AnchorRight;
             if (_ghostRatio > ratio && GameClock.Time >= _ghostHoldUntil)
             {
-                // Constant rate rather than a lerp toward the target: a whole bar takes GhostDrainSeconds
+                // Constant rate rather than a lerp toward the target: a whole bar takes ghostDrainSeconds
                 // and a scratch is proportionally quicker, which is what makes the size of a hit readable.
                 // A lerp spends the same wall-clock time on both and never quite lands on the target.
-                _ghostRatio = Mathf.Max(ratio, _ghostRatio - delta / GhostDrainSeconds);
+                _ghostRatio = Mathf.Max(ratio, _ghostRatio - delta / _ghostDrainSeconds);
                 SetFill(_ghostFill, _ghostRatio, 1f);
             }
             else if (_ghostRatio < ratio)
@@ -733,8 +769,8 @@ namespace MyGame.UI
             // Bone over ember for the flash frame. ColorRect.Color early-outs on an unchanged value, so
             // writing it every frame costs no redraw.
             _healthFill.Color = GameClock.Time < _hitFlashUntil
-                ? new Color(Bone100.R, Bone100.G, Bone100.B, 0.85f)
-                : new Color(Ember300.R, Ember300.G, Ember300.B, 0.55f);
+                ? Hue("bone_100_hit_flash")
+                : Hue("ember_300_health_fill");
         }
 
         private void UpdateHumanity(float current)
@@ -828,8 +864,8 @@ namespace MyGame.UI
                 // Brighter as well as red while staggered: the strip is the peripheral read, and the
                 // stagger is the one poise state the player has to catch without looking at the numbers.
                 _poiseFill.Color = staggered
-                    ? new Color(Ember300.R, Ember300.G, Ember300.B, 0.75f)
-                    : new Color(Bone300.R, Bone300.G, Bone300.B, 0.55f);
+                    ? Hue("ember_300_poise_staggered")
+                    : Hue("bone_300_poise_fill");
         }
 
         private void UpdateSouls(int current)

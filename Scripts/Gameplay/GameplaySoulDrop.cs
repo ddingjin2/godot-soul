@@ -19,16 +19,17 @@ namespace MyGame.Gameplay
         private PlayerController2D _player;
         private SoulPickup _activeStain;
         private Vector2 _lastGroundedPosition;
-        private float _pickupDelay = GameplayTuningDefaults.SoulStainPickupDelay;
+        /// <summary>Seconds, from <c>PlayerResources.json</c> by way of <see cref="Initialize"/>. Zero until then; there is no constant behind it (PLAN_CLOSEOUT A4).</summary>
+        private float _pickupDelay;
 
         public SoulPickup ActiveStain => _activeStain != null && IsInstanceValid(_activeStain) ? _activeStain : null;
 
         /// <summary>
-        /// <paramref name="pickupDelay"/> is required rather than defaulted. It briefly had
-        /// <see cref="GameplayTuningDefaults.SoulStainPickupDelay"/> as a default on the claim that test
-        /// runners called the three-argument form - QA found no such caller. An unused default is only a
-        /// way for the next caller to forget the delay and silently get the fallback instead of the
-        /// authored value, which is the exact failure the wiring was added to remove.
+        /// <paramref name="pickupDelay"/> is required rather than defaulted. It briefly had a constant
+        /// as a default on the claim that test runners called the three-argument form - QA found no such
+        /// caller. An unused default is only a way for the next caller to forget the delay and silently
+        /// get a fallback instead of the authored value, which is the exact failure the wiring was added
+        /// to remove. The constant itself is gone now; <c>PlayerResources.json</c> is the only source.
         /// </summary>
         public void Initialize(SoulsWallet wallet, DeathStateController death, PlayerController2D player,
             float pickupDelay)
