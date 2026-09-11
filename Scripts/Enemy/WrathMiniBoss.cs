@@ -41,7 +41,7 @@ namespace MyGame.Enemy
         public bool IsInIntro => _isInIntro;
         public bool IsInRageMode => _isInRageMode;
         public float DetectionRange => encounterData != null ? encounterData.detectionRange : DefaultDetectionRange;
-        public float AttackRange => tuningData != null ? tuningData.slashRange : World.U(1.8f);
+        public float AttackRange => tuningData.slashRange;
 
         public void SetTuningData(WrathMiniBossData data) => tuningData = data;
 
@@ -110,9 +110,9 @@ namespace MyGame.Enemy
         /// Telegraph base: the pre-mood boss body colour. Blending from here instead of _originalColor
         /// keeps slash at #F7C20F and slam at #F70F0F after the body is muted.
         /// See Docs/MoodDirection.md "The lerp trap".
-        /// Authored as <c>WrathMiniBoss.json.telegraphColor</c>; this is the file-less fallback.
+        /// Authored as <c>WrathMiniBoss.json.telegraphColor</c>.
         /// </summary>
-        private Color TelegraphBase => tuningData?.telegraphColor ?? new Color(0.9f, 0.2f, 0.2f);
+        private Color TelegraphBase => tuningData.telegraphColor;
 
         /// <summary>#4A4A47 - the boss stops being a threat.</summary>
         private static readonly Color DefeatedColor = new Color(0.2901961f, 0.2901961f, 0.2784314f);
@@ -163,21 +163,26 @@ namespace MyGame.Enemy
             // ported tests still look this member up by name, so the shape stays.
             base._Ready();
 
+            if (tuningData == null)
+            {
+                GD.PushError($"{GetType().Name} '{Name}' entered the tree without tuning data; call SetTuningData first.");
+                SetProcess(false);
+                SetPhysicsProcess(false);
+                return;
+            }
+
             _health = this.FindComponent<Health>();
             _spawnPosition = GlobalPosition;
 
-            if (tuningData != null)
+            _health.SetHealth(tuningData.maxHealthBoss);
+            if (_sr != null)
             {
-                _health.SetHealth(tuningData.maxHealthBoss);
-                if (_sr != null)
-                {
-                    _originalColor = tuningData.bossColor;
-                    _sr.Modulate = _originalColor;
-                    _sr.SetSpriteSize(tuningData.bossBodySize);
-                }
-
-                ResizeCapsule(tuningData.bossBodySize);
+                _originalColor = tuningData.bossColor;
+                _sr.Modulate = _originalColor;
+                _sr.SetSpriteSize(tuningData.bossBodySize);
             }
+
+            ResizeCapsule(tuningData.bossBodySize);
 
             _health.OnHealthChanged += CheckPhaseChange;
             _health.OnHealthDepleted += OnBossDeath;
@@ -223,7 +228,7 @@ namespace MyGame.Enemy
                 return;
             }
 
-            float threshold = tuningData != null ? tuningData.phaseThreshold : 0.5f;
+            float threshold = tuningData.phaseThreshold;
             if (_health.NormalizedHealth <= threshold)
             {
                 EnterPhaseTwo();
@@ -234,7 +239,7 @@ namespace MyGame.Enemy
         {
             _isPhaseTwo = true;
             _isInRageMode = true;
-            _rageModeTimer = tuningData?.rageModeDuration ?? 5f;
+            _rageModeTimer = tuningData.rageModeDuration;
 
             TriggerPhaseTransitionEffect();
             OnPhaseChange?.Invoke();
@@ -244,7 +249,7 @@ namespace MyGame.Enemy
 
         private void TriggerPhaseTransitionEffect()
         {
-            HitStopManager.Instance?.TriggerHitStop(tuningData?.phaseTransitionHitStop ?? 0.15f);
+            HitStopManager.Instance?.TriggerHitStop(tuningData.phaseTransitionHitStop);
             CameraShake.Instance?.TriggerShake(CameraShakePreset.BossPhase);
             this.FindComponent<CombatFeedback>()?.TriggerImpactScale();
 
@@ -259,7 +264,7 @@ namespace MyGame.Enemy
             }
 
             _sr.Modulate = Colors.Red;
-            await ToSignal(GetTree().CreateTimer(tuningData?.phaseFlashRedTime ?? 0.1f), SceneTreeTimer.SignalName.Timeout);
+            await ToSignal(GetTree().CreateTimer(tuningData.phaseFlashRedTime), SceneTreeTimer.SignalName.Timeout);
 
             if (!GodotObject.IsInstanceValid(this) || _sr == null)
             {
@@ -267,7 +272,7 @@ namespace MyGame.Enemy
             }
 
             _sr.Modulate = Colors.White;
-            await ToSignal(GetTree().CreateTimer(tuningData?.phaseFlashWhiteTime ?? 0.05f), SceneTreeTimer.SignalName.Timeout);
+            await ToSignal(GetTree().CreateTimer(tuningData.phaseFlashWhiteTime), SceneTreeTimer.SignalName.Timeout);
 
             if (!GodotObject.IsInstanceValid(this) || _sr == null)
             {
@@ -464,13 +469,13 @@ namespace MyGame.Enemy
                 _sr.Modulate = Colors.Black;
             }
 
-            await ToSignal(GetTree().CreateTimer(tuningData?.introBlackoutTime ?? 0.5f), SceneTreeTimer.SignalName.Timeout);
+            await ToSignal(GetTree().CreateTimer(tuningData.introBlackoutTime), SceneTreeTimer.SignalName.Timeout);
             if (!GodotObject.IsInstanceValid(this))
             {
                 return;
             }
 
-            HitStopManager.Instance?.TriggerHitStop(tuningData?.introImpactHitStop ?? 0.1f);
+            HitStopManager.Instance?.TriggerHitStop(tuningData.introImpactHitStop);
 
             if (_sr != null)
             {
@@ -479,7 +484,7 @@ namespace MyGame.Enemy
 
             CameraShake.Instance?.TriggerShake(CameraShakePreset.BossPhase);
 
-            await ToSignal(GetTree().CreateTimer(tuningData?.introSettleTime ?? 0.8f), SceneTreeTimer.SignalName.Timeout);
+            await ToSignal(GetTree().CreateTimer(tuningData.introSettleTime), SceneTreeTimer.SignalName.Timeout);
             if (!GodotObject.IsInstanceValid(this))
             {
                 return;
@@ -558,11 +563,6 @@ namespace MyGame.Enemy
 
         private float GetCurrentSpeed()
         {
-            if (tuningData == null)
-            {
-                return World.U(2.5f);
-            }
-
             float speed = _isPhaseTwo ? tuningData.moveSpeedBoss * tuningData.phaseSpeedMultiplier : tuningData.moveSpeedBoss;
             if (_isInRageMode)
             {
@@ -604,7 +604,7 @@ namespace MyGame.Enemy
         {
             _isAttacking = true;
             _currentAttack = AttackType.Slash;
-            _telegraphTimer = tuningData?.slashTelegraphTime ?? 0.5f;
+            _telegraphTimer = tuningData.slashTelegraphTime;
             _telegraphPulse = 0f;
             _hasHitInAttack = false;
             Velocity = Vector2.Zero;
@@ -618,7 +618,7 @@ namespace MyGame.Enemy
         {
             _isAttacking = true;
             _currentAttack = AttackType.Slam;
-            _telegraphTimer = tuningData?.slamTelegraphTime ?? 0.7f;
+            _telegraphTimer = tuningData.slamTelegraphTime;
             _telegraphPulse = 0f;
             _hasHitInAttack = false;
             Velocity = Vector2.Zero;
@@ -637,7 +637,7 @@ namespace MyGame.Enemy
 
             _isAttacking = true;
             _currentAttack = AttackType.RageRush;
-            _telegraphTimer = tuningData?.rushTelegraphTime ?? 0.4f;
+            _telegraphTimer = tuningData.rushTelegraphTime;
             _telegraphPulse = 0f;
             _hasHitInAttack = false;
             _rushElapsed = 0f;
@@ -657,7 +657,7 @@ namespace MyGame.Enemy
             if (_sr != null)
             {
                 Color telegraph = _currentAttack == AttackType.Slam ? Colors.Red : Colors.Yellow;
-                _sr.Modulate = TelegraphBase.Lerp(telegraph, tuningData?.telegraphBlend ?? 0.7f);
+                _sr.Modulate = TelegraphBase.Lerp(telegraph, tuningData.telegraphBlend);
             }
         }
 
@@ -701,9 +701,9 @@ namespace MyGame.Enemy
         {
             float dt = GameClock.DeltaTime;
             _telegraphTimer -= dt;
-            _telegraphPulse += dt * (tuningData?.telegraphPulseSpeed ?? 8f);
+            _telegraphPulse += dt * tuningData.telegraphPulseSpeed;
 
-            float pulse = 1f + (Mathf.Sin(_telegraphPulse) * (tuningData?.telegraphPulseAmplitude ?? 0.2f));
+            float pulse = 1f + (Mathf.Sin(_telegraphPulse) * tuningData.telegraphPulseAmplitude);
             Scale = new Vector2(pulse, pulse);
 
             if (_telegraphTimer <= 0f)
@@ -729,7 +729,7 @@ namespace MyGame.Enemy
 
         private void UpdateSlash()
         {
-            if (_telegraphTimer > -(tuningData?.slashDuration ?? 0.3f))
+            if (_telegraphTimer > -tuningData.slashDuration)
             {
                 return;
             }
@@ -755,8 +755,8 @@ namespace MyGame.Enemy
 
             // Both already pixels: WrathMiniBossData scaled them at load. Wrath carries no AttackPoint
             // node, so unlike the grunt's this offset is what every slash actually uses.
-            float range = tuningData?.slashRange ?? World.U(1.8f);
-            float originOffset = tuningData?.attackPointOffset ?? World.U(0.5f);
+            float range = tuningData.slashRange;
+            float originOffset = tuningData.attackPointOffset;
             Vector2 origin = GlobalPosition + (Vector2.Right * _facingDir * originOffset);
 
             foreach (GodotObject hit in Phys2D.OverlapCircleAll(this, origin, range, World.Layer.Player))
@@ -766,8 +766,8 @@ namespace MyGame.Enemy
                     continue;
                 }
 
-                float dmg = tuningData != null ? tuningData.attackDamageSlash : 20f;
-                float knb = tuningData != null ? tuningData.attackKnockbackSlash : World.U(6f);
+                float dmg = tuningData.attackDamageSlash;
+                float knb = tuningData.attackKnockbackSlash;
                 var request = new DamageRequest(
                     this,
                     player,
@@ -794,7 +794,7 @@ namespace MyGame.Enemy
 
         private void UpdateSlam()
         {
-            if (_telegraphTimer > -(tuningData?.slamDuration ?? 0.4f))
+            if (_telegraphTimer > -tuningData.slamDuration)
             {
                 return;
             }
@@ -819,7 +819,7 @@ namespace MyGame.Enemy
             CameraShake.Instance?.TriggerShake(CameraShakePreset.BossSlam);
             this.FindComponent<CombatFeedback>()?.TriggerImpactScale();
 
-            float range = tuningData?.slamRange ?? World.U(2.5f);
+            float range = tuningData.slamRange;
 
             foreach (GodotObject hit in Phys2D.OverlapCircleAll(this, GlobalPosition, range, World.Layer.Player))
             {
@@ -828,8 +828,8 @@ namespace MyGame.Enemy
                     continue;
                 }
 
-                float dmg = tuningData != null ? tuningData.attackDamageSlam : 25f;
-                float knb = tuningData?.slamShockwaveForce ?? World.U(8f);
+                float dmg = tuningData.attackDamageSlam;
+                float knb = tuningData.slamShockwaveForce;
 
                 // Radial, so the shove is out of the crater in whatever direction the player stands.
                 // No sign flip: this is a difference of two Godot-space positions.
@@ -860,8 +860,8 @@ namespace MyGame.Enemy
 
         private void UpdateRageRush(float delta)
         {
-            float rushDuration = tuningData?.rushDuration ?? 0.6f;
-            if (_telegraphTimer > -rushDuration * (tuningData?.rushWindupFraction ?? 0.5f))
+            float rushDuration = tuningData.rushDuration;
+            if (_telegraphTimer > -rushDuration * tuningData.rushWindupFraction)
             {
                 return;
             }
@@ -870,7 +870,7 @@ namespace MyGame.Enemy
 
             if (_rushElapsed < rushDuration)
             {
-                float rushSpeed = tuningData != null ? tuningData.rushSpeed : World.U(12f);
+                float rushSpeed = tuningData.rushSpeed;
                 float dir = ClampArenaDirection(_facingDir);
                 Velocity = new Vector2(dir * rushSpeed, 0f);
                 if (Mathf.IsZeroApprox(dir))
@@ -893,7 +893,7 @@ namespace MyGame.Enemy
         private void CheckRushHit()
         {
             // Already pixels - WrathMiniBossData scaled it at load.
-            float range = tuningData?.rushRange ?? World.U(1f);
+            float range = tuningData.rushRange;
 
             foreach (GodotObject hit in Phys2D.OverlapCircleAll(this, GlobalPosition, range, World.Layer.Player))
             {
@@ -904,8 +904,8 @@ namespace MyGame.Enemy
 
                 _hasHitInAttack = true;
 
-                float dmg = tuningData != null ? tuningData.attackDamageRage : 15f;
-                float knb = tuningData != null ? tuningData.attackKnockback : World.U(5f);
+                float dmg = tuningData.attackDamageRage;
+                float knb = tuningData.attackKnockback;
                 var request = new DamageRequest(
                     this,
                     player,
@@ -958,11 +958,6 @@ namespace MyGame.Enemy
 
         private float GetAttackCooldown(AttackType completedAttack)
         {
-            if (tuningData == null)
-            {
-                return 2f;
-            }
-
             float baseCooldown = completedAttack switch
             {
                 AttackType.Slash => tuningData.slashCooldown,
@@ -992,7 +987,7 @@ namespace MyGame.Enemy
         public void Stun(bool perfect = false)
         {
             _isStunned = true;
-            _stunTimer = (tuningData?.stunDuration ?? 1f) * (perfect ? perfectParryStunMultiplier : 1f);
+            _stunTimer = tuningData.stunDuration * (perfect ? perfectParryStunMultiplier : 1f);
             _isAttacking = false;
             _currentAttack = AttackType.None;
             Velocity = Vector2.Zero;

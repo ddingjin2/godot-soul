@@ -29,8 +29,8 @@ namespace MyGame.Enemy
 
         public bool IsStunned => _isStunned;
         public bool IsDead => _health.IsDead;
-        public float DetectionRange => tuningData != null ? tuningData.detectionRange : World.U(5f);
-        public float AttackRange => tuningData != null ? tuningData.attackRange : World.U(1.5f);
+        public float DetectionRange => tuningData.detectionRange;
+        public float AttackRange => tuningData.attackRange;
 
         public void SetTuningData(RangedCasterData data) => tuningData = data;
 
@@ -48,9 +48,9 @@ namespace MyGame.Enemy
         /// Telegraph base: the pre-mood caster body colour. Blending from here instead of
         /// tuningData.enemyColor keeps the telegraph at #E50FFF after the body is muted.
         /// See Docs/MoodDirection.md "The lerp trap".
-        /// Authored as <c>RangedCaster.json.telegraphColor</c>; this is the file-less fallback.
+        /// Authored as <c>RangedCaster.json.telegraphColor</c>.
         /// </summary>
-        private Color TelegraphBase => tuningData?.telegraphColor ?? new Color(0.5f, 0.3f, 1f);
+        private Color TelegraphBase => tuningData.telegraphColor;
 
         private Health _health;
         private bool _isStunned;
@@ -73,23 +73,28 @@ namespace MyGame.Enemy
         private Color? _projectileTint;
         private int? _projectileSortingOrder;
         /// <summary>Already pixels - <c>RangedCasterData.ScaleToPixels</c> converted the authored metres at load.</summary>
-        private float PatrolHalfWidth => tuningData?.patrolDistance ?? World.U(3f);
+        private float PatrolHalfWidth => tuningData.patrolDistance;
 
         public override void _Ready()
         {
             base._Ready();
 
+            if (tuningData == null)
+            {
+                GD.PushError($"{GetType().Name} '{Name}' entered the tree without tuning data; call SetTuningData first.");
+                SetProcess(false);
+                SetPhysicsProcess(false);
+                return;
+            }
+
             _health = this.FindComponent<Health>();
             _startPos = GlobalPosition;
             _patrolTarget = _startPos + (Vector2.Right * PatrolHalfWidth);
 
-            if (tuningData != null)
+            _health.SetHealth(tuningData.maxHealth);
+            if (_sr != null)
             {
-                _health.SetHealth(tuningData.maxHealth);
-                if (_sr != null)
-                {
-                    _sr.Modulate = tuningData.enemyColor;
-                }
+                _sr.Modulate = tuningData.enemyColor;
             }
 
             // One source for the shot, not two. This used to build a second, divergent EnemyProjectile
@@ -156,8 +161,8 @@ namespace MyGame.Enemy
             _attackCooldownTimer -= dt;
 
             float dist = _player != null ? GlobalPosition.DistanceTo(_player.GlobalPosition) : float.MaxValue;
-            float minDist = tuningData?.minDistance ?? World.U(5f);
-            float repositionDist = tuningData?.repositionDistance ?? World.U(3f);
+            float minDist = tuningData.minDistance;
+            float repositionDist = tuningData.repositionDistance;
 
             if (_currentState == EnemyState.Combat || _currentState == EnemyState.Investigate)
             {
@@ -180,7 +185,7 @@ namespace MyGame.Enemy
                     // one-unit shell 6 < d <= 7 and a caster the player walked up to strafed in silence
                     // forever - the exact inverse of what a ranged enemy reads as. attackRange was
                     // exposed the whole time and never read.
-                    MoveTowards(_player.GlobalPosition, tuningData != null ? tuningData.moveSpeed : World.U(1.5f));
+                    MoveTowards(_player.GlobalPosition, tuningData.moveSpeed);
                 }
                 else if (_isStrafing)
                 {
@@ -212,7 +217,7 @@ namespace MyGame.Enemy
                 return;
             }
 
-            float range = tuningData != null ? tuningData.detectionRange : World.U(5f);
+            float range = tuningData.detectionRange;
             GodotObject hit = Phys2D.OverlapCircle(this, GlobalPosition, range, World.Layer.Player);
             if (hit != null && Phys2D.FindActorInGroup(hit, World.Group.Player) is Node2D player)
             {
@@ -229,7 +234,7 @@ namespace MyGame.Enemy
                 return;
             }
 
-            float speed = tuningData != null ? tuningData.moveSpeed : World.U(1.5f);
+            float speed = tuningData.moveSpeed;
             float dir = Mathf.Sign(_patrolTarget.X - GlobalPosition.X);
             dir = ClampToGroundAhead(ClampHomewardDirection(dir));
             Velocity = new Vector2(dir * speed, Velocity.Y);
@@ -257,7 +262,7 @@ namespace MyGame.Enemy
         {
             _facingDir *= -1;
             _patrolTarget = _startPos + (Vector2.Right * PatrolHalfWidth * _facingDir);
-            _idleTimer = tuningData?.patrolIdleTime ?? 0.5f;
+            _idleTimer = tuningData.patrolIdleTime;
         }
 
         /// <summary>
@@ -293,7 +298,7 @@ namespace MyGame.Enemy
         private void StartCast()
         {
             _isCasting = true;
-            _castTelegraphTimer = tuningData != null ? tuningData.castTelegraphTime : 1f;
+            _castTelegraphTimer = tuningData.castTelegraphTime;
             _telegraphPulse = 0f;
             Velocity = Vector2.Zero;
             _isStrafing = false;
@@ -309,9 +314,9 @@ namespace MyGame.Enemy
                 telegraphIndicator.Visible = true;
             }
 
-            if (_sr != null && tuningData != null)
+            if (_sr != null)
             {
-                _sr.Modulate = TelegraphBase.Lerp(Colors.Magenta, tuningData?.telegraphBlend ?? 0.8f);
+                _sr.Modulate = TelegraphBase.Lerp(Colors.Magenta, tuningData.telegraphBlend);
             }
         }
 
@@ -329,9 +334,9 @@ namespace MyGame.Enemy
             {
                 var dt = (float)delta;
                 _castTelegraphTimer -= dt;
-                _telegraphPulse += dt * (tuningData?.telegraphPulseSpeed ?? 6f);
+                _telegraphPulse += dt * tuningData.telegraphPulseSpeed;
 
-                float pulse = 1f + (Mathf.Sin(_telegraphPulse) * (tuningData?.telegraphPulseAmplitude ?? 0.1f));
+                float pulse = 1f + (Mathf.Sin(_telegraphPulse) * tuningData.telegraphPulseAmplitude);
                 Scale = new Vector2(pulse, pulse);
 
                 if (_castTelegraphTimer <= 0f)
@@ -346,7 +351,7 @@ namespace MyGame.Enemy
         private void FireProjectile()
         {
             _isCasting = false;
-            _attackCooldownTimer = tuningData != null ? tuningData.attackCooldown : 2f;
+            _attackCooldownTimer = tuningData.attackCooldown;
             StopTelegraphVisuals();
             Scale = Vector2.One;
 
@@ -365,11 +370,11 @@ namespace MyGame.Enemy
                     // Every one of these is already pixels where it is a distance - RangedCasterData
                     // scaled them at load. The knockback used to be a World.U(3f) literal that ignored
                     // the attackKnockback sitting in the same file at the same 3 metres; it reads it now.
-                    float projSpeed = tuningData != null ? tuningData.projectileSpeed : World.U(5f);
-                    float projDmg = tuningData != null ? tuningData.projectileDamage : 8f;
-                    float projKnockback = tuningData != null ? tuningData.attackKnockback : World.U(3f);
-                    float projLifetime = tuningData?.projectileLifetime ?? 5f;
-                    float projArcHeight = tuningData?.projectileArcHeight ?? World.U(0.5f);
+                    float projSpeed = tuningData.projectileSpeed;
+                    float projDmg = tuningData.projectileDamage;
+                    float projKnockback = tuningData.attackKnockback;
+                    float projLifetime = tuningData.projectileLifetime;
+                    float projArcHeight = tuningData.projectileArcHeight;
                     projectile.Initialize(direction, projSpeed, projDmg, projKnockback, projLifetime, projArcHeight);
                 }
             }
@@ -383,7 +388,7 @@ namespace MyGame.Enemy
 
         private void Strafe()
         {
-            float strafeSpeed = tuningData != null ? tuningData.strafeSpeed : World.U(1.5f);
+            float strafeSpeed = tuningData.strafeSpeed;
             float dir = ClampToGroundAhead(ClampHomewardDirection(_strafeDir));
             Velocity = new Vector2(dir * strafeSpeed, Velocity.Y);
             if (Mathf.IsZeroApprox(dir))
@@ -391,7 +396,7 @@ namespace MyGame.Enemy
                 _strafeDir *= -1f;
             }
 
-            if (GD.Randf() < (tuningData?.strafeFlipChance ?? 0.01f))
+            if (GD.Randf() < tuningData.strafeFlipChance)
             {
                 _strafeDir *= -1f;
             }
@@ -417,8 +422,8 @@ namespace MyGame.Enemy
             _lastRepositionTime = GameClock.Time;
             _isRepositioning = true;
             _repositionCooldown = (float)GD.RandRange(
-                tuningData?.repositionCooldownMin ?? 1.2f,
-                tuningData?.repositionCooldownMax ?? 2f);
+                tuningData.repositionCooldownMin,
+                tuningData.repositionCooldownMax);
 
             float dir = Mathf.Sign(GlobalPosition.X - _player.GlobalPosition.X);
 
@@ -429,7 +434,7 @@ namespace MyGame.Enemy
             }
 
             dir = ClampToGroundAhead(ClampHomewardDirection(dir));
-            Velocity = new Vector2(dir * (tuningData?.moveSpeed ?? World.U(2f)), 0f);
+            Velocity = new Vector2(dir * tuningData.moveSpeed, 0f);
             _strafeDir = Mathf.IsZeroApprox(dir) ? -Mathf.Sign(GlobalPosition.X - _startPos.X) : dir;
 
             OnReposition?.Invoke();
@@ -441,7 +446,7 @@ namespace MyGame.Enemy
         /// <summary>Unity's <c>Invoke(nameof(EndReposition), 0.5f)</c>, with the delay authored.</summary>
         private async void EndRepositionAfterDelay()
         {
-            float duration = tuningData?.repositionDuration ?? 0.5f;
+            float duration = tuningData.repositionDuration;
             await ToSignal(GetTree().CreateTimer(duration), SceneTreeTimer.SignalName.Timeout);
 
             if (GodotObject.IsInstanceValid(this))
@@ -480,7 +485,7 @@ namespace MyGame.Enemy
         public void Stun()
         {
             _isStunned = true;
-            _stunTimer = tuningData != null ? tuningData.stunDuration : 0.8f;
+            _stunTimer = tuningData.stunDuration;
             _isCasting = false;
             _isRepositioning = false;
             Velocity = Vector2.Zero;
@@ -508,7 +513,7 @@ namespace MyGame.Enemy
             {
                 _sr.Modulate = new Color(0.24705882f, 0.32941177f, 0.34117648f); // COLD_400 #3F5457
             }
-            else if (tuningData != null)
+            else
             {
                 _sr.Modulate = tuningData.enemyColor;
             }

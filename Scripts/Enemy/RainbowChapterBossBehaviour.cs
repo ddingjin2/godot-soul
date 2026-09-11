@@ -1181,8 +1181,8 @@ namespace MyGame.Enemy
 
         private void PulseTelegraph()
         {
-            float pulseSpeed = bossData?.telegraphPulseSpeed ?? 8f;
-            float pulseAmplitude = bossData?.telegraphPulseAmplitude ?? 0.2f;
+            float pulseSpeed = bossData.telegraphPulseSpeed;
+            float pulseAmplitude = bossData.telegraphPulseAmplitude;
             float pulse = 1f + (Mathf.Sin(GameClock.Time * pulseSpeed) * pulseAmplitude);
             Scale = new Vector2(pulse, pulse);
         }
