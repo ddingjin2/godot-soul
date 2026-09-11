@@ -21,10 +21,16 @@ namespace MyGame.Gameplay
     /// <para>
     /// No <c>.tres</c> ships: <c>Resources/Gameplay/SceneDefaults.tres</c> does not exist, so every load
     /// of this type answers null and the layout JSON alone decides the arena. The type stays as the
-    /// hook a scene can opt into, and its defaults are the shipped framing (<c>SceneLayout.json</c>'s
-    /// camera and spawn) so a freshly created asset changes nothing until a field is edited. They used
-    /// to be a camera at (8, 2) with a 7.0 half height that no shipped layout names (numbers audit
-    /// §3.3).
+    /// hook a scene can opt into.
+    /// </para>
+    /// <para>
+    /// The four value fields have no initialiser, by decision D4: they used to be set to
+    /// <c>SceneLayout.json</c>'s camera and spawn so a freshly created asset changed nothing, which
+    /// made an <c>[Export]</c> default a second copy of the designer's number. Nothing reads them
+    /// unless the matching <c>override*</c> flag is ticked, and ticking a flag is exactly the moment
+    /// the author means to type their own number - so a zero is harmless and an inherited default was
+    /// not. Before that they were a camera at (8, 2) with a 7.0 half height that no shipped layout
+    /// names (numbers audit §3.3).
     /// </para>
     /// </remarks>
     [GlobalClass]
@@ -34,19 +40,19 @@ namespace MyGame.Gameplay
         [Export] private bool overrideCamera;
 
         /// <summary>Unity metres, +Y up.</summary>
-        [Export] private Vector2 cameraPosition = new(0f, 2f);
+        [Export] private Vector2 cameraPosition;
 
         /// <summary>Visible half-height in Unity units - stays unconverted, see <see cref="GameplaySceneDefaults"/>.</summary>
-        [Export] private float cameraOrthographicSize = 6.8f;
+        [Export] private float cameraOrthographicSize;
 
         [ExportGroup("Spawn")]
         [Export] private bool overrideSpawn;
 
         /// <summary>Unity metres, +Y up.</summary>
-        [Export] private Vector2 playerSpawnPosition = new(-2f, 0.5f);
+        [Export] private Vector2 playerSpawnPosition;
 
         /// <summary>Unity metres, +Y up.</summary>
-        [Export] private Vector2 checkpointPosition = new(-2f, 0.5f);
+        [Export] private Vector2 checkpointPosition;
 
         internal void ApplyTo(GameplaySceneDefaults defaults)
         {

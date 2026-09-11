@@ -26,9 +26,13 @@
 ;
 ; WHAT IS STILL BOUND AT RUNTIME: PlayerResourceData / PlayerMovementData / PlayerCombatData /
 ; SinTuning / WorldTuning from Resources/Design, the fall-death Y and the spawn position from
-; GameplaySceneDefaults, the hitbox radius and offset and every colour from
-; GameplayReadabilityDefaults with Resources/Art/Readability.json over it. So each literal below is
-; the shipped default a player nobody tuned would get.
+; GameplaySceneDefaults, the hitbox radius and offset, every size, every colour and every sorting
+; order from GameplayReadabilityDefaults with Resources/Art/Readability.json over it. None of those
+; is authored here any more (decision D4, 2026-09-12): the spawner writes each one on every spawn, so
+; a number in this file was a second place the designer's number lived. What is left is the shape -
+; the node tree, the scripts, the collision layers, the textures, and the three local transforms
+; below that nothing writes. The cost is that the scene opens at Godot's type defaults in the editor:
+; an unscaled white body on a 10 x 20 capsule, with the health bar on the origin.
 ;
 ; UNITS: 1 Unity metre = 100 px (World.Ppu), +Y down.
 [gd_scene load_steps=21 format=3]
@@ -59,11 +63,9 @@
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_body"]
 ; Local to the scene, so a second player - a test fixture, a spirit-form double - cannot resize the
-; first one's body. PlayerColliderSize = World.U(0.58, 1.28) = 58 x 128 px; Unity's
-; CapsuleCollider2D.size was the full width and height and Godot wants a radius, hence 58 / 2.
+; first one's body. No radius and no height (decision D4): GameplayPlayerSpawner.ResizeCapsuleCollider
+; writes both from ReadabilityLayout.json PlayerColliderSize before the player enters the tree.
 resource_local_to_scene = true
-radius = 29.0
-height = 128.0
 
 [node name="Player" type="CharacterBody2D"]
 ; World.Layer.Player = 1 << 1 = 2.
@@ -81,15 +83,13 @@ texture = ExtResource("2")
 ; GameplayVisualFactory.Pivot(ActorSpriteKind) is (0.5, 0.45) measured from the texture's
 ; bottom-left, and Dress turned that into ((0.5 - 0.5) * 64, (0.45 - 0.5) * 128) = (0, -6.4) on the
 ; 64 x 128 ActorPlayer.png. Feet-heavy, not centred.
+; The pivot is the only authored number left: nothing writes offset, and DressSprite needs the
+; texture to turn a size in pixels into a scale.
 centered = true
 offset = Vector2(0, -6.4)
-; PlayerVisualSize = World.U(0.9, 1.45) = 90 x 145 px, / the 64 x 128 texture.
-scale = Vector2(1.40625, 1.1328125)
-; GameplayReadabilityDefaults.PlayerColor as shipped; Readability.json still wins at runtime, and
-; CombatFeedback caches whatever it finds as the colour to flash back to.
-modulate = Color(0.68235296, 0.72156864, 0.7607843, 1)
-; PlayerSortingOrder = 10.
-z_index = 10
+; NO scale, modulate OR z_index, by decision D4: DressSprite writes all three on every spawn, from
+; PlayerVisualSize, PlayerColor and PlayerSortingOrder. CombatFeedback is handed readability's colour
+; directly rather than reading it back off this node, so nothing here is a fallback either.
 
 [node name="Health" type="Node" parent="."]
 script = ExtResource("3")
@@ -142,12 +142,8 @@ texture = ExtResource("10")
 ; its middle. On the 96 x 24 Sword.png that is ((0.5 - 0.1) * 96, (0.5 - 0.5) * 24) = (38.4, 0).
 centered = true
 offset = Vector2(38.4, 0)
-; SwordSize = World.U(0.95, 0.22) = 95 x 22 px, / the 96 x 24 texture.
-scale = Vector2(0.98958331, 0.91666667)
-; GameplayReadabilityDefaults.SwordColor as shipped; Readability.json still wins at runtime.
-modulate = Color(0.5568628, 0.54901963, 0.50980395, 1)
-; SwordSortingOrder = 12 - in front of the body, which is 10.
-z_index = 12
+; No scale, modulate or z_index, by decision D4: the same DressSprite call writes all three, from
+; SwordSize, SwordColor and SwordSortingOrder.
 
 [node name="PlayerAttackAnimator2D" type="Node2D" parent="HitboxAnchor/ReadableSword"]
 script = ExtResource("11")
@@ -190,10 +186,9 @@ script = ExtResource("19")
 
 ; GameplayWorldHealthBar.Build looks for a child named exactly "HealthBar" and only instances this
 ; scene when it finds none - so the authored bar is the one that gets used. Size, offset and colour
-; are rewritten by ApplyLayout from what AddHealthBar is handed.
+; are rewritten by ApplyLayout from what AddHealthBar is handed, which is why no position is authored
+; here (decision D4): the bar sits on the player's origin in the editor.
 [node name="HealthBar" parent="GameplayWorldHealthBar" instance=ExtResource("20")]
-; PlayerHealthBarOffset = World.V(0, 1.24) = (0, -124).
-position = Vector2(0, -124)
 
 [node name="DeathStateController" type="Node2D" parent="."]
 script = ExtResource("21")

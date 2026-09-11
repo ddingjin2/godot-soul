@@ -14,8 +14,9 @@
 ; MORE IS BOUND AT RUNTIME HERE THAN ON ANY OTHER ACTOR, and it has to be - the data decides which
 ; boss this is. The node's *name* is the boss's name (data.BossName), the capsule is data.BodySize,
 ; the visual's colour is data.PrimaryColor, the role marker's caption is data.ChapterName, and max
-; health, poise and the soul reward all come from the same file through SetBossData. So the literals
-; below are chapter one's, and every one of them is overwritten before the boss is dressed.
+; health, poise and the soul reward all come from the same file through SetBossData. Which is why
+; there are no literals below at all any more (decision D4) - every one of them was chapter one's,
+; overwritten before the boss was dressed.
 ;
 ; UNITS: 1 Unity metre = 100 px (World.Ppu), +Y down.
 [gd_scene load_steps=5 format=3]
@@ -28,11 +29,9 @@
 ; Local to the scene - see the base. RainbowChapterBossBehaviour:383 reads this back as
 ; FindComponent<CollisionShape2D>()?.Shape as CapsuleShape2D for its own half-height, so it has to
 ; stay a capsule and stay the first CollisionShape2D child.
-; BossColliderSize = World.U(1.2, 2.0) = 120 x 200 px, halved for Godot's radius. Rewritten from
-; RainbowChapterBossData.BodySize on every spawn.
+; No radius and no height (decision D4): ResizeCapsuleCollider writes both from this boss's own
+; RainbowChapterBossData.BodySize before it enters the tree, and :383 reads back what it wrote.
 resource_local_to_scene = true
-radius = 60.0
-height = 200.0
 
 [node name="ChapterBoss" instance=ExtResource("1")]
 script = ExtResource("2")
@@ -40,18 +39,10 @@ script = ExtResource("2")
 [node name="Collider" parent="."]
 shape = SubResource("CapsuleShape2D_boss")
 
+; The texture only, and it is the only thing every chapter boss shares. The size is BossVisualSize
+; through DressActorVisual and then the boss's own BodySize through SetBossData, and the colour is
+; data.PrimaryColor - so neither is authored (decision D4). The RoleMarker and HealthBar overrides
+; that used to sit here carried nothing but BossRoleLocalPosition and BossHealthBarOffset, which
+; DressRoleMarker and GameplayWorldHealthBar.ApplyLayout write, so both blocks are gone with them.
 [node name="Visual" parent="."]
 texture = ExtResource("3")
-; BossVisualSize = World.U(1.75, 2.35) = 175 x 235 px, / the 64 x 128 texture. Every chapter boss
-; shares this body size; only the colour changes, and that comes from the data.
-scale = Vector2(2.734375, 1.8359375)
-; GameplayReadabilityDefaults.BossColor as shipped. Overwritten by data.PrimaryColor on every spawn.
-modulate = Color(0.54901963, 0.20392157, 0.15686275, 1)
-
-[node name="RoleMarker" parent="."]
-; BossRoleLocalPosition = World.V(0, -1.35) = (0, 135).
-position = Vector2(0, 135)
-
-[node name="HealthBar" parent="GameplayWorldHealthBar"]
-; BossHealthBarOffset = World.V(0, 1.65) = (0, -165).
-position = Vector2(0, -165)

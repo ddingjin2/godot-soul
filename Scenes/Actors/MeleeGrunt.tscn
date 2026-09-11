@@ -9,7 +9,9 @@
 ;
 ; STILL BOUND AT RUNTIME: MeleeGruntData (Resources/Design/MeleeGrunt.json, or the per-spawn variant
 ; file a placement names) through SetTuningData, the attack point through SetAttackPoint, and every
-; colour and size below from GameplayReadabilityDefaults / Resources/Art/Readability.json.
+; size, colour and sorting order from GameplayReadabilityDefaults / Resources/Art/Readability.json -
+; which since decision D4 is all of them. The one number left in this file is AttackPoint's local
+; position, which nothing writes; see the header of EnemyBase.tscn.
 ;
 ; UNITS: 1 Unity metre = 100 px (World.Ppu), +Y down.
 [gd_scene load_steps=6 format=3]
@@ -32,16 +34,11 @@ texture = ExtResource("3")
 [node name="AttackPoint" type="Node2D" parent="."]
 position = Vector2(60, 0)
 
-; MeleeDangerLocalPosition = World.V(0.55, 0) = (55, 0). AttackReadout.tscn ships the player's arc,
-; so size, colour and sorting order are all overridden here - and then bound again per spawn, because
-; the colour is designer-owned.
+; The disc that telegraphs where the swing lands. No numbers, by decision D4: DressAttackReadout
+; writes the position, the size, the colour and the sorting order from ReadabilityLayout.json /
+; Readability.json on every spawn. In the editor it shows AttackReadout.tscn's own shipped arc
+; values, sitting on the grunt's origin.
 [node name="SlashDanger" parent="." instance=ExtResource("4")]
-position = Vector2(55, 0)
-; MeleeDangerSize = World.U(1.55, 1.05) = 155 x 105 px, / the 64 x 64 Disc.png.
-scale = Vector2(2.421875, 1.640625)
-modulate = Color(1, 0.08, 0.04, 0.2)
-; EnemyReadoutSortingOrder = 3.
-z_index = 3
 
 ; Authored rather than left to GameplayEnemySpawner.EnsureEnemyHealthRig's EnsureComponent: a grunt
 ; is one of the three archetypes that despawn on death. Neither boss scene carries this, which is

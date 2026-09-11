@@ -17,13 +17,14 @@
 ;     FindComponent<CollisionShape2D>()?.Shape as CapsuleShape2D for the body's half-height, so
 ;     Collider is first and its shape must stay a capsule.
 ;
-; WHAT IS STILL BOUND AT RUNTIME, and why none of it can be baked here: the capsule's radius and
-; height (readability per archetype, and the chapter boss's own RainbowChapterBossData.BodySize), the
-; visual's size, colour and sorting order, the role marker's caption, colour, font size and sorting
-; order, and the health bar's size, offset and colour. All of them come from
-; GameplayReadabilityDefaults - already past the World.Ppu boundary - with Resources/Art/
-; Readability.json overriding every colour. So each literal below is the shipped *default* an enemy
-; nobody dressed would get, not a number the game runs on.
+; THE SPAWNER OWNS EVERY NUMBER, SO THIS SCENE AUTHORS NONE OF THEM (decision D4, 2026-09-12). The
+; capsule's radius and height, the visual's size, colour and sorting order, the role marker's
+; caption, position, colour, font size and sorting order, and the health bar's size, offset and
+; colour are all written by GameplayEnemySpawner on every spawn, from GameplayReadabilityDefaults -
+; already past the World.Ppu boundary - with Resources/Art/Readability.json over the colours and the
+; chapter boss's own RainbowChapterBossData.BodySize over the capsule. A copy here was a second
+; place the designer's number lived. The cost is that the scene opens at Godot's type defaults in the
+; editor: an unscaled white body on a 10 x 20 capsule, with the label and the bar on the origin.
 ;
 ; UNITS: 1 Unity metre = 100 px (World.Ppu), +Y down.
 [gd_scene load_steps=12 format=3]
@@ -44,11 +45,10 @@
 ; one CapsuleShape2D and sizing the boss would resize every grunt with it. Same reason
 ; Scenes/World/SolidBox.tscn marks its rectangle local.
 resource_local_to_scene = true
-; GameplayReadabilityDefaults.MeleeColliderSize = World.U(0.6, 1.0) = 60 x 100 px. Unity's
-; CapsuleCollider2D.size was the full width and height; Godot wants a radius, hence 60 / 2.
-; ResizeCapsuleCollider rewrites both from the archetype's own size on every spawn.
-radius = 30.0
-height = 100.0
+; NO radius AND NO height, by decision D4: GameplayEnemySpawner.ResizeCapsuleCollider writes both
+; from ReadabilityLayout.json (or RainbowChapterBossData.BodySize) before the actor enters the tree,
+; so a number here was a second copy of the designer's. The shape opens at Godot's own 10 x 20 in the
+; editor; what the game runs on is the JSON.
 
 [node name="EnemyBase" type="CharacterBody2D"]
 ; World.Layer.Enemy = 1 << 2 = 4.
@@ -65,14 +65,13 @@ shape = SubResource("CapsuleShape2D_body")
 ; GameplayVisualFactory.Pivot(ActorSpriteKind) is (0.5, 0.45) measured from the texture's bottom-left,
 ; and Dress turned that into ((0.5 - 0.5) * 64, (0.45 - 0.5) * 128) = (0, -6.4). Feet-heavy, not
 ; centred.
+; The pivot is the only authored number left: nothing writes offset, and DressActorVisual needs the
+; texture to turn a size in pixels into a scale.
 centered = true
 offset = Vector2(0, -6.4)
-; MeleeVisualSize = World.U(0.88, 1.18) = 88 x 118 px, / the 64 x 128 texture.
-scale = Vector2(1.375, 0.921875)
-; GameplayReadabilityDefaults.EnemyColor as shipped. Readability.json still wins at runtime.
-modulate = Color(0.41960785, 0.22745098, 0.2, 1)
-; ActorSortingOrder = 5.
-z_index = 5
+; NO scale, modulate OR z_index, by decision D4: DressActorVisual writes all three on every spawn -
+; the size from ReadabilityLayout.json through SetSpriteSize, the colour from Readability.json, the
+; sorting order from ActorSortingOrder. The body opens unscaled and white in the editor.
 
 [node name="Health" type="Node" parent="."]
 script = ExtResource("1")
@@ -98,19 +97,16 @@ script = ExtResource("6")
 [node name="EnemyGroupCombat" type="Node2D" parent="."]
 script = ExtResource("7")
 
-; The word under the enemy's feet saying what it is. CreateRoleMarker binds the caption, the local
-; position, the colour, RoleMarkerFontSizePx and RoleMarkerSortingOrder on every instance - the scene
-; ships the checkpoint-sign values, which no enemy uses.
+; The word under the enemy's feet saying what it is. DressRoleMarker binds the caption, the local
+; position, the colour, RoleMarkerFontSizePx and RoleMarkerSortingOrder on every instance - so there
+; is no position here either (decision D4); it sits on the body's origin in the editor.
 [node name="RoleMarker" parent="." instance=ExtResource("9")]
-; MeleeRoleLocalPosition = World.V(0, -0.72) = (0, 72). +Y is down, so a Unity -0.72 is below.
-position = Vector2(0, 72)
 
 [node name="GameplayWorldHealthBar" type="Node2D" parent="."]
 script = ExtResource("8")
 
 ; GameplayWorldHealthBar.Build looks for a child named exactly "HealthBar" and only instances this
 ; scene when it finds none - so an authored bar is the one that gets used. Its size, offset and
-; colour are rewritten by ApplyLayout from what AddHealthBar was handed.
+; colour are rewritten by ApplyLayout from what AddHealthBar was handed, which is why no position is
+; authored here (decision D4): the bar sits on the body's origin in the editor.
 [node name="HealthBar" parent="GameplayWorldHealthBar" instance=ExtResource("10")]
-; MeleeHealthBarOffset = World.V(0, 0.9) = (0, -90).
-position = Vector2(0, -90)

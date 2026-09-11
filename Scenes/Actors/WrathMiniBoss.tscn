@@ -7,8 +7,9 @@
 ; argument decided before this scene existed.
 ;
 ; STILL BOUND AT RUNTIME: WrathMiniBossData (Resources/Design/WrathMiniBoss.json) through
-; SetTuningData, BossEncounterData through SetEncounterData, and every colour and size below from
-; GameplayReadabilityDefaults / Resources/Art/Readability.json.
+; SetTuningData, BossEncounterData through SetEncounterData, and every size, colour and sorting order
+; from GameplayReadabilityDefaults / Resources/Art/Readability.json - which since decision D4 is all
+; of them, so this file authors none. See the header of EnemyBase.tscn.
 ;
 ; UNITS: 1 Unity metre = 100 px (World.Ppu), +Y down.
 [gd_scene load_steps=6 format=3]
@@ -22,10 +23,9 @@
 ; Local to the scene - see the base. WrathMiniBoss:211 reads this back as
 ; FindComponent<CollisionShape2D>()?.Shape as CapsuleShape2D to find its own half-height, so it has to
 ; stay a capsule and it has to be the first CollisionShape2D child.
-; BossColliderSize = World.U(1.2, 2.0) = 120 x 200 px, halved for Godot's radius.
+; No radius and no height (decision D4): ResizeCapsuleCollider writes both from ReadabilityLayout.json
+; BossColliderSize before the boss enters the tree, and WrathMiniBoss:211 reads back what it wrote.
 resource_local_to_scene = true
-radius = 60.0
-height = 200.0
 
 [node name="WrathMiniBoss" instance=ExtResource("1")]
 script = ExtResource("2")
@@ -33,37 +33,19 @@ script = ExtResource("2")
 [node name="Collider" parent="."]
 shape = SubResource("CapsuleShape2D_boss")
 
+; The texture only. The size and the colour are DressActorVisual's, from BossVisualSize and BossColor
+; (decision D4); the RoleMarker and HealthBar overrides that used to sit here carried nothing but
+; BossRoleLocalPosition and BossHealthBarOffset, which DressRoleMarker and
+; GameplayWorldHealthBar.ApplyLayout write, so both blocks are gone with them.
 [node name="Visual" parent="."]
 texture = ExtResource("3")
-; BossVisualSize = World.U(1.75, 2.35) = 175 x 235 px, / the 64 x 128 texture.
-scale = Vector2(2.734375, 1.8359375)
-; GameplayReadabilityDefaults.BossColor as shipped; Readability.json still wins at runtime.
-modulate = Color(0.54901963, 0.20392157, 0.15686275, 1)
 
-[node name="RoleMarker" parent="."]
-; BossRoleLocalPosition = World.V(0, -1.35) = (0, 135).
-position = Vector2(0, 135)
-
-[node name="HealthBar" parent="GameplayWorldHealthBar"]
-; BossHealthBarOffset = World.V(0, 1.65) = (0, -165).
-position = Vector2(0, -165)
-
-; BossSlashDangerLocalPosition = World.V(0.85, 0) = (85, 0) - out in front of the body, mirrored by
-; the boss flipping its own scale.
+; The horizontal slash, out in front of the body and mirrored by the boss flipping its own scale.
+; No numbers: DressAttackReadout writes the position, the size, the colour and the sorting order from
+; BossSlashDanger* on every spawn - including the sorting order that keeps it above the slam, so the
+; two overlapping discs still read apart.
 [node name="BossSlashDanger" parent="." instance=ExtResource("4")]
-position = Vector2(85, 0)
-; BossSlashDangerSize = World.U(2.7, 1.55) = 270 x 155 px, / the 64 x 64 Disc.png.
-scale = Vector2(4.21875, 2.421875)
-modulate = Color(1, 0.06, 0.02, 0.22)
-; BossSlashReadoutSortingOrder = 4 - above the slam, so the two overlapping discs still read apart.
-z_index = 4
 
-; BossSlamDangerLocalPosition = World.V(0, -0.15) = (0, 15).
+; The ground slam - the widest readout in the game, which is BossSlamDangerSize saying so in
+; ReadabilityLayout.json. Same as above: DressAttackReadout writes all four.
 [node name="BossSlamDanger" parent="." instance=ExtResource("4")]
-position = Vector2(0, 15)
-; BossSlamDangerSize = World.U(4.2, 1.45) = 420 x 145 px, / the 64 x 64 Disc.png. The widest readout
-; in the game: the slam covers most of the arena floor.
-scale = Vector2(6.5625, 2.265625)
-modulate = Color(1, 0.22, 0.02, 0.13)
-; BossSlamReadoutSortingOrder = 2.
-z_index = 2
