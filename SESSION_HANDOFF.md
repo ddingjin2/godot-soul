@@ -1,4 +1,4 @@
-# 인수인계 — 2026-09-10 (3차)
+# 인수인계 — 2026-09-11 (4차)
 
 새 세션은 이 파일부터 읽는다. 그다음 `README.md`의 현재 상태, 그다음 `AGENTS.md`.
 
@@ -12,7 +12,7 @@ Unity 6 → Godot 4.7.2 이식이 끝났고, Godot 제작 규칙 4개로의 전�
 | 이식 자체 | 완료. 스위트 211 passed / 1 failed / 1 skipped (실패 1건은 이식 전부터 red였던 레이아웃 개수 어서션) |
 | 규칙 3 — UI는 씬에 배치 | 완결 |
 | 규칙 2 — 재사용 단위는 씬 | 완결. `GameplayBuildShim` 퇴역은 **하지 않기로 결정** — 아래 |
-| 규칙 1 — 수치 데이터화 | 1차 **완결**(S1·S4~S10·S12·S13, 키 190개 / 파일 27개). 2차([PLAN_CLOSEOUT.md](docs/migrations/scene-data/PLAN_CLOSEOUT.md)) **K0 착지, K1부터 남음** |
+| 규칙 1 — 수치 데이터화 | 1차 **완결**(S1·S4~S10·S12·S13, 키 190개 / 파일 27개). 2차([PLAN_CLOSEOUT.md](docs/migrations/scene-data/PLAN_CLOSEOUT.md)) **K0·K1 착지, K2 ∥ K3 ∥ K4부터 남음** |
 | 규칙 4 — 일회성 테스트 격리 | 지켜지는 중 |
 
 1차 정본 계획은 [docs/migrations/scene-data/PLAN.md](docs/migrations/scene-data/PLAN.md), 2차는
@@ -22,9 +22,9 @@ Unity 6 → Godot 4.7.2 이식이 끝났고, Godot 제작 규칙 4개로의 전�
 ## 브랜치
 
 `master`가 이식 본체, `refactor/godot-scene-data`가 전환 브랜치. **병합하지 않았고 push한 적도
-없다.** 원격 없음. 이번 세션 커밋 11개, 각 커밋이 풀 스위트 green으로 착지했다.
+없다.** 원격 없음. 지난 세션 커밋 11개 + 이번 세션 2개(K1, 인수인계), 각 커밋이 풀 스위트 green으로 착지했다.
 
-## 이번 세션에 착지한 것
+## 착지한 것 — 지난 세션(09-10)과 이번 세션(09-11)
 
 - **S12** `DifficultyTuning.json` — 난이도·NG+ 승수 5개.
 - **S9** 카메라 감각 4키 → `WorldTuning.json`. `cameraLookAhead`는 스케일 + Y 반전 둘 다 — probe로
@@ -46,53 +46,43 @@ Unity 6 → Godot 4.7.2 이식이 끝났고, Godot 제작 규칙 4개로의 전�
   약 42, 누락 시 처리 미정의.
 - **K0 `be8fb52`.** 누락 = `PushError` + 부팅 중단. `Res.LoadJson(path, required)`, `.Shared` 3종 null,
   `GameplayTuningCatalog.IsComplete`, `GameplayBootstrap`이 확인. 파일 전부 있으면 행동 변화 없음.
+- **K1 `5912697` (2026-09-11).** 스위트를 fallback에서 뗐다. 맨손 아키타입 5곳 `SetTuningData(XData.Load())`,
+  팩토리 소비 6곳 `XData.Load()`, 스테인 유예 1곳 `PlayerResourceData.Load()`. 팩토리 4개 삭제, 스포너는
+  `catalog.X`. 어서션 변화 0 — 팩토리 값이 JSON과 같았다(`PORT_STATUS.md`에 적을 드리프트 없음).
+  증명: 아키타입 `_Ready` 4곳 + 챕터 보스 `PulseTelegraph`에 임시 `PushError("FALLBACK")` — 인수인계가
+  말한 "`??` 우변 전부"가 아니라 그 우변들이 전부 걸려 있는 null 게이트 한 곳씩. 풀 스위트 0건, 제거.
 
-## 다음에 할 일 — K1부터
+## 다음에 할 일 — K2 ∥ K3 ∥ K4
 
-**K1: 테스트를 fallback 경로에서 떼어낸다.** 이게 문이다 — K1 없이 K2~K4를 하면 스위트의 맨손 액터가 전부
-`PushError`로 죽는다. 단독 작업, 최고 위험.
+K1이 문이었고 닫혔다. 이제 세 단계가 파일 서로소로 병렬 가능하다 (담당별 소유 목록 명시,
+`run-tests.ps1`은 한 명만, 풀 스위트는 코디네이터가 착지 시점에 한 번 — 11분).
 
-측정(2026-09-10, 착지 직전 갱신할 것):
+- **K2** `Scripts/Enemy` 5파일: `tuningData?.x ?? 리터럴`·`tuningData != null ? x : 리터럴` 전부 제거.
+  `tuningData` 필수, 미설정이면 `_Ready`에서 `PushError` + `SetProcess(false)`. 프로퍼티는
+  `DetectionRange => tuningData.detectionRange`. `WrathMiniBoss`의 `GetCurrentSpeed`·`GetAttackCooldown`
+  `tuningData == null` 분기도 같은 대상. `RainbowChapterBossBehaviour`는 `PulseTelegraph`의 2곳만 —
+  나머지 `bossData == null` 가드는 "아무것도 안 함"이지 숫자 fallback이 아니다.
+- **K3** Data 클래스 13개 `[Export]` 기본값 232개 삭제. **K3a 선행**: `SceneLayout*.json` 8파일에
+  `shortcutGatePosition`·`shortcutGateSize`·`shortcutOpensFromRight`를 현재 기본값으로 추가 — 빼먹으면
+  챕터 7개의 숏컷 게이트가 크기 0.
+- **K4** `GameplaySceneDefaults.Create()` 100 + `GameplayReadabilityDefaults.CreateBase()` 79 삭제,
+  `ReadabilityThemeWriter` 삭제(D7), identity 테스트 2개 → D6 완전성 테스트.
 
-| 테스트 파일 | `AddComponent<` | `new 아키타입` | `GameplayTuningDefaults.` |
-|---|---|---|---|
-| `GameplayBossAttackGrammarTests` | 7 | | |
-| `UnityTestAgentPlayModeSmokeTests` | 6 | | |
-| `GameplayChapterBossTests` | 5 | | |
-| `GameplayHazardStripRegressionTests` | 5 | | |
-| `GameplayDifficultyAndGateTravelTests` | 4 | | |
-| `GameplayBossChapterSystemsTests` | 1 | | |
-| `GameplayChapterProgressionRegressionTests` | 1 | | |
-| `GameplayDifficultySaveMergeRegressionTests` | 1 | | |
-| `P0CombatStabilityTests.Gameplay` | | 3 (`MeleeGrunt`, `WrathMiniBoss`×2) | 3 |
-| `P0CombatStabilityTests.Systems` | | 2 (`LeapingAttacker`, `WrathMiniBoss`) | 3 (`SetTuningData` 1곳만 있음) |
-| `GameplaySoulsPoisePauseTests` | | | 1 |
-| `P0CombatStabilityTests` (본체) | `new Node2D {` 빌더 | | |
+K1이 남긴 것 중 다음 단계가 알아야 할 것:
 
-방법:
-1. `new MeleeGrunt` 류 5곳 → 생성 직후 `SetTuningData(MeleeGruntData.Load())` (`EnemyTuningData.Load<T>`가
-   실제 JSON을 읽고 스케일까지 한다). K2가 `tuningData` 없는 아키타입을 `_Ready`에서 죽이므로 **반드시**.
-2. `GameplayTuningDefaults.CreateX` 소비 7곳 → 같은 `XData.Load()`. 그 뒤 `GameplayTuningDefaults.cs`의
-   팩토리 4개 삭제(D3). `const` 4개(`CheckpointZoneRadius` 등)는 K5가 없앤다 — K1에서는 두되 테스트가
-   그 상수를 어서션 값으로 쓰면 `WorldTuningData.Load()` 값으로 바꾼다.
-3. `AddComponent<Health>()` 같은 컴포넌트 합성은 K1에서 그대로 둔다 — 그건 fallback이 아니라 조립이고
-   K7이 `Tests/Framework`로 옮긴다. K1의 대상은 **숫자를 코드 사본에서 받는 경로**뿐이다.
-4. 착지 조건: 스위트가 fallback을 **한 번도 안 탄다.** 증명은 rule-4 probe로 — 아키타입 `??` 우변과
-   `GameplayTuningDefaults` 팩토리에 임시 `GD.PushError("FALLBACK")`를 심고 풀 스위트를 돌려 로그에 0건,
-   그 다음 심은 줄을 전부 지운다. `Tests/`에 아무것도 남기지 않는다.
-5. 어서션 숫자가 바뀌는 테스트가 나오면 그 테스트는 출하하지 않는 숫자를 검증하고 있었다는 뜻이다.
-   출하 값으로 바꾸고 `PORT_STATUS.md`에 어느 테스트가 얼마나 어긋나 있었는지 적는다. 약화가 아니라
-   발견이다.
-
-K1이 green으로 착지하면 K2 ∥ K3 ∥ K4 (파일 서로소, 담당별 소유 목록 명시, `run-tests.ps1`은 한 명만).
-K3는 **K3a 선행**: `SceneLayout*.json` 8파일에 `shortcutGatePosition`·`shortcutGateSize`·
-`shortcutOpensFromRight`를 현재 기본값으로 추가 — 빼먹으면 챕터 7개의 숏컷 게이트가 크기 0.
+- 테스트가 `XData.Load()`로 받는 객체는 매번 새 인스턴스다 (`Res.LoadJson`은 캐시하지 않는다).
+  `WrathMiniBossPreservesCompletedAttackCooldown`이 `slamCooldown`을 고쳐 쓰는데 그래서 안전하다.
+- 챕터 보스 테스트 8파일은 여전히 인라인 JSON 문자열 fixture + `SetBossData`를 쓴다. 코드 사본이
+  아니라 테스트 소유 데이터이므로 K1 범위 밖이었고, K2도 건드릴 이유가 없다.
+- `AddComponent<` 조립 30곳은 그대로다 — K7이 `Tests/Framework`로 옮긴다.
+- `GameplayTuningDefaults`의 `const` 4개와 그 소비자(`GameplayPlayerSpawner` 3, `CheckpointZone` 1,
+  `GameplaySoulDrop` 1)는 K5. 이 경로는 K1 probe가 재지 않았다.
 
 그 밖에 남은 것은 전부 **사람의 판단이 필요한 것**이다.
 
 1. **씬 S9 — 아레나를 챕터 셸에 배치.** 아레나를 씬에 넣으면 `SceneLayout_*.json`이 레이아웃
    정본 자리를 잃는다. 기획자 소유 데이터의 소유권 이동이라 **물어본 뒤에** 한다.
-2. **`master`로의 병합 여부.** 커밋 34개가 전환 브랜치에만 있다.
+2. **`master`로의 병합 여부.** 커밋 38개가 전환 브랜치에만 있다.
 3. ~~씬이 거울로 들고 있는 값~~ → D4로 결정됨(씬에서 제거). 2차 K6.
 
 ## 사람이 봐야 하는 것 — 자동 검증으로 못 잡는다
@@ -104,7 +94,7 @@ K3는 **K3a 선행**: `SceneLayout*.json` 8파일에 `shortcutGatePosition`·`sh
 3. **챕터 8 보스 인트로.** S8 이후 7.2 → 6.336 푸시. 숫자상 12%로 같지만 눈으로 본 적 없다.
 4. **재미 검증.** 여전히 안 했다.
 
-## 이번 세션에서 물린 것 — 같은 데서 또 미끄러지지 말 것
+## 지난 세션에서 물린 것 — 같은 데서 또 미끄러지지 말 것
 
 - **`git add <paths>` 뒤 pathspec 없는 `git commit`은 인덱스 전체를 커밋한다.** 다음 단계용으로
   `git rm`해 둔 파일 삭제가 앞 단계 커밋에 딸려 들어가 **빌드 안 되는 커밋**이 생겼다. amend로
