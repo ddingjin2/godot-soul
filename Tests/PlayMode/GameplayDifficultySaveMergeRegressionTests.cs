@@ -90,7 +90,7 @@ namespace MyGame.Tests
                 World.V(new Vector2(60f, 1f)),
                 GameplayReadabilityDefaults.Create(),
                 data,
-                null);
+                BossEncounterData.Load("Design/WrathEncounter"));
 
             _boss = behaviour;
 
@@ -217,7 +217,7 @@ namespace MyGame.Tests
                 // zero stun is not the one these tests were written against, so the fixture says them.
                 "\"stunDuration\":1,\"bodySize\":{\"x\":1.6,\"y\":2.3},\"telegraphPulseSpeed\":8,\"telegraphPulseAmplitude\":0.2," +
                 "\"bossName\":\"DifficultyFixtureBoss\",\"chapterName\":\"Test Chapter\"," +
-                "\"attacks\":[{\"attackId\":\"test_swing\",\"damage\":12,\"knockback\":0," +
+                "\"attacks\":[{\"attackId\":\"test_swing\",\"damageType\":1,\"afterimageCountOverride\":-1,\"damage\":12,\"knockback\":0," +
                 "\"telegraphTime\":0.25,\"activeTime\":0.25,\"recoveryTime\":0.25,\"range\":1.5,\"forwardOffset\":0.5," +
                 "\"phaseTwoWeight\":1}]}");
 

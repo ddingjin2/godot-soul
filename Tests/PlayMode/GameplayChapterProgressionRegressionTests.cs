@@ -289,7 +289,7 @@ namespace MyGame.Tests
                    // ordinary swing well outside the window this measures. Without it the cap looks
                    // broken: the counter resets when the chain ends and the same row is simply chosen
                    // again, which is a boss repeating itself, not a chain with no end.
-                   "\"attacks\":[{\"attackId\":\"loop_swing\",\"damage\":5,\"knockback\":0," +
+                   "\"attacks\":[{\"attackId\":\"loop_swing\",\"damageType\":1,\"afterimageCountOverride\":-1,\"damage\":5,\"knockback\":0," +
                    "\"telegraphTime\":0.1,\"activeTime\":0.1,\"recoveryTime\":3.0,\"range\":1.5," +
                    "\"forwardOffset\":0.5,\"phaseTwoWeight\":1,\"chainNextAttackId\":\"loop_swing\"," +
                    "\"chainDelay\":0.1,\"chainDelayPhaseTwoScale\":1}]}";
@@ -317,6 +317,10 @@ namespace MyGame.Tests
 
             TestContext.Runner.AddChild(_boss);
             _boss.GlobalPosition = Vector2.Zero;
+
+            // Required since K5 - the chain cap this fixture measures is the encounter's maxChainSteps,
+            // which used to be a constant on the behaviour. Chapter one's shipped file still says 4.
+            _boss.SetEncounterData(BossEncounterData.Load("Design/WrathEncounter"));
             _boss.SetBossData(data);
 
             // The chain only ticks past the intro gate, and a boss that never sees a player never leaves it.

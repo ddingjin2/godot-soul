@@ -240,7 +240,7 @@ namespace MyGame.Tests
                 "\"maxPoise\":90,\"poiseHeavyMultiplier\":2,\"poiseRegenDelay\":3,\"poiseRegenRate\":30,\"stunDuration\":1,\"soulReward\":300," +
                 "\"bodySize\":{\"x\":1.6,\"y\":2.3},\"telegraphPulseSpeed\":8,\"telegraphPulseAmplitude\":0.2," +
                 "\"bossName\":\"HazardDeathFixture\",\"chapterName\":\"Test Chapter\"," +
-                "\"attacks\":[{\"attackId\":\"test_lunge\",\"damage\":1,\"knockback\":0," +
+                "\"attacks\":[{\"attackId\":\"test_lunge\",\"damageType\":1,\"afterimageCountOverride\":-1,\"damage\":1,\"knockback\":0," +
                 "\"telegraphTime\":0.3,\"activeTime\":0.2,\"recoveryTime\":0.2,\"range\":1.5,\"forwardOffset\":0.5," +
                 "\"phaseTwoWeight\":1,\"leavesHazard\":true,\"hazardPhaseTwoOnly\":false," +
                 "\"hazardDamage\":1,\"hazardRadius\":1,\"hazardTickInterval\":0.1,\"hazardDuration\":1," +
@@ -268,6 +268,8 @@ namespace MyGame.Tests
             // already be a sibling.
             FixtureRoot.AddChild(_boss);
 
+            // Required since K5 - see GameplayBossAttackGrammarTests for why chapter one's file.
+            _boss.SetEncounterData(BossEncounterData.Load("Design/WrathEncounter"));
             _boss.SetBossData(data);
             return _boss;
         }

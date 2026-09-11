@@ -40,15 +40,16 @@ namespace MyGame.Enemy
         public bool IsInVictoryState => _isVictorious;
         public bool IsInIntro => _isInIntro;
         public bool IsInRageMode => _isInRageMode;
-        public float DetectionRange => encounterData != null ? encounterData.detectionRange : DefaultDetectionRange;
+        public float DetectionRange => encounterData.detectionRange;
         public float AttackRange => tuningData.slashRange;
 
         public void SetTuningData(WrathMiniBossData data) => tuningData = data;
 
         /// <summary>
         /// The encounter around the fight - arena reach, intro patience, punish window, phase-two
-        /// pattern. Null leaves every constant below in place, which is what the P0 runner's synthetic
-        /// boss gets and what the fight was tuned against.
+        /// pattern. Required since K5: there is no constant left to fall back to, so a boss that enters
+        /// the tree without one says so and stops. Call it before the boss is parented, the way
+        /// <c>GameplayEnemySpawner.CreateWrathMiniBoss</c> does.
         /// </summary>
         public void SetEncounterData(BossEncounterData data) => encounterData = data;
 
@@ -136,25 +137,14 @@ namespace MyGame.Enemy
         private int _attackPatternIndex;
         private float _rushElapsed;
         private float _recoveryTimer;
-        private float _postAttackRecoveryTime = 0.5f;
         private bool _inRecoveryWindow;
         private Color _originalColor;
         private int _facingDir = 1;
         private Vector2 _spawnPosition;
 
-        // Fallbacks, used whenever no BossEncounterData is bound. The intro cap follows from the
-        // sequence's own beats being ~1.3s and CutsceneDirection.md capping the whole intro at 4.0s.
-        private const float DefaultIntroHoldTimeout = 2.7f;
-        private static readonly float DefaultArenaLeftOffset = World.U(5f);
-        private static readonly float DefaultArenaRightOffset = World.U(1.1f);
-        private static readonly float DefaultDetectionRange = World.U(8f);
-        private const float DefaultRageSpeedMultiplier = 1.2f;
-        private const float DefaultPhaseTwoRecoveryMultiplier = 0.8f;
-        private const float DefaultVictoryPresentationDelay = 1.5f;
-
-        private float IntroHoldTimeout => encounterData != null ? encounterData.introHoldTimeout : DefaultIntroHoldTimeout;
-        private float ArenaLeftOffset => encounterData != null ? encounterData.arenaLeftOffset : DefaultArenaLeftOffset;
-        private float ArenaRightOffset => encounterData != null ? encounterData.arenaRightOffset : DefaultArenaRightOffset;
+        private float IntroHoldTimeout => encounterData.introHoldTimeout;
+        private float ArenaLeftOffset => encounterData.arenaLeftOffset;
+        private float ArenaRightOffset => encounterData.arenaRightOffset;
 
         public override void _Ready()
         {
@@ -166,6 +156,17 @@ namespace MyGame.Enemy
             if (tuningData == null)
             {
                 GD.PushError($"{GetType().Name} '{Name}' entered the tree without tuning data; call SetTuningData first.");
+                SetProcess(false);
+                SetPhysicsProcess(false);
+                return;
+            }
+
+            // Same policy as the tuning check above, and it can live here for the same reason: the
+            // spawner binds the encounter while the boss is still detached, so anything that arrives in
+            // the tree without one was never going to get one.
+            if (encounterData == null)
+            {
+                GD.PushError($"{GetType().Name} '{Name}' entered the tree without encounter data; call SetEncounterData first.");
                 SetProcess(false);
                 SetPhysicsProcess(false);
                 return;
@@ -307,21 +308,10 @@ namespace MyGame.Enemy
             VictorySequence();
         }
 
-        /// <summary>The shipped 40/30/30 split, kept for a boss built with no encounter data.</summary>
-        private static int DefaultPhaseTwoPattern(float roll)
-        {
-            if (roll < 0.4f)
-            {
-                return 0;
-            }
-
-            return roll < 0.7f ? 1 : 2;
-        }
-
         private async void VictorySequence()
         {
             await ToSignal(
-                GetTree().CreateTimer(encounterData != null ? encounterData.victoryPresentationDelay : DefaultVictoryPresentationDelay),
+                GetTree().CreateTimer(encounterData.victoryPresentationDelay),
                 SceneTreeTimer.SignalName.Timeout);
 
             if (!GodotObject.IsInstanceValid(this))
@@ -566,7 +556,7 @@ namespace MyGame.Enemy
             float speed = _isPhaseTwo ? tuningData.moveSpeedBoss * tuningData.phaseSpeedMultiplier : tuningData.moveSpeedBoss;
             if (_isInRageMode)
             {
-                speed *= encounterData != null ? encounterData.rageSpeedMultiplier : DefaultRageSpeedMultiplier;
+                speed *= encounterData.rageSpeedMultiplier;
             }
 
             return speed;
@@ -581,9 +571,7 @@ namespace MyGame.Enemy
 
             if (_isPhaseTwo)
             {
-                _attackPatternIndex = encounterData != null
-                    ? encounterData.SelectPhaseTwoPattern(GD.Randf())
-                    : DefaultPhaseTwoPattern(GD.Randf());
+                _attackPatternIndex = encounterData.SelectPhaseTwoPattern(GD.Randf());
             }
 
             switch (_attackPatternIndex)
@@ -947,12 +935,10 @@ namespace MyGame.Enemy
 
         private void StartRecoveryTimer()
         {
-            _recoveryTimer = encounterData != null ? encounterData.postAttackRecoveryTime : _postAttackRecoveryTime;
+            _recoveryTimer = encounterData.postAttackRecoveryTime;
             if (_isPhaseTwo)
             {
-                _recoveryTimer *= encounterData != null
-                    ? encounterData.phaseTwoRecoveryMultiplier
-                    : DefaultPhaseTwoRecoveryMultiplier;
+                _recoveryTimer *= encounterData.phaseTwoRecoveryMultiplier;
             }
         }
 

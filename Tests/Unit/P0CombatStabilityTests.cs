@@ -525,6 +525,40 @@ namespace MyGame.Tests
             return node;
         }
 
+        /// <summary>
+        /// What <c>GameplayEnemySpawner.ConfigureSharedBehaviour</c> does to every enemy it builds, for
+        /// the ones this suite builds by hand instead.
+        ///
+        /// Needed since K5: <see cref="EnemyStateMachine"/>'s four state-transition numbers no longer
+        /// carry initialisers, so an enemy nobody configured leashes at zero and flips state the frame
+        /// it enters one. The same shape as K1's <c>SetTuningData(XData.Load())</c> - the fixture reads
+        /// the shipped file rather than a number written here.
+        /// </summary>
+        /// <remarks>
+        /// UNITS: every distance is already pixels - <c>WorldTuningData.Load</c> ran
+        /// <c>ScaleToPixels</c> on the authored metres on the way in.
+        /// </remarks>
+        private static T ConfigureFromDesign<T>(T machine) where T : EnemyStateMachine
+        {
+            MyGame.Gameplay.WorldTuningData world = MyGame.Gameplay.WorldTuningData.Load();
+            Assert.NotNull(world, "Resources/Design/WorldTuning.json has to load; every enemy's leash and gravity is in it.");
+
+            PlayerCombatData combat = PlayerCombatData.Load();
+            Assert.NotNull(combat, "Resources/Design/PlayerCombat.json has to load; the perfect-parry stun multiplier is in it.");
+
+            machine.Configure(
+                world.enemyGravity,
+                world.enemyDisengageDistance,
+                world.enemyIdleToPatrolTime,
+                world.enemyInvestigateDuration,
+                world.enemyRecoveryDuration,
+                world.enemyLedgeProbeForward,
+                world.enemyLedgeProbeDepth,
+                combat.perfectParryStunMultiplier);
+
+            return machine;
+        }
+
         // ---------------------------------------------------------------------------------------
         // Reflection helpers - ported verbatim in intent from the Unity runner
         // ---------------------------------------------------------------------------------------

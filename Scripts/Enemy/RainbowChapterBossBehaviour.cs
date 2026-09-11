@@ -117,13 +117,10 @@ namespace MyGame.Enemy
         private enum AttackPhase { None, Telegraph, Feint, Active, Recovery }
 
         /// <summary>
-        /// How many links a chain may run before the boss has to stop and let the player back in. A row
-        /// that chains to itself, or a pair that chain to each other, is a fight with no punish window
-        /// at all - and it is a one-word authoring mistake, so it is capped rather than trusted.
-        /// Authored per chapter as <c>&lt;chapter&gt;_Encounter.json.maxChainSteps</c>; this is the
-        /// fallback a boss with no encounter file gets.
+        /// Set once the missing-data error below has been said, so a boss that was never handed its data
+        /// says so once instead of once a frame.
         /// </summary>
-        private const int DefaultMaxChainSteps = 4;
+        private bool _missingDataReported;
 
         private Health _bossHealth;
         private AttackPhase _phase;
@@ -158,20 +155,49 @@ namespace MyGame.Enemy
         private float _stanceTimer;
         private int _stanceIndex;
 
-        private const float DefaultIntroHoldTimeout = 2.7f;
-        private static readonly float DefaultArenaLeftOffset = World.U(5f);
-        private static readonly float DefaultArenaRightOffset = World.U(1.1f);
-        private const float DefaultVictoryPresentationDelay = 1.5f;
-        /// <summary>What a boss with no design file is stunned for. <c>RainbowChapterBossData.stunDuration</c> is the authored number.</summary>
-        private const float DefaultStunDuration = 1f;
-
         public void SetBossData(RainbowChapterBossData data)
         {
             bossData = data;
             ApplyData();
         }
 
+        /// <summary>
+        /// The room the fight happens in - arena reach, intro patience, punish floor, chain cap.
+        /// Required since K5: nothing here falls back to a constant any more.
+        /// </summary>
         public void SetEncounterData(BossEncounterData data) => encounterData = data;
+
+        /// <summary>
+        /// The boss's two design files, checked once at the top of the fight loop rather than in
+        /// <c>_Ready</c>. Both are bound <em>after</em> the boss is in the tree - the spawner parents it
+        /// and then calls <see cref="SetEncounterData"/> and <see cref="SetBossData"/>, and every test
+        /// fixture does the same - so a ready-time check would fire on every boss the game ships. The
+        /// first frame is late enough: those calls are synchronous with the spawn.
+        /// </summary>
+        /// <remarks>
+        /// Same policy as the archetypes' tuning check (K2, decision D1): say it once, stop ticking, and
+        /// leave the body where it is rather than run the fight on numbers nobody authored.
+        /// </remarks>
+        private bool HasTheDataItNeeds()
+        {
+            if (bossData != null && encounterData != null)
+            {
+                return true;
+            }
+
+            if (!_missingDataReported)
+            {
+                _missingDataReported = true;
+                string missing = bossData == null
+                    ? (encounterData == null ? "boss and encounter data" : "boss data")
+                    : "encounter data";
+                GD.PushError($"{GetType().Name} '{Name}' is in the tree without {missing}; call SetBossData and SetEncounterData on spawn.");
+            }
+
+            SetProcess(false);
+            SetPhysicsProcess(false);
+            return false;
+        }
 
         /// <summary>
         /// Replaces the colour the body settles back to between attacks, in both phases. The telegraph
@@ -247,12 +273,9 @@ namespace MyGame.Enemy
 
             // The floor is the encounter's punish window: an attack authored with almost no recovery
             // would otherwise leave the player nothing to answer with, which is a fight with no rhythm.
-            if (encounterData != null)
-            {
-                recovery = Mathf.Max(
-                    recovery,
-                    encounterData.postAttackRecoveryTime * (IsPhaseTwo ? encounterData.phaseTwoRecoveryMultiplier : 1f));
-            }
+            recovery = Mathf.Max(
+                recovery,
+                encounterData.postAttackRecoveryTime * (IsPhaseTwo ? encounterData.phaseTwoRecoveryMultiplier : 1f));
 
             _attackCooldownTimer = recovery;
 
@@ -281,8 +304,7 @@ namespace MyGame.Enemy
                 return;
             }
 
-            _stunTimer = (bossData != null ? bossData.stunDuration : DefaultStunDuration)
-                * (perfect ? perfectParryStunMultiplier : 1f);
+            _stunTimer = bossData.stunDuration * (perfect ? perfectParryStunMultiplier : 1f);
 
             // The rest of the chain dies with the swing that was carrying it. Interrupting one link and
             // then eating the next three is not a punish window. A poise break is also the loudest way
@@ -395,6 +417,11 @@ namespace MyGame.Enemy
 
         public override void _Process(double delta)
         {
+            if (!HasTheDataItNeeds())
+            {
+                return;
+            }
+
             if (IsDefeated)
             {
                 return;
@@ -499,7 +526,7 @@ namespace MyGame.Enemy
             StopMovement();
             OnIntroStart?.Invoke();
 
-            float remaining = encounterData != null ? encounterData.introHoldTimeout : DefaultIntroHoldTimeout;
+            float remaining = encounterData.introHoldTimeout;
             while (_introHold && remaining > 0f)
             {
                 remaining -= GameClock.UnscaledDeltaTime;
@@ -800,7 +827,7 @@ namespace MyGame.Enemy
         /// </summary>
         private void QueueChain(BossAttackProfile finished)
         {
-            int maxChainSteps = encounterData != null ? encounterData.maxChainSteps : DefaultMaxChainSteps;
+            int maxChainSteps = encounterData.maxChainSteps;
             if (!finished.HasChain || bossData == null || _chainStepsTaken >= maxChainSteps)
             {
                 ClearChain();
@@ -906,7 +933,7 @@ namespace MyGame.Enemy
         private void EndChant()
         {
             _chantTimer = 0f;
-            _chantCooldownTimer = bossData != null ? bossData.ChantInterval : 0f;
+            _chantCooldownTimer = bossData.ChantInterval;
         }
 
         /// <summary>
@@ -1159,21 +1186,15 @@ namespace MyGame.Enemy
             Velocity = new Vector2(0f, Velocity.Y);
         }
 
-        private float MinArenaX =>
-            _spawnPosition.X - (encounterData != null ? encounterData.arenaLeftOffset : DefaultArenaLeftOffset);
+        private float MinArenaX => _spawnPosition.X - encounterData.arenaLeftOffset;
 
-        private float MaxArenaX =>
-            _spawnPosition.X + (encounterData != null ? encounterData.arenaRightOffset : DefaultArenaRightOffset);
+        private float MaxArenaX => _spawnPosition.X + encounterData.arenaRightOffset;
 
-        protected override float GetDetectionRange()
-        {
-            if (encounterData != null)
-            {
-                return encounterData.detectionRange;
-            }
-
-            return bossData != null ? bossData.DetectionRange : base.GetDetectionRange();
-        }
+        /// <summary>
+        /// The encounter's reach, not the boss's own: the arena decides when the fight starts, and the
+        /// boss's <c>detectionRange</c> is what it would notice from if it were standing anywhere else.
+        /// </summary>
+        protected override float GetDetectionRange() => encounterData.detectionRange;
 
         // A poise break opens the same window a perfect parry does, the way every other archetype
         // treats it.
@@ -1270,7 +1291,7 @@ namespace MyGame.Enemy
         private async void DefeatSequence()
         {
             await ToSignal(
-                GetTree().CreateTimer(encounterData != null ? encounterData.victoryPresentationDelay : DefaultVictoryPresentationDelay),
+                GetTree().CreateTimer(encounterData.victoryPresentationDelay),
                 SceneTreeTimer.SignalName.Timeout);
 
             if (!GodotObject.IsInstanceValid(this))

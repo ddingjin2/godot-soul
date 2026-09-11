@@ -17,40 +17,46 @@ namespace MyGame.Enemy
     /// and <c>System.Text.Json</c> only binds public members. The read-only properties below stay the
     /// way the boss loop talks to a row.
     ///
+    /// No field below carries an initialiser any more (K5, decision D1): a row is what the design file
+    /// says and nothing else, so a key left out of a row reads as zero rather than as a number this
+    /// class made up. The shipped rows all spell out every value that used to have one; the six that
+    /// never did - the lunge pair, the feint pause and the three flags - are still legitimately absent
+    /// from a row that does not use them.
+    ///
     /// UNITS: <see cref="ScaleToPixels"/> scales <c>knockback</c>, <c>range</c>, <c>forwardOffset</c>,
     /// <c>lungeSpeed</c>, <c>hazardRadius</c> and <c>hazardForwardOffset</c>. Damage, every time in
     /// seconds, the weights and the colours are untouched.
     /// </summary>
     public sealed partial class BossAttackProfile : Resource
     {
-        [Export] public string attackId = "attack";
-        [Export] public string displayName = "Attack";
-        [Export] public float damage = 20f;
-        [Export] public float knockback = 6f;
-        [Export] public float telegraphTime = 0.6f;
-        [Export] public float activeTime = 0.25f;
-        [Export] public float recoveryTime = 0.6f;
-        [Export] public float range = 2f;
-        [Export] public Color telegraphColor = Colors.Red;
+        [Export] public string attackId;
+        [Export] public string displayName;
+        [Export] public float damage;
+        [Export] public float knockback;
+        [Export] public float telegraphTime;
+        [Export] public float activeTime;
+        [Export] public float recoveryTime;
+        [Export] public float range;
+        [Export] public Color telegraphColor;
 
         /// <summary>
         /// Standard is parryable and light on poise; Heavy is the committed one. Chosen per attack
         /// because a boss whose every swing is Heavy has no wrong answer for the player to find.
         /// </summary>
-        [Export] public DamageType damageType = DamageType.Standard;
+        [Export] public DamageType damageType;
 
         /// <summary>
         /// Relative pick weight once the boss is in phase two. Weights are summed and normalised, so any
         /// scale works. Phase one rotates in array order instead, which is what makes the opening
         /// learnable.
         /// </summary>
-        [Export] public float phaseTwoWeight = 1f;
+        [Export] public float phaseTwoWeight;
 
         /// <summary>
         /// Hit test is centred this far ahead of the boss, in facing units. Zero centres it on the body,
         /// which is what a slam wants.
         /// </summary>
-        [Export] public float forwardOffset = 0.5f;
+        [Export] public float forwardOffset;
 
         /// <summary>
         /// How fast the boss drives forward through its own active window, and for how long. Zero is no
@@ -67,7 +73,7 @@ namespace MyGame.Enemy
         /// stance is how the final chapters claim the earlier ones: the boss stands in one colour's
         /// shape at a time and only its rows are available.
         /// </summary>
-        [Export] public string stanceId = "";
+        [Export] public string stanceId;
 
         // Feint
         /// <summary>
@@ -83,26 +89,26 @@ namespace MyGame.Enemy
         /// attackId of the row this one leads into, or empty. The chain is what turns single swings into
         /// a wave the player has to learn the end of; an id that names nothing just ends the chain.
         /// </summary>
-        [Export] public string chainNextAttackId = "";
+        [Export] public string chainNextAttackId;
 
         /// <summary>
         /// Beat between this attack finishing and the chained one starting. It replaces the recovery for
         /// that gap, so a short delay is a chain the player cannot punish in the middle of.
         /// </summary>
-        [Export] public float chainDelay = 0.35f;
+        [Export] public float chainDelay;
 
         /// <summary>
         /// Phase two multiplies the chain delay by this. Above 1 is the late beat - the chain the player
         /// learned now arrives after they have already dodged.
         /// </summary>
-        [Export] public float chainDelayPhaseTwoScale = 1f;
+        [Export] public float chainDelayPhaseTwoScale;
 
         /// <summary>
         /// Copies this row raises, overriding the boss's own count. Negative leaves the boss's number
         /// alone. A stance quoting the chapter of shadows needs its copies without giving them to the
         /// other six stances, and the boss-level count cannot say that.
         /// </summary>
-        [Export] public int afterimageCountOverride = -1;
+        [Export] public int afterimageCountOverride;
 
         /// <summary>
         /// Only reachable as the end of a chain, never picked on its own. A finisher with no stance
@@ -130,30 +136,30 @@ namespace MyGame.Enemy
         /// Hold the strip back until phase two. On means the first half of the fight teaches the attack
         /// and the second half adds what it costs to stand near it.
         /// </summary>
-        [Export] public bool hazardPhaseTwoOnly = true;
+        [Export] public bool hazardPhaseTwoOnly;
 
         /// <summary>
         /// Damage per tick. Chip, not a second swing: the strip is meant to move the player, not to kill
         /// one who is already committed.
         /// </summary>
-        [Export] public float hazardDamage = 6f;
+        [Export] public float hazardDamage;
 
-        [Export] public float hazardRadius = 1.2f;
-        [Export] public float hazardTickInterval = 0.5f;
+        [Export] public float hazardRadius;
+        [Export] public float hazardTickInterval;
 
         /// <summary>
         /// How long the strip burns. Long enough to deny the ground for the next exchange is the point;
         /// long enough to stack several is an arena the player cannot re-enter.
         /// </summary>
-        [Export] public float hazardDuration = 3f;
+        [Export] public float hazardDuration;
 
         /// <summary>
         /// Where the strip lands, in facing units ahead of the boss. Usually further out than the hit
         /// test, so the strip covers the ground the lunge crossed rather than the boss's own feet.
         /// </summary>
-        [Export] public float hazardForwardOffset = 1.5f;
+        [Export] public float hazardForwardOffset;
 
-        [Export] public Color hazardColor = new Color(1f, 0.45f, 0.1f, 0.55f);
+        [Export] public Color hazardColor;
 
         private bool _scaledToPixels;
 

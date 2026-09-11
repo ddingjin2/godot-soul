@@ -429,6 +429,7 @@ namespace MyGame.Tests
                 Position = World.V(new Vector2(0f, 20f)),
             };
             leaper.SetTuningData(LeapingAttackerData.Load());
+            ConfigureFromDesign(leaper);
             AddBoxShape(leaper);
             var health = new Health { Name = nameof(Health) };
             leaper.AddChild(health);
@@ -540,6 +541,10 @@ namespace MyGame.Tests
             boss.AddChild(health);
             SetPrivateField(health, "maxHealth", tuning.maxHealthBoss);
             boss.SetTuningData(tuning);
+
+            // Both before Spawn: _Ready refuses to run the fight without either of them.
+            boss.SetEncounterData(BossEncounterData.Load("Design/WrathEncounter"));
+            ConfigureFromDesign(boss);
             Spawn(boss);
             return boss;
         }

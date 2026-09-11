@@ -231,7 +231,7 @@ namespace MyGame.Tests
                 World.V(new Vector2(5f, 1f)),
                 GameplayReadabilityDefaults.Create(),
                 data,
-                null);
+                BossEncounterData.Load("Design/WrathEncounter"));
 
             Assert.IsInstanceOf<IBossEncounter>(_boss, "The spawned boss has to be bindable as an encounter.");
 
@@ -563,7 +563,7 @@ namespace MyGame.Tests
                      // zero stun is not the one these tests were written against, so the fixture says them.
                      "\"stunDuration\":1,\"bodySize\":{\"x\":1.6,\"y\":2.3},\"telegraphPulseSpeed\":8,\"telegraphPulseAmplitude\":0.2," +
                      "\"bossName\":\"TestChapterBoss\",\"chapterName\":\"Test Chapter\"," +
-                     "\"attacks\":[{\"attackId\":\"test_swing\",\"damage\":12,\"knockback\":0," +
+                     "\"attacks\":[{\"attackId\":\"test_swing\",\"damageType\":1,\"afterimageCountOverride\":-1,\"damage\":12,\"knockback\":0," +
                      "\"telegraphTime\":0.25,\"activeTime\":0.25,\"recoveryTime\":0.25,\"range\":1.5,\"forwardOffset\":0.5," +
                      "\"phaseTwoWeight\":1}]}";
 
@@ -592,7 +592,7 @@ namespace MyGame.Tests
                    // zero stun is not the one these tests were written against, so the fixture says them.
                    "\"stunDuration\":1,\"bodySize\":{\"x\":1.6,\"y\":2.3},\"telegraphPulseSpeed\":8,\"telegraphPulseAmplitude\":0.2," +
                    "\"bossName\":\"TestHazardBoss\",\"chapterName\":\"Test Chapter\"," +
-                   "\"attacks\":[{\"attackId\":\"test_lunge\",\"damage\":12,\"knockback\":0," +
+                   "\"attacks\":[{\"attackId\":\"test_lunge\",\"damageType\":1,\"afterimageCountOverride\":-1,\"damage\":12,\"knockback\":0," +
                    "\"telegraphTime\":0.25,\"activeTime\":0.25,\"recoveryTime\":0.25,\"range\":1.5,\"forwardOffset\":0.5," +
                    "\"phaseTwoWeight\":1,\"leavesHazard\":true,\"hazardPhaseTwoOnly\":" + (phaseTwoOnly ? "true" : "false") +
                    ",\"hazardDamage\":5,\"hazardRadius\":1.5,\"hazardTickInterval\":0.2,\"hazardDuration\":1.2," +
@@ -621,6 +621,8 @@ namespace MyGame.Tests
 
             FixtureRoot.AddChild(_boss);
 
+            // Required since K5 - see GameplayBossAttackGrammarTests for why chapter one's file.
+            _boss.SetEncounterData(BossEncounterData.Load("Design/WrathEncounter"));
             _boss.SetBossData(data);
             return _boss;
         }

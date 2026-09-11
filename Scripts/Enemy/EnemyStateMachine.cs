@@ -35,12 +35,15 @@ namespace MyGame.Enemy
     {
         // State Transitions. Authored in WorldTuning.json (enemyIdleToPatrolTime,
         // enemyInvestigateDuration, enemyRecoveryDuration, enemyDisengageDistance) and pushed in by
-        // Configure; the initialisers are what a synthetic enemy built with no design file gets. The
-        // three times are seconds; disengageDistance is PIXELS - the JSON authors 8 metres.
-        [Export] protected float idleToPatrolTime = 3f;
-        [Export] protected float investigateDuration = 2f;
-        [Export] protected float recoveryDuration = 1f;
-        [Export] protected float disengageDistance = World.U(8f);
+        // Configure, which is the ONLY source: K5 took the initialisers out, because a copy of the
+        // shipped numbers here is the "code fallback" decision D1 forbids. An enemy that never had
+        // Configure called on it now leashes at zero distance and flips state on the frame it changes
+        // one - visibly broken rather than quietly running on numbers nobody authored. The three times
+        // are seconds; disengageDistance is PIXELS - the JSON authors 8 metres.
+        [Export] protected float idleToPatrolTime;
+        [Export] protected float investigateDuration;
+        [Export] protected float recoveryDuration;
+        [Export] protected float disengageDistance;
 
         public event Action<EnemyState> OnStateChanged;
         public event Action OnEnteredCombat;

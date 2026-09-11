@@ -185,7 +185,7 @@ namespace MyGame.Tests
         private static string FeintJson()
         {
             return BossJson(
-                "{\"attackId\":\"feint_swing\",\"damage\":10,\"knockback\":0,\"telegraphTime\":0.2," +
+                "{\"attackId\":\"feint_swing\",\"damageType\":1,\"afterimageCountOverride\":-1,\"damage\":10,\"knockback\":0,\"telegraphTime\":0.2," +
                 "\"feintPauseTime\":0.35,\"activeTime\":0.25,\"recoveryTime\":0.2,\"range\":1.5," +
                 "\"forwardOffset\":0.5,\"phaseTwoWeight\":1}");
         }
@@ -193,11 +193,11 @@ namespace MyGame.Tests
         private static string ChainJson()
         {
             return BossJson(
-                "{\"attackId\":\"wave_a\",\"damage\":5,\"knockback\":0,\"telegraphTime\":0.15," +
+                "{\"attackId\":\"wave_a\",\"damageType\":1,\"afterimageCountOverride\":-1,\"damage\":5,\"knockback\":0,\"telegraphTime\":0.15," +
                 "\"activeTime\":0.15,\"recoveryTime\":0.15,\"range\":1.5,\"forwardOffset\":0.5," +
                 "\"phaseTwoWeight\":1,\"chainNextAttackId\":\"wave_b\",\"chainDelay\":0.15," +
                 "\"chainDelayPhaseTwoScale\":1}," +
-                "{\"attackId\":\"wave_b\",\"damage\":5,\"knockback\":0,\"telegraphTime\":0.15," +
+                "{\"attackId\":\"wave_b\",\"damageType\":1,\"afterimageCountOverride\":-1,\"damage\":5,\"knockback\":0,\"telegraphTime\":0.15," +
                 "\"activeTime\":0.15,\"recoveryTime\":0.15,\"range\":1.5,\"forwardOffset\":0.5," +
                 "\"phaseTwoWeight\":1}");
         }
@@ -205,7 +205,7 @@ namespace MyGame.Tests
         private static string PullJson()
         {
             return BossJson(
-                "{\"attackId\":\"tide_pull\",\"damage\":8,\"knockback\":6,\"telegraphTime\":0.15," +
+                "{\"attackId\":\"tide_pull\",\"damageType\":1,\"afterimageCountOverride\":-1,\"damage\":8,\"knockback\":6,\"telegraphTime\":0.15," +
                 "\"activeTime\":0.25,\"recoveryTime\":0.2,\"range\":1.5,\"forwardOffset\":0.5," +
                 "\"phaseTwoWeight\":1,\"pullsTarget\":true}");
         }
@@ -262,6 +262,11 @@ namespace MyGame.Tests
 
             TestContext.Tree.Root.AddChild(_boss);
 
+            // Required since K5: the behaviour's arena, intro cap, punish floor and chain cap all read
+            // the encounter directly now. Chapter one's shipped file, the same one the spawner hands a
+            // boss whose arena names no encounter of its own - so the fixture fights in a real room
+            // rather than in constants the class used to carry.
+            _boss.SetEncounterData(BossEncounterData.Load("Design/WrathEncounter"));
             _boss.SetBossData(data);
             _boss.SkipIntro();
             return _boss;

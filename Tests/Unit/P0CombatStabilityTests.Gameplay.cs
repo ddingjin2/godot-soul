@@ -150,6 +150,11 @@ namespace MyGame.Tests
 
                 var boss = new WrathMiniBoss { Name = "VictoryBoss" };
                 boss.SetTuningData(WrathMiniBossData.Load());
+
+                // Both bound before Spawn: the boss's _Ready refuses to run without either, the way the
+                // spawner hands them over while the body is still detached.
+                boss.SetEncounterData(BossEncounterData.Load("Design/WrathEncounter"));
+                ConfigureFromDesign(boss);
                 AddBoxShape(boss);
                 var bossHealth = new Health { Name = nameof(Health) };
                 boss.AddChild(bossHealth);
@@ -537,6 +542,7 @@ namespace MyGame.Tests
             // health component as a child node. PPU on every position below; none of them is vertical.
             var enemy = new MeleeGrunt { Name = "ContextEnemy", Position = new Vector2(World.U(2f), 0f) };
             enemy.SetTuningData(MeleeGruntData.Load());
+            ConfigureFromDesign(enemy);
             var enemyHealth = new Health { Name = nameof(Health) };
             enemy.AddChild(enemyHealth);
             Spawn(enemy);
@@ -545,6 +551,8 @@ namespace MyGame.Tests
 
             var boss = new WrathMiniBoss { Name = "ContextBoss", Position = new Vector2(World.U(4f), 0f) };
             boss.SetTuningData(WrathMiniBossData.Load());
+            boss.SetEncounterData(BossEncounterData.Load("Design/WrathEncounter"));
+            ConfigureFromDesign(boss);
             var bossHealth = new Health { Name = nameof(Health) };
             boss.AddChild(bossHealth);
             Spawn(boss);
