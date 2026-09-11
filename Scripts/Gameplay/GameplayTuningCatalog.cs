@@ -56,11 +56,7 @@ namespace MyGame.Gameplay
         public PlayerCombatData PlayerCombat => playerCombat;
         public PlayerResourceData PlayerResources => playerResources;
 
-        /// <summary>
-        /// What souls buy. Null when the design file is missing, like every other entry here;
-        /// <c>ProgressionTuningData.Load</c> is the path that falls back to defaults instead,
-        /// because <c>PlayerProgression</c> has save-backed levels it must still be able to apply.
-        /// </summary>
+        /// <summary>What souls buy. Null when the design file is missing, like every other entry here.</summary>
         public ProgressionTuningData Progression => progression;
         public SinTuningData SinTuning => sinTuning;
         public WorldTuningData WorldTuning => worldTuning;
@@ -168,9 +164,7 @@ namespace MyGame.Gameplay
                 playerCombat = PlayerCombatData.Load(),
                 playerResources = PlayerResourceData.Load(),
 
-                // Deliberately not ProgressionTuningData.Load(): that one substitutes defaults for a
-                // missing file, and this property's contract is null. See the Progression remarks.
-                progression = MyGame.Core.Res.LoadJson<ProgressionTuningData>(DesignResourceFolder + ProgressionTuningFile),
+                progression = ProgressionTuningData.Load(),
 
                 sinTuning = SinTuningData.Load(DesignResourceFolder + SinTuningFile),
                 worldTuning = WorldTuningData.Load(DesignResourceFolder + WorldTuningFile),
