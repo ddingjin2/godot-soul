@@ -348,3 +348,40 @@ layout file is missing. Deleted with them: the `internal` `ToGodot(float, float)
 `GameplayReadabilityThemeData.CopyFrom`, `addons/mygame_tools/ReadabilityThemeWriter` and its dock
 button. `Tests/Unit/DesignFileCompletenessTests` is the new permanent test; the two
 `Applied*_ReproducesEveryShipped*` identity tests are gone.
+
+### The component numbers, the HUD palette and the last constants (K5, core half)
+
+`GameplayCameraFollow2D.ApplyTuning(null)`, `ActorIdleBob._Ready`, `GameplayTelegraphPulse._Ready`,
+`GameplayWorldHealthBar.Build`, `CheckpointZone.AuthoredRadius` / `EnsureMarker`,
+`GameplayEnvironmentBuilder.CreateWorldEdge` / `CreateGatePortal`, `GameplayEnemySpawner.ConfigureSharedBehaviour`
+and `GameplayPlayerSpawner.EnsureLockOn` push an error and do nothing where they used to keep a code copy;
+`GameplaySoulDrop._pickupDelay` starts at 0 and `Initialize` is its only writer. `GameplayTuningDefaults` is
+deleted. New: `MyGame.Gameplay.UiTuningData` + `Resources/Design/UiTuning.json` (three HUD timings, seconds),
+registered in `GameplayTuningCatalog` so `IsComplete` requires it; `GameplayReadabilityDefaults.HealthBarFrameColor`
+/ `.HealthBarLowHealthTint` from two new keys in `Resources/Art/Readability.json`; nine `Palette/colors/*` items in
+`MenuTheme.tres` that `GameplayHud` reads with `Theme.GetColor` (the five names stay as private properties, so
+call sites did not move). `Scripts/UI/GameplayHud.cs` now has `using MyGame.Gameplay;` - the first UI → Gameplay
+reference, mirroring the Gameplay → UI one `CheckpointZone.Activate` already had.
+
+### The boss encounter is required, and the state machine has no numbers of its own (K5, boss half)
+
+`BossEncounterData` is required by both bosses. `WrathMiniBoss.SetEncounterData` must be called before the boss
+is parented: `_Ready` refuses to run the fight without one, as it already refused without tuning data.
+`RainbowChapterBossBehaviour` cannot check at ready time (the spawner parents it and then binds its two files),
+so it checks once at the top of `_Process` and disables both callbacks if either is missing.
+`RainbowChapterBossBehaviour.GetDetectionRange()` is the encounter's `detectionRange` and no longer falls through
+to the boss file or the base 5 m. `BossAttackProfile` and `EnemyStateMachine` carry no `[Export]` initialisers:
+an attack row is what the design file says, and an enemy's four state-transition numbers
+(`enemyIdleToPatrolTime` etc., already authored once in `WorldTuning.json`) arrive only through
+`EnemyStateMachine.Configure` - code that builds an enemy by hand must call it, as the P0 fixtures now do through
+`ConfigureFromDesign<T>`.
+
+### The actor scenes author no number the spawner writes (K6)
+
+The seven scenes in `Scenes/Actors/` lost sixty property lines and eight empty override blocks: capsule sizes,
+Visual scale / modulate / z_index, HealthBar, AttackReadout and RoleMarker positions and scales - all written on
+every spawn by `ResizeCapsuleCollider`, `DressActorVisual` / `DressSprite`, `DressAttackReadout`,
+`DressRoleMarker` and `AddHealthBar` from `ReadabilityLayout.json`. Node trees, scripts, collision layers,
+textures and the transforms nothing writes are untouched; a probe of all 493 spawned values before and after was
+identical. `GameplaySceneDefaultsAsset` keeps its four `[Export]`s without initialisers; they are read only behind
+`overrideCamera` / `overrideSpawn`. No signature changed.

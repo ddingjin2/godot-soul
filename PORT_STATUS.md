@@ -587,3 +587,22 @@ layout that K4 deleted; `SceneLayout.json` sets `overridePlatforms: true` with i
 ... `KilnStep`) and no such platform ever shipped, so the test was verifying a fixture the game did not
 use. It is replaced by `GameplaySceneNamesEveryPlatformItShips`: the shipped list is non-empty and every
 platform carries a name, which is the contract the instanced platforms and two other tests rely on.
+
+### Second phase K5-K6 - the components, the HUD, the bosses and the scenes
+
+No shipped behaviour changed in any of the three. Every value the components read back after the move was
+probed against the literal it replaced and was identical (camera feel, idle bob, telegraph pulse, health bar
+margin and colours, HUD timings and palette); every constant deleted from the two bosses, `BossAttackProfile`
+and `EnemyStateMachine` equalled the value its design file already carried, verified across all nine encounter
+files and all 36 attack rows before the strip; and the seven actor scenes lost only values the spawner writes
+on every spawn, proved by a 493-value dump of the spawned actors before and after.
+
+What changed is a build with a design file missing (decision D1): the camera stops following, the idle bob and
+telegraph pulses stop, the world edges and gate portal are not built, lock-on has no reach, the bonfire has no
+radius, the HUD ghost gauge has no hold, and a chapter boss or mini-boss logs one error and stops ticking - each
+naming the file - instead of running on numbers nobody authored.
+
+Editor-view trade-off accepted with D4: the actor scenes now open in the Godot editor at type defaults - an
+unscaled body on a 10 x 20 capsule, role label and health bar on the origin - because every size, colour,
+sorting order and offset lives only in `ReadabilityLayout.json` and `Readability.json`. Run the scene to see the
+real proportions. Nothing about a spawned actor changed.
