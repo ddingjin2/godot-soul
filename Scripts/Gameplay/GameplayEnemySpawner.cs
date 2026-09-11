@@ -143,8 +143,7 @@ namespace MyGame.Gameplay
             DressAttackReadout(go, "SlashDanger", readability.MeleeDangerLocalPosition, readability.MeleeDangerSize, readability.MeleeDangerColor, readability.EnemyReadoutSortingOrder);
             DressRoleMarker(go, "Melee", readability.MeleeRoleLocalPosition, readability.MeleeRoleColor, readability);
 
-            MeleeGruntData tuning = SpawnTuning<MeleeGruntData>(spawn) ?? (catalog?.MeleeGrunt
-                ?? GameplayTuningDefaults.CreateMeleeGrunt(readability.EnemyColor));
+            MeleeGruntData tuning = SpawnTuning<MeleeGruntData>(spawn) ?? catalog.MeleeGrunt;
 
             go.SetTuningData(tuning);
             go.SetAttackPoint(attackPoint);
@@ -167,8 +166,7 @@ namespace MyGame.Gameplay
             DressAttackReadout(go, "LeapLandingDanger", readability.LeapDangerLocalPosition, readability.LeapDangerSize, readability.LeapDangerColor, readability.EnemyReadoutSortingOrder);
             DressRoleMarker(go, "Leap", readability.LeapRoleLocalPosition, readability.LeapRoleColor, readability);
 
-            LeapingAttackerData tuning = SpawnTuning<LeapingAttackerData>(spawn) ?? (catalog?.LeapingAttacker
-                ?? GameplayTuningDefaults.CreateLeapingAttacker());
+            LeapingAttackerData tuning = SpawnTuning<LeapingAttackerData>(spawn) ?? catalog.LeapingAttacker;
 
             go.SetTuningData(tuning);
 
@@ -198,8 +196,7 @@ namespace MyGame.Gameplay
                 readability.ProjectileColor,
                 readability.ProjectileSortingOrder);
 
-            RangedCasterData tuning = SpawnTuning<RangedCasterData>(spawn) ?? (catalog?.RangedCaster
-                ?? GameplayTuningDefaults.CreateRangedCaster());
+            RangedCasterData tuning = SpawnTuning<RangedCasterData>(spawn) ?? catalog.RangedCaster;
 
             go.SetTuningData(tuning);
 
@@ -374,8 +371,7 @@ namespace MyGame.Gameplay
             DressAttackReadout(go, "BossSlamDanger", readability.BossSlamDangerLocalPosition, readability.BossSlamDangerSize, readability.BossSlamDangerColor, readability.BossSlamReadoutSortingOrder);
             DressRoleMarker(go, "Mini Boss", readability.BossRoleLocalPosition, readability.BossRoleColor, readability);
 
-            WrathMiniBossData tuning = catalog?.WrathMiniBoss
-                ?? GameplayTuningDefaults.CreateWrathMiniBoss(readability.BossColor);
+            WrathMiniBossData tuning = catalog.WrathMiniBoss;
 
             go.SetTuningData(tuning);
 

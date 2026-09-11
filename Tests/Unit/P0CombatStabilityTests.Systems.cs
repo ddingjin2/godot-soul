@@ -428,6 +428,7 @@ namespace MyGame.Tests
                 // PPU + Y FLIP: Unity's (0, 20) metres up is (0, -2000) pixels in Godot.
                 Position = World.V(new Vector2(0f, 20f)),
             };
+            leaper.SetTuningData(LeapingAttackerData.Load());
             AddBoxShape(leaper);
             var health = new Health { Name = nameof(Health) };
             leaper.AddChild(health);
@@ -474,7 +475,7 @@ namespace MyGame.Tests
             Assert.IsNull(typeof(WrathMiniBoss).GetField("_sr", InstanceMembers),
                 "WrathMiniBoss must not shadow the inherited _sr field.");
 
-            WrathMiniBoss behaviour = CreateWrathMiniBoss(GameplayTuningDefaults.CreateWrathMiniBoss(Colors.Red));
+            WrathMiniBoss behaviour = CreateWrathMiniBoss(WrathMiniBossData.Load());
             Assert.IsTrue(behaviour.IsInGroup(World.Group.Enemy),
                 "base._Ready puts the enemy in the Enemy group; a boss outside it never ran the base state machine's setup.");
             Assert.AreEqual(EnemyState.Idle, behaviour.CurrentState, "A freshly built boss should start Idle.");
@@ -486,7 +487,7 @@ namespace MyGame.Tests
         [Test]
         public void WrathMiniBossPreservesCompletedAttackCooldown()
         {
-            WrathMiniBossData tuning = GameplayTuningDefaults.CreateWrathMiniBoss(Colors.Red);
+            WrathMiniBossData tuning = WrathMiniBossData.Load();
             // Distinct from every other cooldown and from the AttackType.None fallback of 2f. Seconds,
             // so no PPU scaling.
             tuning.slamCooldown = 3.75f;
@@ -513,7 +514,7 @@ namespace MyGame.Tests
         [Test]
         public void WrathMiniBossTelegraphUsesRenderFrameDeltaTime()
         {
-            WrathMiniBoss behaviour = CreateWrathMiniBoss(GameplayTuningDefaults.CreateWrathMiniBoss(Colors.Red));
+            WrathMiniBoss behaviour = CreateWrathMiniBoss(WrathMiniBossData.Load());
             SetPrivateField(behaviour, "_currentAttack", ParsePrivateEnum(typeof(WrathMiniBoss), "AttackType", "Slash"));
             SetPrivateField(behaviour, "_telegraphTimer", 10f);
 

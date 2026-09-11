@@ -10,8 +10,8 @@ namespace MyGame.Gameplay
     /// Runtime view over the tuning numbers that designers own.
     /// The source of truth is plain JSON under <see cref="DesignResourceFolder"/>, so tuning can be
     /// edited and reviewed without opening an editor; this type only turns that JSON into the typed
-    /// objects the gameplay code expects. A missing file yields null so callers keep falling back to
-    /// <see cref="GameplayTuningDefaults"/>.
+    /// objects the gameplay code expects. A missing file is reported by <c>Res.LoadJson</c> and
+    /// yields null; <see cref="IsComplete"/> is what the bootstrap checks before it builds.
     ///
     /// UNITS: nothing is converted here. Every entry is loaded through its own type's <c>Load</c>,
     /// which is where that type's metres-to-pixels conversion lives, so the catalog cannot double-scale

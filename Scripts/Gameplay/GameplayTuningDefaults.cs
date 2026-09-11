@@ -1,19 +1,19 @@
-using Godot;
 using MyGame.Core;
-using MyGame.Enemy;
 
 namespace MyGame.Gameplay
 {
     /// <summary>
-    /// The fallbacks. Every number here is what a caller gets when the design JSON it wanted is not on
-    /// disk - which is every synthetic actor the test runners build.
+    /// The last code copies of authored numbers: four constants that <c>GameplayPlayerSpawner</c>,
+    /// <c>CheckpointZone</c> and <c>GameplaySoulDrop</c> still read when no tuning object reaches them.
+    /// Stage K5 of <c>docs/migrations/scene-data/PLAN_CLOSEOUT.md</c> removes them.
+    ///
+    /// The four enemy factories that used to live beside them are gone (K1, decision D3). Anything that
+    /// wants an archetype's numbers - the spawner, a test building a bare actor - loads the design file
+    /// through that type's own <c>Load()</c>, which is also where the metres-to-pixels pass happens.
     ///
     /// UNITS: the three reach constants are in <b>pixels</b>, because they are handed straight to
     /// runtime components that work in pixels. They are written as <c>metres * World.Ppu</c> so the
     /// authored number is still readable next to <c>WorldTuning.json</c>, which holds the metres.
-    /// The <c>Create*</c> factories below write Unity metres into the tuning object and then call
-    /// <c>ScaleToPixels()</c>, exactly as <c>EnemyTuningData.LoadFrom</c> does for an authored file -
-    /// so a defaulted enemy and a tuned one are in the same space.
     /// </summary>
     public static class GameplayTuningDefaults
     {
@@ -25,7 +25,7 @@ namespace MyGame.Gameplay
         /// back itself is never blocked.
         /// The fallback. <c>PlayerResources.json</c> owns the authored value through
         /// <c>PlayerResourceData.soulStainPickupDelay</c>; this is what a synthetic player built without a
-        /// tuning asset gets, which is every player the test runners make.
+        /// tuning asset gets.
         /// Seconds, so it is not scaled.
         /// Mirrors <c>PlayerResources.json</c>'s <c>soulStainPickupDelay</c>; keep the two identical.
         /// </summary>
@@ -57,136 +57,5 @@ namespace MyGame.Gameplay
         /// The fallback for <c>WorldTuningData.lockOnBreakRange</c>.
         /// </summary>
         public const float LockOnBreakRange = 11f * World.Ppu;
-
-        public static MeleeGruntData CreateMeleeGrunt(Color enemyColor)
-        {
-            var tuning = new MeleeGruntData
-            {
-                maxHealth = 40f,
-                moveSpeed = 2.5f,
-                attackDamage = 12f,
-                attackKnockback = 5f,
-                detectionRange = 5f,
-                attackRange = 1.2f,
-                telegraphTime = 0.85f,
-                attackDuration = 0.35f,
-                attackCooldown = 1.35f,
-                stunDuration = 0.8f,
-                enemyColor = enemyColor,
-                patrolDistance = 2.5f,
-                patrolIdleTime = 0.8f,
-                attackRadius = 0.7f,
-                // Roughly one light combo, so grunts break to pressure but not to a single poke.
-                // Mirrors MeleeGrunt.json's maxPoise.
-                maxPoise = 35f,
-                // Mirrors MeleeGrunt.json's soulReward.
-                soulReward = 7,
-            };
-
-            tuning.ScaleToPixels();
-            return tuning;
-        }
-
-        public static LeapingAttackerData CreateLeapingAttacker()
-        {
-            var tuning = new LeapingAttackerData
-            {
-                maxHealth = 35f,
-                moveSpeed = 2f,
-                attackDamage = 15f,
-                attackKnockback = 6f,
-                detectionRange = 6f,
-                attackRange = 1f,
-                telegraphTime = 1f,
-                attackDuration = 0.4f,
-                attackCooldown = 2f,
-                stunDuration = 0.7f,
-                enemyColor = new Color(0.47843137f, 0.29411766f, 0.17254902f),
-                leapSpeed = 10f,
-                leapHeight = 2.5f,
-                maintainDistance = 3.5f,
-                landingVulnerabilityTime = 0.6f,
-                leapTelegraphTime = 1.1f,
-                // Mirrors LeapingAttacker.json's maxPoise.
-                maxPoise = 30f,
-                // Mirrors LeapingAttacker.json's soulReward.
-                soulReward = 8,
-            };
-
-            tuning.ScaleToPixels();
-            return tuning;
-        }
-
-        public static RangedCasterData CreateRangedCaster()
-        {
-            var tuning = new RangedCasterData
-            {
-                maxHealth = 30f,
-                moveSpeed = 1.5f,
-                attackDamage = 10f,
-                attackKnockback = 3f,
-                detectionRange = 7f,
-                attackRange = 5f,
-                telegraphTime = 1f,
-                attackDuration = 0.2f,
-                attackCooldown = 2.5f,
-                stunDuration = 0.6f,
-                enemyColor = new Color(0.29411766f, 0.27058825f, 0.3764706f),
-                projectileSpeed = 5f,
-                projectileDamage = 8f,
-                minDistance = 4f,
-                repositionDistance = 2f,
-                castTelegraphTime = 0.8f,
-                strafeSpeed = 1.5f,
-                // The squishiest of the three: one clean hit interrupts a cast.
-                // Mirrors RangedCaster.json's maxPoise.
-                maxPoise = 25f,
-                // Mirrors RangedCaster.json's soulReward.
-                soulReward = 8,
-            };
-
-            tuning.ScaleToPixels();
-            return tuning;
-        }
-
-        public static WrathMiniBossData CreateWrathMiniBoss(Color bossColor)
-        {
-            var tuning = new WrathMiniBossData
-            {
-                maxHealthBoss = 180f,
-                moveSpeedBoss = 2.5f,
-                attackDamageSlash = 18f,
-                attackDamageSlam = 22f,
-                attackDamageRage = 12f,
-                phaseThreshold = 0.5f,
-                phaseSpeedMultiplier = 1.4f,
-                phaseAttackCooldownMultiplier = 0.6f,
-                slashTelegraphTime = 0.85f,
-                slashDuration = 0.35f,
-                slashRange = 1.6f,
-                slashCooldown = 1.8f,
-                slamTelegraphTime = 1f,
-                slamDuration = 0.45f,
-                slamRange = 2.2f,
-                slamShockwaveForce = 7f,
-                slamCooldown = 2.5f,
-                rushTelegraphTime = 0.8f,
-                rushSpeed = 11f,
-                rushDuration = 0.5f,
-                rushCooldown = 3f,
-                bossColor = bossColor,
-                bossBodySize = new Vector2(1.2f, 2f),
-                stunDuration = 1f,
-                // Deep enough that chip damage never staggers it: breaking the boss takes committed heavy
-                // attacks, which is the trade the poise gauge exists to force.
-                // Mirrors WrathMiniBoss.json's maxPoise, poiseRegenDelay and soulReward.
-                maxPoise = 90f,
-                poiseRegenDelay = 3f,
-                soulReward = 300,
-            };
-
-            tuning.ScaleToPixels();
-            return tuning;
-        }
     }
 }

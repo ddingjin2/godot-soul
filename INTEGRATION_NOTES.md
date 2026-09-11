@@ -304,3 +304,15 @@ same parameter. `CombatTuningData.Shared`, `DifficultyTuningData.Shared` and `Cu
 are **null** while their file is missing rather than a default-filled object; `GameplayBootstrap` checks
 all three and `GameplayTuningCatalog.IsComplete` (new) before it builds, so a consumer that runs at all
 can still assume non-null. A tool or test that reads `.Shared` without the bootstrap must handle null.
+
+### `GameplayTuningDefaults` lost its four enemy factories
+
+Second-phase stage K1, decision D3. `GameplayTuningDefaults.CreateMeleeGrunt(Color)`,
+`CreateLeapingAttacker()`, `CreateRangedCaster()` and `CreateWrathMiniBoss(Color)` are deleted. A caller
+that wants an archetype's numbers loads the design file through that type's own `Load()` -
+`MeleeGruntData.Load()`, `LeapingAttackerData.Load()`, `RangedCasterData.Load()`,
+`WrathMiniBossData.Load()` - which is also where the metres-to-pixels pass runs. Each call returns a
+fresh object, so a test may still edit one field before handing it to `SetTuningData`.
+`GameplayEnemySpawner` reads `catalog.X` directly; the catalog is complete by the time it runs (K0).
+The four constants (`SoulStainPickupDelay`, `CheckpointZoneRadius`, `LockOnRange`, `LockOnBreakRange`)
+stay until K5.

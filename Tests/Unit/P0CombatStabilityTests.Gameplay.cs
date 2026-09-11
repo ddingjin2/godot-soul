@@ -149,6 +149,7 @@ namespace MyGame.Tests
                     null);
 
                 var boss = new WrathMiniBoss { Name = "VictoryBoss" };
+                boss.SetTuningData(WrathMiniBossData.Load());
                 AddBoxShape(boss);
                 var bossHealth = new Health { Name = nameof(Health) };
                 boss.AddChild(bossHealth);
@@ -248,9 +249,9 @@ namespace MyGame.Tests
         [Test]
         public void GameplayEnemyTelegraphsAreReadableForParry()
         {
-            MeleeGruntData melee = GameplayTuningDefaults.CreateMeleeGrunt(Colors.Red);
-            LeapingAttackerData leaper = GameplayTuningDefaults.CreateLeapingAttacker();
-            WrathMiniBossData boss = GameplayTuningDefaults.CreateWrathMiniBoss(Colors.Red);
+            MeleeGruntData melee = MeleeGruntData.Load();
+            LeapingAttackerData leaper = LeapingAttackerData.Load();
+            WrathMiniBossData boss = WrathMiniBossData.Load();
 
             // Seconds, not distances - no PPU scaling on any of these four.
             Assert.GreaterOrEqual(melee.telegraphTime, 0.8f, "Melee grunt telegraph should be slow enough to parry.");
@@ -531,6 +532,7 @@ namespace MyGame.Tests
             // body here (EnemyStateMachine is a CharacterBody2D), so the actor is a MeleeGrunt with the
             // health component as a child node. PPU on every position below; none of them is vertical.
             var enemy = new MeleeGrunt { Name = "ContextEnemy", Position = new Vector2(World.U(2f), 0f) };
+            enemy.SetTuningData(MeleeGruntData.Load());
             var enemyHealth = new Health { Name = nameof(Health) };
             enemy.AddChild(enemyHealth);
             Spawn(enemy);
@@ -538,6 +540,7 @@ namespace MyGame.Tests
             enemyHealth.SetHealth(20f);
 
             var boss = new WrathMiniBoss { Name = "ContextBoss", Position = new Vector2(World.U(4f), 0f) };
+            boss.SetTuningData(WrathMiniBossData.Load());
             var bossHealth = new Health { Name = nameof(Health) };
             boss.AddChild(bossHealth);
             Spawn(boss);
