@@ -6,7 +6,7 @@
 
 Unity 6 → Godot 4.7.2 이식이 끝났고, Godot 제작 규칙 4개로의 전환도 **일정에 있던 단계는 전부
 끝났다.** 2차(완전 준수) 계획은 K0~K6이 착지했고 K7·K8이 남았다 — 그 전에 작은 잔여 묶음 **K5b**가
-승인 대기다.
+승인됐고 명세가 계획서 §K5b에 있다.
 
 | 축 | 상태 |
 |---|---|
@@ -23,7 +23,7 @@ Unity 6 → Godot 4.7.2 이식이 끝났고, Godot 제작 규칙 4개로의 전�
 ## 브랜치
 
 `master`가 이식 본체, `refactor/godot-scene-data`가 전환 브랜치. **병합하지 않았고 push한 적도
-없다.** 원격 없음. 이번 세션(09-11~12) 커밋 17개: K1 2, K2~K4 7, K5~K6 4, 문서 4. 풀 스위트 4회(K1,
+없다.** 원격 없음. 이번 세션(09-11~12) 커밋 18개: K1 2, K2~K4 7, K5~K6 4, 문서 5(K5b 명세 포함). 풀 스위트 4회(K1,
 K2~K4 병합, K2~K4 최종, K5~K6 최종).
 
 ## 착지한 것 — 이번 세션(09-11~12)
@@ -44,15 +44,9 @@ K2~K4 병합, K2~K4 최종, K5~K6 최종).
 - 에이전트 각자: build + 헤드리스 스모크(GameplayScene + 챕터 2~8) 0 오류, 필터 테스트 K6 31건, K5-boss 31건, K5-core 31건 전부 통과. 저장 접촉 클래스(`GameSave|PlayerPrefs`)는 코디네이터 풀 스위트로만.
 - 안 한 것: 육안 확인 전부(아래).
 
-## 다음에 할 일 — K5b(승인 대기) → K7 → K8
+## 다음에 할 일 — K5b(승인, 명세 있음) → K7 → K8
 
-**결정 필요 — K5b.** `PLAN_CLOSEOUT.md` 검토 이력 마지막 항목. 전부 작고 서로소, 한 명이 한 번에:
-1. `GameplayHud.GetSinColor` SinState 색 7 → `MenuTheme.tres` 항목(§4 면제 아님).
-2. `GameplayPlayerSpawner` `StartingHealth`/`StartingHumanity` 상수 2(사이트 3) → `PlayerResources.json` 값.
-3. B1 잔여 거울: `GameplayWorldHealthBar` `_size`/`_offset`/`_fillColor` 초기화값 3 + `Scenes/World/WorldHealthBar.tscn` 같은 값 3, `Scenes/World/AttackReadout.tscn` scale/modulate/z_index 3, `Scenes/World/Checkpoint.tscn` `radius = 150` — 전부 코드가 매번 덮어씀.
-4. `EnemyStateMachine` 죽은 사본 4(`gravity`, `_ledgeProbeAhead`, `_ledgeProbeDepth`, `perfectParryStunMultiplier` — 이제 `Configure`가 항상 덮어씀) + `GetDetectionRange() => World.U(5f)`(전 아키타입이 override).
-5. `GameplayReadabilityDefaults.Create()` null 미체크 소비자 3(`GameplayLockOnMarker`, `GateTravelZone.TitleFor`, `GameplayCutsceneTriggers.MoveRigToBoss`) → D1 처리.
-6. fixture 공격 행 14개는 `telegraphColor`/`hazardColor` 없이 투명하게 예고한다 — 테스트가 안 읽으니 그대로 둠(기록만).
+**K5b — 승인됨, 명세는 `PLAN_CLOSEOUT.md` §K5b.** 다음 세션은 그 명세로 에이전트 1명(opus, worktree)을 띄우면 된다. 여섯 항목: SinState 색 7 → Theme, 플레이어 시작 자원 상수 2, `Scenes/World` 거울 3파일, `EnemyStateMachine` 죽은 사본 4 + 도달 불가 메서드 1, `Create()` null 미처리 소비자 2, 기록만 1. 줄 번호·값·정본 키·검증 방법이 전부 명세에 있다.
 
 - **K7** (단독, 마지막 큰 것): `CheckpointZone`·`GateTravelZone`·`Camera2D` fallback 생성 삭제, `EnsureComponent` → `GetComponent` + null이면 `PushError`, `SceneryPiece.tscn`(D8), `CutsceneDirector`를 `GameplayScene.tscn` + 챕터 셸 8개에 authoring, `GameplayBuildShim`은 `SceneRoot`·`ActiveSceneName`·`SetActive`만 남기고 `NewObject`/`AddComponent`/`EnsureComponent` 삭제 — 테스트가 쓰는 `AddComponent<` 30곳은 `Tests/Framework/NodeBuild.cs`로. 씬 셸 8개 동시 편집이라 한 명.
 - **K8** 문서 종결: `AGENTS.md` "현재 준수 상태" → 준수, `PLAN.md`·`PORTING_GUIDE.md` 종결 표기, `AUDIT_NUMBERS.md:297` `stunDuration` 문장 갱신, `INTEGRATION_NOTES`·`PORT_STATUS` 정리.
@@ -64,7 +58,7 @@ K2~K4 병합, K2~K4 최종, K5~K6 최종).
 그 밖에 남은 것은 전부 **사람의 판단이 필요한 것**이다.
 
 1. **씬 S9 — 아레나를 챕터 셸에 배치.** 기획자 소유 데이터의 소유권 이동이라 **물어본 뒤에** 한다.
-2. **`master`로의 병합 여부.** 커밋 53개가 전환 브랜치에만 있다.
+2. **`master`로의 병합 여부.** 커밋 54개가 전환 브랜치에만 있다.
 
 ## 사람이 봐야 하는 것 — 자동 검증으로 못 잡는다
 

@@ -109,14 +109,86 @@ keep-in-code 목록, `GameplayVisualFactory`, `DebugVisualization`. 이들은 "�
 | **K4** | **완료.** `Create()` 92 리터럴 → 0(파일 적용만), `CreateBase()` 217 → 정렬 순서 20(D2). `ReadabilityThemeWriter` + 독 버튼 삭제(D7). identity 테스트 2개 → `DesignFileCompletenessTests` 1개(D6) — 파일→타입 표 전수, 누락 키를 이름으로 보고. 부수 삭제: `GameplayReadabilityThemeData.CopyFrom`, `internal ToGodot(float,float)` 2개. 발견: `P0CombatStabilityTests`의 `CheckpointRunPlatform` 어서션은 코드 사본에만 있던 이름 — 출하 계약(이름 있는 플랫폼 목록)으로 교체, `PORT_STATUS.md` | 3 + addons 2 + 테스트 4 | 중간 | 완료 |
 | **K5** | **완료(두 명).** core: A7 24곳 중 19 제거(5는 옵셔널 컴포넌트 null 가드, 숫자 아님), HUD 팔레트 5 + alpha 4 → `MenuTheme.tres` `Palette` 항목 9, 타이밍 3 → `UiTuning.json`(카탈로그 등록, D6 표 추가), B3 색 2 → `Art/Readability.json`, `GameplayTuningDefaults` 삭제. boss: encounter 상수 12 + 패턴 메서드 + 필드 → `encounterData` 필수(`WrathMiniBoss` `_Ready`, 챕터 보스 `_Process` 첫 프레임 가드), `BossAttackProfile` 초기화값 24 → 0, `EnemyStateMachine` 4 → 0 — 값은 이미 `WorldTuning.json`에 한 번 있어 `Configure`로만 들어옴(브리프의 "12파일에 복사"는 중복이라 하지 않음). JSON 추가 0. 기대값 변화 0. 발견은 검토 이력 | core 23 + boss 13 | 중간 | 완료 |
 | **K6** | **완료.** 액터 씬 7개에서 스포너가 매 스폰 쓰는 속성 60줄 + 빈 override 블록 8 삭제; 스폰 결과 493값 전후 동일(probe). `GameplaySceneDefaultsAsset` 초기화값 4 → 0. 발견: `Scenes/World/AttackReadout.tscn`·`WorldHealthBar.tscn`·`Checkpoint.tscn`이 같은 거울 패턴(K6 범위 밖) | tscn 7 + 1 | 낮음 | 완료 |
+| **K5b** | **승인, 명세는 아래 §K5b.** K5·K6 잔여: SinState 색 7 → Theme, 플레이어 시작 자원 상수 2, `Scenes/World` 거울 3파일(WorldHealthBar·AttackReadout·Checkpoint), `EnemyStateMachine` 죽은 사본 4 + 도달 불가 메서드 1, `Create()` null 미처리 소비자 2. 기록만 1 | 약 9 + tscn 3 | 낮음 | 단독, K7 전 |
 | **K7** | 규칙 2·3 잔여: `CheckpointZone`·`GateTravelZone`·`Camera2D` fallback 생성 삭제(씬이 authoring, 테스트는 K1에서 씬 인스턴스로); `EnsureComponent` → `GetComponent` + null이면 `PushError`; `SceneryPiece.tscn`(D8); `CutsceneDirector`를 `GameplayScene.tscn`과 챕터 셸 8개에 authoring; `GameplayBuildShim`은 `SceneRoot`·`ActiveSceneName`·`SetActive`만 남기고 `NewObject`/`AddComponent`/`EnsureComponent` 삭제 — 테스트가 쓰는 건 `Tests/Framework/NodeBuild.cs`로 이동 | 약 8 + tscn 9 + shim + 테스트 | 높음 — 씬 셸 8개 동시 편집 | 단독, 마지막 |
 | **K8** | D6 완전성 테스트 1개. 문서: `AGENTS.md` "현재 준수 상태"를 "준수"로, `PLAN.md`·`PORTING_GUIDE.md` 종결 표기, `PORT_STATUS`·`INTEGRATION_NOTES`(시그니처 다수), 인수인계 | 문서 | 낮음 | 단독 |
 
-**순서:** K0 → K1 → (K2 ∥ K3 ∥ K4) → (K5 ∥ K6) → K7 → K8. 병렬은 파일 서로소일 때만, 담당별 소유 파일
+**순서:** K0 → K1 → (K2 ∥ K3 ∥ K4) → (K5 ∥ K6) → K5b → K7 → K8. 병렬은 파일 서로소일 때만, 담당별 소유 파일
 목록 명시, `run-tests.ps1`은 한 명만, 풀 스위트는 착지마다 코디네이터가 한 번(11분).
 
 **K1이 문이다.** K1 없이 K2~K4를 하면 스위트의 맨손 액터가 전부 `PushError`로 죽는다. K1은 스위트가 정본
 파일만으로 도는 상태를 만드는 단계라 가장 크고 가장 먼저다.
+
+## K5b — 잔여 정리 명세 (2026-09-12 승인, 다음 세션의 시작점)
+
+목적: K5·K6가 남긴 코드 사본·씬 거울·null 미처리 소비자를 한 번에 닫는다. 한 명, `isolation: worktree`,
+`model: opus`. 여섯 항목이 파일 서로소라 병렬이 필요 없다. 착지 = 풀 스위트 210 / 1 / 1 유지,
+`DesignFileCompletenessTests` green, 값 동일 probe. 측정치는 전부 `ada3269` 기준 — 에이전트가 다시 잰다
+(브리프는 방향, 사실은 현장).
+
+### 소유 파일
+
+- `Scripts/UI/GameplayHud.cs`, `Resources/UI/MenuTheme.tres`
+- `Scripts/Gameplay/GameplayPlayerSpawner.cs`
+- `Scripts/Gameplay/GameplayWorldHealthBar.cs`, `Scenes/World/WorldHealthBar.tscn`, `Scenes/World/AttackReadout.tscn`,
+  `Scenes/World/Checkpoint.tscn`
+- `Scripts/Enemy/EnemyStateMachine.cs` (+ `Scripts/Gameplay/GameplayEnemySpawner.cs`와 `Tests/Unit/P0CombatStabilityTests.cs`는
+  `Configure`/`DetectPlayer` 시그니처가 바뀔 때만)
+- `Scripts/Gameplay/GameplayLockOnMarker.cs`, `Scripts/Gameplay/GateTravelZone.cs`
+- 테스트: 위 변경이 깨뜨리는 파일만. 문서는 코디네이터.
+
+### 항목
+
+1. **SinState 색 7 → Theme.** `GameplayHud.cs:917-933` `GetSinColor`: Wrath `#8C3428`, Sloth `#3F4A63`, Pride `#7A6A3C`,
+   Gluttony `#8C5A28`, Greed `#8C7A28`, Envy `#3F6347`, Lust `#7A3F5C`. §4 면제 아님(§2.9 UI 표현 블록).
+   먼저 `SinTuning.json`·`Resources/Art/Readability.json`에 같은 색이 이미 있는지 확인 — 있으면 그쪽을 읽고 Theme에
+   중복을 만들지 않는다. 없으면 K5가 만든 `MenuTheme.tres`의 `Palette` 타입에 `sin_wrath` … `sin_lust` 7항목을
+   추가하고 기존 `Hue(token)`으로 읽는다.
+2. **플레이어 시작 자원 상수 2.** `GameplayPlayerSpawner.cs:78-79` `StartingHealth = 100f`, `StartingHumanity = 100f`;
+   사이트 `:89-91` `resources != null ? resources.x : Const` 3곳. 정본 `PlayerResources.json` `maxHealth`·`startingHealth`·
+   `startingHumanity` = 100. 상수 삭제, `resources` null이면 D1(`PushError` + 스폰 중단). 부트스트랩이 카탈로그 완전성을
+   보장하므로 출하 경로 변화 없음.
+3. **B1 잔여 거울 — 코드가 매번 덮어쓰는 씬 값.** K6 방식 그대로: 어느 쪽이 이기는지 코드 줄로 증명한 뒤 지는 쪽만
+   지운다. 부팅 후 값 dump 전후 동일.
+   - `GameplayWorldHealthBar.cs:27,30,32` `_size`·`_offset`·`_fillColor` 초기화값 ↔ `Scenes/World/WorldHealthBar.tscn:33,39,52,55`
+     (Frame position `(0,-120)`·scale `(16,2.5)`, Fill scale `(15,1.5)`·modulate `(0.85,0.08,0.08)`). `Initialize(:67-69)`가
+     세 필드를 쓰고 `ApplyLayout`이 `_barRoot.Position = _offset`, `_fillRenderer.Modulate = _fillColor`, `_fill.Scale`을 쓴다.
+     `Initialize` 없이 쓰는 경로가 있으면 그 경로는 D1(오류)로 만든다. z_index 40/41은 코드가 안 쓰면 씬에 남긴다.
+   - `Scenes/World/AttackReadout.tscn:23,26,28` scale `(1.640625,1.171875)`·modulate `(0.82,0.9,1,0.16)`·z_index 8 ↔
+     `GameplayEnemySpawner.DressAttackReadout`(`:594-595` Modulate·ZIndex + 크기)과 플레이어 스포너가 매 스폰 덮어씀.
+     단 `GameplayTelegraphPulse`가 ready 시점의 scale을 캐시한다(tscn 주석 `:7`, `:32-33`) — 순서(스포너 dress → 트리
+     진입 → `_Ready` 캐시)를 확인하고 지운다.
+   - `Scenes/World/Checkpoint.tscn:31` `radius = 150.0` ↔ `CheckpointZone.cs:257-258` 씬 원형이어도
+     `circle.Radius = AuthoredRadius()`로 매 인스턴스 덮어씀(`resource_local_to_scene`). 삭제. `:249-253`의
+     `new CollisionShape2D` fallback은 K7(C1) — 건드리지 않는다.
+4. **`EnemyStateMachine` 죽은 사본 4 + 도달 불가 메서드 1.** `:72` `gravity = World.U(9.81f)`, `:87-88`
+   `_ledgeProbeAhead = World.U(0.35f)`·`_ledgeProbeDepth = World.U(1.1f)`, `:96` `perfectParryStunMultiplier = 1.6f`.
+   `Configure(:109-126)`이 넷 다 덮어쓰고 스포너(`GameplayEnemySpawner:447-448` 등)와 P0 fixture(`ConfigureFromDesign<T>`)가
+   항상 부른다. 초기화값 삭제. 정본: `WorldTuning.json` `enemyGravity`·`enemyLedgeProbeForward`·`enemyLedgeProbeDepth`,
+   `PlayerCombat.json` `perfectParryStunMultiplier`. `Configure`를 안 부른 액터는 중력 0으로 떠 있게 되므로 D1대로
+   `_Ready`에서 미호출을 감지(플래그) + `PushError` + 정지. `GetDetectionRange() => World.U(5f)`(`:365`): 아키타입 4개는
+   `DetectPlayer`를 override(`MeleeGrunt:206`, `LeapingAttacker:195`, `RangedCaster:213`, `WrathMiniBoss:519`)하고 챕터
+   보스는 `GetDetectionRange`를 override(`:1197`)하므로 base 본체는 도달 불가 → `abstract`. 시그니처 변경은
+   `INTEGRATION_NOTES`용으로 보고.
+5. **`GameplayReadabilityDefaults.Create()` null 미처리 소비자 2.** `GameplayLockOnMarker.cs:93`, `GateTravelZone.cs:357`.
+   (`GameplayCutsceneTriggers`는 K5-core 보고와 달리 `Create()`를 부르지 않는다 — 확인 완료.) null이면 `PushError` +
+   return, `CheckpointZone.EnsureMarker`가 이미 하는 모양 그대로.
+6. **기록만.** 챕터 보스 테스트 fixture 6파일의 인라인 공격 행 14개는 `telegraphColor`/`hazardColor` 없이(투명)
+   예고한다. 테스트가 안 읽고 출하 행 36개는 전부 갖고 있다. 손대지 않는다.
+
+### 검증
+
+- `tools/build.ps1` BUILD OK; 헤드리스 스모크 GameplayScene + 챕터 2~8 오류 0(알려진 `SpriteFrameAnimator` 경고 제외).
+- 값 동일 probe: 항목 1(색 7), 2(자원 3), 3(씬 값 8), 4(넷) — 삭제 전 리터럴 = 삭제 후 읽는 값. 임시 `GD.Print`,
+  `Tests/` 밖, 커밋 전 제거.
+- 필터 테스트는 `GameSave|PlayerPrefs` 없는 클래스만; `DesignFileCompleteness` 필수. 풀 스위트는 코디네이터 1회.
+- 어서션 약화 금지. 기대값이 바뀌면 그 값은 출하되지 않던 것 — 출하 값으로 바꾸고 `PORT_STATUS.md`용으로 old → new 보고.
+- 커밋은 worktree 브랜치에 경로 명시(`git commit -F msg -- <paths>`), 본문 끝에 attribution 2줄.
+
+### 착지 후 남는 코드 fallback
+
+0이어야 한다. `grep -rnE '\?\? (new Color|World\.U|[0-9])' Scripts`와 `[Export]` 초기화값 grep으로 재측정해 K8 문서에
+숫자로 남긴다. 남는 것은 면제(D2)뿐: 정렬 순서 20, §3.13~3.17, §4.
 
 ## 이 계획으로 바뀌는 행동
 
@@ -156,4 +228,4 @@ keep-in-code 목록, `GameplayVisualFactory`, `DebugVisualization`. 이들은 "�
 - 2026-09-10: D1~D8 전부 추천안으로 승인. 시작 가능.
 - 2026-09-12: K2·K3·K4 착지(병렬, worktree 3개, cherry-pick). 계획 밖 발견 3건 — (a) `encounterData == null` 뒤의 `Default*` 상수 13개 + `DefaultPhaseTwoPattern()` + `_postAttackRecoveryTime`, 그리고 `bossData` 숫자 fallback 2곳; (b) `BossAttackProfile` `[Export]` 초기화값 24; (c) `EnemyStateMachine` 기본 클래스 `[Export]` 초기화값(A7 범위). 제안: (a)(b)를 K5에 편입, (c)는 이미 K5. **승인 대기.**
 - 2026-09-12: 위 (a)(b) K5 편입 **승인**. K5는 두 명이 나눠 든다 — core(컴포넌트·HUD·상수 4·`UiTuning.json`)와 boss(encounter 상수·`BossAttackProfile`·`EnemyStateMachine`). K6 병렬. 에이전트는 opus.
-- 2026-09-12: K5(core·boss)·K6 착지. 남은 발견, 전부 작고 서로소 — 제안: **K5b** 한 명, K7 전에. (1) `GameplayHud.GetSinColor` SinState 색 7 → Theme(§4 면제 아님). (2) `GameplayPlayerSpawner` `StartingHealth`/`StartingHumanity` 상수 2, 사이트 3 → `PlayerResources.json` 값. (3) `GameplayWorldHealthBar` `_size`/`_offset`/`_fillColor` 초기화값 3 + `Scenes/World/WorldHealthBar.tscn` 같은 값 3, `Scenes/World/AttackReadout.tscn` scale/modulate/z_index 3, `Scenes/World/Checkpoint.tscn` `radius = 150` — 스포너/코드가 매번 덮어쓰는 거울(B1 잔여). (4) `EnemyStateMachine` 죽은 사본 4(`gravity`, `_ledgeProbeAhead`, `_ledgeProbeDepth`, `perfectParryStunMultiplier`) + `GetDetectionRange() => World.U(5f)`(전 아키타입이 override, 죽은 코드). (5) `GameplayReadabilityDefaults.Create()` null 미체크 소비자 3(`GameplayLockOnMarker`, `GateTravelZone.TitleFor`, `GameplayCutsceneTriggers.MoveRigToBoss`). (6) `AUDIT_NUMBERS.md:297` `stunDuration` 문장 낡음(K8). **승인 대기.**
+- 2026-09-12: K5(core·boss)·K6 착지. 남은 발견, 전부 작고 서로소 — 제안: **K5b** 한 명, K7 전에. (1) `GameplayHud.GetSinColor` SinState 색 7 → Theme(§4 면제 아님). (2) `GameplayPlayerSpawner` `StartingHealth`/`StartingHumanity` 상수 2, 사이트 3 → `PlayerResources.json` 값. (3) `GameplayWorldHealthBar` `_size`/`_offset`/`_fillColor` 초기화값 3 + `Scenes/World/WorldHealthBar.tscn` 같은 값 3, `Scenes/World/AttackReadout.tscn` scale/modulate/z_index 3, `Scenes/World/Checkpoint.tscn` `radius = 150` — 스포너/코드가 매번 덮어쓰는 거울(B1 잔여). (4) `EnemyStateMachine` 죽은 사본 4(`gravity`, `_ledgeProbeAhead`, `_ledgeProbeDepth`, `perfectParryStunMultiplier`) + `GetDetectionRange() => World.U(5f)`(전 아키타입이 override, 죽은 코드). (5) `GameplayReadabilityDefaults.Create()` null 미체크 소비자 3(`GameplayLockOnMarker`, `GateTravelZone.TitleFor`, `GameplayCutsceneTriggers.MoveRigToBoss`). (6) `AUDIT_NUMBERS.md:297` `stunDuration` 문장 낡음(K8). **같은 날 승인 — 명세는 §K5b, 다음 세션이 시작한다.**
