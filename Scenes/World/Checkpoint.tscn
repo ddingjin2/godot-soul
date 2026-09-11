@@ -27,8 +27,7 @@
 ; Local to the scene so a chapter's several bonfires do not share one shape resource.
 resource_local_to_scene = true
 ; WorldTuning.json checkpointZoneRadius = 1.5 m -> World.U -> 150 px. Rebound from the design file
-; on every instance; this is what a zone built with no catalog gets
-; (GameplayTuningDefaults.CheckpointZoneRadius, the same 1.5 m).
+; on every instance; a zone with no catalog reports an error and keeps this shape (K5).
 radius = 150.0
 
 [node name="Checkpoint" type="Node2D"]

@@ -325,7 +325,7 @@ namespace MyGame.Tests
 
             FieldInfo frameColor = typeof(GameplayWorldHealthBar)
                 .GetField("FrameColor", BindingFlags.NonPublic | BindingFlags.Static);
-            Assert.NotNull(frameColor, "GameplayWorldHealthBar should keep its FrameColor constant.");
+            Assert.NotNull(frameColor, "GameplayWorldHealthBar should still expose FrameColor, now read from the palette.");
             Assert.IsTrue(
                 builtFrame.Modulate.IsEqualApprox((Color)frameColor.GetValue(null)),
                 $"The frame Build creates ({builtFrame.Modulate}) should be painted with GameplayWorldHealthBar.FrameColor; Build reuses an existing HealthBar/Frame instead of recolouring it.");
