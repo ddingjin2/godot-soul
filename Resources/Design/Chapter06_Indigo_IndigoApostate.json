@@ -18,7 +18,9 @@
     "afterimageSpread": 2.4,
     "afterimageLifetime": 1.1,
 
+    "approachHopInterval": 0.0,
     "approachHopImpulse": 5.0,
+    "chantInterval": 0.0,
     "chantDuration": 2.5,
     "chantHealPerSecond": 12.0,
 
@@ -35,6 +37,7 @@
     "telegraphPulseSpeed": 8.0,
     "telegraphPulseAmplitude": 0.2,
 
+    "stanceRotationInterval": 0.0,
     "attacks": [
         {
             "attackId": "shadow_reach",

@@ -16,10 +16,13 @@
 
     "stanceRotationInterval": 6.0,
 
+    "afterimageCount": 0,
     "afterimageSpread": 2.4,
     "afterimageLifetime": 1.0,
 
+    "approachHopInterval": 0.0,
     "approachHopImpulse": 5.0,
+    "chantInterval": 0.0,
     "chantDuration": 2.5,
     "chantHealPerSecond": 12.0,
 

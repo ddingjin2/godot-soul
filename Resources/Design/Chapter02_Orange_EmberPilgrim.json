@@ -17,8 +17,10 @@
     "approachHopInterval": 0.9,
     "approachHopImpulse": 5.5,
 
+    "chantInterval": 0.0,
     "chantDuration": 2.5,
     "chantHealPerSecond": 12.0,
+    "afterimageCount": 0,
     "afterimageSpread": 2.2,
     "afterimageLifetime": 0.9,
 
@@ -35,6 +37,7 @@
     "telegraphPulseSpeed": 8.0,
     "telegraphPulseAmplitude": 0.2,
 
+    "stanceRotationInterval": 0.0,
     "attacks": [
         {
             "attackId": "ember_jab",

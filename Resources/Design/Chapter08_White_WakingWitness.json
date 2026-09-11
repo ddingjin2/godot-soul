@@ -24,6 +24,7 @@
     "afterimageSpread": 3.0,
     "afterimageLifetime": 0.8,
 
+    "approachHopInterval": 0.0,
     "approachHopImpulse": 5.0,
 
     "maxPoise": 120.0,
