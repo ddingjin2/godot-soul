@@ -15,54 +15,54 @@ namespace MyGame.Enemy
     public sealed partial class LeapingAttackerData : EnemyTuningData
     {
         // Leap Specific
-        [Export] public float leapSpeed = 10f;
-        [Export] public float leapHeight = 3f;
-        [Export] public float maintainDistance = 4f;
-        [Export] public float landingVulnerabilityTime = 0.5f;
-        [Export] public float leapTelegraphTime = 1.1f;
+        [Export] public float leapSpeed;
+        [Export] public float leapHeight;
+        [Export] public float maintainDistance;
+        [Export] public float landingVulnerabilityTime;
+        [Export] public float leapTelegraphTime;
 
         /// <summary>
         /// Half the width of the patrol beat, in metres, measured from where the leaper spawned. It is
         /// also the hard leash on combat movement - <c>ClampHomewardDirection</c> refuses to carry the
         /// body past it - so widening this widens the whole fight, not just the walk.
         /// </summary>
-        [Export] public float patrolDistance = 3f;
+        [Export] public float patrolDistance;
 
         /// <summary>Seconds the leaper stands still at each end of its patrol beat.</summary>
-        [Export] public float patrolIdleTime = 0.5f;
+        [Export] public float patrolIdleTime;
 
         /// <summary>
         /// Half-width of the band around <c>maintainDistance</c> inside which the leaper simply stands,
         /// in metres. This is the spacing of the whole fight: too narrow and it jitters, too wide and it
         /// never closes.
         /// </summary>
-        [Export] public float maintainDistanceDeadband = 1f;
+        [Export] public float maintainDistanceDeadband;
 
         /// <summary>
         /// What damage is multiplied by while the leaper is in its landing-vulnerability window. The
         /// window's length is <c>landingVulnerabilityTime</c>; this is its payoff, and the two together
         /// are the archetype's whole trade.
         /// </summary>
-        [Export] public float landingPunishMultiplier = 2f;
+        [Export] public float landingPunishMultiplier;
 
         // --- Telegraph readability. The blend target (yellow) is the shared danger colour and stays in
         // code with the rest of the palette; what is authored here is this archetype's own base. None
         // of the four is a distance, so ScaleToPixels leaves them alone. ---
 
         /// <summary>Radians per second the wind-up pulse runs at.</summary>
-        [Export] public float telegraphPulseSpeed = 8f;
+        [Export] public float telegraphPulseSpeed;
 
         /// <summary>How far the wind-up pulse swings, as a fraction of rest scale.</summary>
-        [Export] public float telegraphPulseAmplitude = 0.15f;
+        [Export] public float telegraphPulseAmplitude;
 
         /// <summary>How far the body tints toward the danger colour while winding up. 1 is the danger colour outright.</summary>
-        [Export] public float telegraphBlend = 0.7f;
+        [Export] public float telegraphBlend;
 
         /// <summary>
         /// The colour the telegraph blends <i>from</i>. Deliberately not <c>enemyColor</c>: muting the
         /// body must not drag the danger read dark. See Docs/MoodDirection.md "The lerp trap".
         /// </summary>
-        [Export] public Color telegraphColor = new Color(1f, 0.5f, 0f);
+        [Export] public Color telegraphColor;
 
         public override void ScaleToPixels()
         {

@@ -7,8 +7,8 @@ namespace MyGame.Combat
     /// Designer-owned difficulty weights: what the player takes and what the enemies have on Easy
     /// and Hard, and how much each New Game+ lap adds. Loaded from
     /// <c>Resources/Design/DifficultyTuning.json</c>; a missing file is an error - <see cref="Load"/>
-    /// returns null and the bootstrap refuses to build the arena. The initialisers below are what a
-    /// key the file leaves out reads as.
+    /// returns null and the bootstrap refuses to build the arena. A key the file leaves out reads
+    /// as zero.
     /// </summary>
     /// <remarks>
     /// UNITS: nothing here is spatial. Every field is a multiplier, so no field is scaled by
@@ -21,15 +21,15 @@ namespace MyGame.Combat
         public const string FileName = "DifficultyTuning";
 
         /// <summary>How much of an incoming hit the player takes.</summary>
-        [Export] public float easyPlayerDamageTaken = 0.7f;
-        [Export] public float hardPlayerDamageTaken = 1.4f;
+        [Export] public float easyPlayerDamageTaken;
+        [Export] public float hardPlayerDamageTaken;
 
         /// <summary>Enemy and boss health.</summary>
-        [Export] public float easyEnemyHealth = 0.85f;
-        [Export] public float hardEnemyHealth = 1.25f;
+        [Export] public float easyEnemyHealth;
+        [Export] public float hardEnemyHealth;
 
         /// <summary>Added to the enemy health multiplier per completed cycle of the road.</summary>
-        [Export] public float newGamePlusEnemyHealthPerCycle = 0.25f;
+        [Export] public float newGamePlusEnemyHealthPerCycle;
 
         public static DifficultyTuningData Load(string path = "Design/" + FileName)
         {

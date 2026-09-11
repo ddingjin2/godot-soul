@@ -20,16 +20,16 @@ namespace MyGame.Combat
     public partial class SinTuningData : Resource
     {
         // Resonance
-        [Export] public float maxResonance = 100f;
-        [Export] public float resonancePerHit = 5f;
-        [Export] public float resonancePerParry = 25f;
-        [Export] public float resonancePerDamage = 3f;
+        [Export] public float maxResonance;
+        [Export] public float resonancePerHit;
+        [Export] public float resonancePerParry;
+        [Export] public float resonancePerDamage;
 
         // Activation
-        [Export] public float activeDuration = 5f;
-        [Export] public float cooldownDuration = 10f;
-        [Export] public float resonanceCost = 50f;
-        [Export] public float humanityCostOnActivate = 5f;
+        [Export] public float activeDuration;
+        [Export] public float cooldownDuration;
+        [Export] public float resonanceCost;
+        [Export] public float humanityCostOnActivate;
 
         /// <summary>
         /// One row per sin, matched on its own sin field rather than on position. A sin with no row runs

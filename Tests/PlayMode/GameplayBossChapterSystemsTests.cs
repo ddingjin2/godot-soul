@@ -190,6 +190,10 @@ namespace MyGame.Tests
         {
             return "{\"maxHealth\":200,\"moveSpeed\":2,\"detectionRange\":8,\"attackRange\":1.5," +
                    "\"phaseTwoHealthThreshold\":0.1,\"phaseTwoSpeedMultiplier\":1,\"phaseTwoCooldownMultiplier\":1," +
+                   // Stun, poise, body and pulse were class defaults until K3; a boss with a zero body or a
+                   // zero stun is not the one these tests were written against, so the fixture says them.
+                   "\"maxPoise\":90,\"poiseHeavyMultiplier\":2,\"poiseRegenDelay\":3,\"poiseRegenRate\":30,\"stunDuration\":1,\"soulReward\":300," +
+                   "\"bodySize\":{\"x\":1.6,\"y\":2.3},\"telegraphPulseSpeed\":8,\"telegraphPulseAmplitude\":0.2," +
                    "\"bossName\":\"ChapterSystemsFixture\",\"chapterName\":\"Test Chapter\"," +
                    extraFields +
                    "\"attacks\":[" + attackRows + "]}";

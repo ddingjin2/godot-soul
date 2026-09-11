@@ -10,8 +10,7 @@ namespace MyGame.Enemy
     /// fight, how the phase-two pattern is weighted.
     ///
     /// They were constants on <see cref="WrathMiniBoss"/>, which meant a second boss with a wider arena
-    /// was a code change. The constants stay as the fallback so a boss built with no catalog - every one
-    /// the test runners make - fights exactly as it did.
+    /// was a code change.
     ///
     /// The three phase-two weights are relative, not percentages: they are summed and normalised, so
     /// 4/3/3 and 40/30/30 mean the same thing and no edit can leave them adding up to something other
@@ -27,57 +26,57 @@ namespace MyGame.Enemy
         /// How far left of its spawn the boss may walk. The fight is anchored on the spawn point, not on
         /// a centre object, so a boss dropped anywhere carries its arena with it.
         /// </summary>
-        [Export] public float arenaLeftOffset = 5f;
+        [Export] public float arenaLeftOffset;
 
         /// <summary>
         /// How far right of its spawn the boss may walk. Short on purpose: the wall is behind the boss,
         /// so the player is always the one with room to retreat.
         /// </summary>
-        [Export] public float arenaRightOffset = 1.1f;
+        [Export] public float arenaRightOffset;
 
         // Engagement
         /// <summary>
         /// How far the boss notices the player from. Wider than a normal enemy's, so the fight starts
         /// when the player enters the arena rather than when they walk into reach.
         /// </summary>
-        [Export] public float detectionRange = 8f;
+        [Export] public float detectionRange;
 
         // Intro
         /// <summary>
         /// Longest the intro sequence will wait for a cutscene listener before starting the fight anyway.
         /// A hold that never lifts would leave the boss standing in a fight that never begins.
         /// </summary>
-        [Export] public float introHoldTimeout = 2.7f;
+        [Export] public float introHoldTimeout;
 
         // Recovery
         /// <summary>
         /// The opening after an attack ends. This is the player's whole punish window, so it is the
         /// single most feel-critical number here.
         /// </summary>
-        [Export] public float postAttackRecoveryTime = 0.5f;
+        [Export] public float postAttackRecoveryTime;
 
         /// <summary>How much of that window phase two keeps. Below 1 means the enraged boss gives less room.</summary>
-        [Export] public float phaseTwoRecoveryMultiplier = 0.8f;
+        [Export] public float phaseTwoRecoveryMultiplier;
 
         // Phase Two Pattern
         /// <summary>Relative weight of the slash in phase two. Summed with the other two and normalised.</summary>
-        [Export] public float phaseTwoSlashWeight = 0.4f;
+        [Export] public float phaseTwoSlashWeight;
 
-        [Export] public float phaseTwoSlamWeight = 0.3f;
-        [Export] public float phaseTwoRushWeight = 0.3f;
+        [Export] public float phaseTwoSlamWeight;
+        [Export] public float phaseTwoRushWeight;
 
         /// <summary>
         /// Extra movement speed while rage is up, on top of the phase-two multiplier in the boss's own
         /// tuning.
         /// </summary>
-        [Export] public float rageSpeedMultiplier = 1.2f;
+        [Export] public float rageSpeedMultiplier;
 
         // Presentation
         /// <summary>
         /// Beat between the death blow and the victory callback, so the kill reads before the panel
         /// arrives.
         /// </summary>
-        [Export] public float victoryPresentationDelay = 1.5f;
+        [Export] public float victoryPresentationDelay;
 
         /// <summary>
         /// How many links a chain may run before the boss has to stop and let the player back in. A row
@@ -85,7 +84,7 @@ namespace MyGame.Enemy
         /// at all - so this is both the designer's pacing knob and the cap that keeps an authoring
         /// mistake from locking the player out. A count, so it is not scaled.
         /// </summary>
-        [Export] public int maxChainSteps = 4;
+        [Export] public int maxChainSteps;
 
         private bool _scaledToPixels;
 

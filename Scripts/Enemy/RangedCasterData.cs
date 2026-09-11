@@ -16,59 +16,59 @@ namespace MyGame.Enemy
     public sealed partial class RangedCasterData : EnemyTuningData
     {
         // Ranged Specific
-        [Export] public float projectileSpeed = 5f;
-        [Export] public float projectileDamage = 8f;
-        [Export] public float minDistance = 5f;
-        [Export] public float repositionDistance = 3f;
-        [Export] public float castTelegraphTime = 1.1f;
-        [Export] public float strafeSpeed = 1.5f;
+        [Export] public float projectileSpeed;
+        [Export] public float projectileDamage;
+        [Export] public float minDistance;
+        [Export] public float repositionDistance;
+        [Export] public float castTelegraphTime;
+        [Export] public float strafeSpeed;
 
         /// <summary>Half the width of the patrol beat, in metres, and the hard leash on how far the caster may drift from where it spawned.</summary>
-        [Export] public float patrolDistance = 3f;
+        [Export] public float patrolDistance;
 
         /// <summary>Seconds the caster stands still at each end of its patrol beat.</summary>
-        [Export] public float patrolIdleTime = 0.5f;
+        [Export] public float patrolIdleTime;
 
         /// <summary>Shortest wait, in seconds, before the caster may back off again.</summary>
-        [Export] public float repositionCooldownMin = 1.2f;
+        [Export] public float repositionCooldownMin;
 
         /// <summary>Longest wait, in seconds, before the caster may back off again. Each retreat rolls between the two.</summary>
-        [Export] public float repositionCooldownMax = 2f;
+        [Export] public float repositionCooldownMax;
 
         /// <summary>Seconds a retreat runs for before the caster settles back into strafing.</summary>
-        [Export] public float repositionDuration = 0.5f;
+        [Export] public float repositionDuration;
 
         /// <summary>
         /// Chance <b>per physics frame</b> that a strafing caster reverses direction. Frame-rate
         /// dependent, and deliberately carried across as-authored rather than converted to a per-second
         /// rate, which would change how the fight moves.
         /// </summary>
-        [Export] public float strafeFlipChance = 0.01f;
+        [Export] public float strafeFlipChance;
 
         /// <summary>Seconds a shot flies before it gives up, which is what decides how far one actually reaches.</summary>
-        [Export] public float projectileLifetime = 5f;
+        [Export] public float projectileLifetime;
 
         /// <summary>How high a shot bows over its flight path, in metres.</summary>
-        [Export] public float projectileArcHeight = 0.5f;
+        [Export] public float projectileArcHeight;
 
         // --- Telegraph readability. The blend target (yellow) is the shared danger colour and stays in
         // code with the rest of the palette; what is authored here is this archetype's own base. None
         // of the four is a distance, so ScaleToPixels leaves them alone. ---
 
         /// <summary>Radians per second the wind-up pulse runs at.</summary>
-        [Export] public float telegraphPulseSpeed = 6f;
+        [Export] public float telegraphPulseSpeed;
 
         /// <summary>How far the wind-up pulse swings, as a fraction of rest scale.</summary>
-        [Export] public float telegraphPulseAmplitude = 0.1f;
+        [Export] public float telegraphPulseAmplitude;
 
         /// <summary>How far the body tints toward the danger colour while winding up. 1 is the danger colour outright.</summary>
-        [Export] public float telegraphBlend = 0.8f;
+        [Export] public float telegraphBlend;
 
         /// <summary>
         /// The colour the telegraph blends <i>from</i>. Deliberately not <c>enemyColor</c>: muting the
         /// body must not drag the danger read dark. See Docs/MoodDirection.md "The lerp trap".
         /// </summary>
-        [Export] public Color telegraphColor = new Color(0.5f, 0.3f, 1f);
+        [Export] public Color telegraphColor;
 
         public override void ScaleToPixels()
         {

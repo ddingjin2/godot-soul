@@ -17,6 +17,11 @@
     "approachHopInterval": 0.9,
     "approachHopImpulse": 5.5,
 
+    "chantDuration": 2.5,
+    "chantHealPerSecond": 12.0,
+    "afterimageSpread": 2.2,
+    "afterimageLifetime": 0.9,
+
     "maxPoise": 85.0,
     "poiseHeavyMultiplier": 2.0,
     "poiseRegenDelay": 3.0,
@@ -51,7 +56,12 @@
             "hazardTickInterval": 0.5,
             "hazardDuration": 3.0,
             "hazardForwardOffset": 1.5,
-            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 }
+            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 },
+            "stanceId": "",
+            "chainNextAttackId": "",
+            "chainDelay": 0.35,
+            "chainDelayPhaseTwoScale": 1.0,
+            "afterimageCountOverride": -1
         },
         {
             "attackId": "rolling_lunge",
@@ -73,7 +83,12 @@
             "hazardTickInterval": 0.5,
             "hazardDuration": 3.2,
             "hazardForwardOffset": 2.0,
-            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 }
+            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 },
+            "stanceId": "",
+            "chainNextAttackId": "",
+            "chainDelay": 0.35,
+            "chainDelayPhaseTwoScale": 1.0,
+            "afterimageCountOverride": -1
         },
         {
             "attackId": "hunger_sweep",
@@ -95,7 +110,12 @@
             "hazardTickInterval": 0.5,
             "hazardDuration": 3.0,
             "hazardForwardOffset": 1.5,
-            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 }
+            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 },
+            "stanceId": "",
+            "chainNextAttackId": "",
+            "chainDelay": 0.35,
+            "chainDelayPhaseTwoScale": 1.0,
+            "afterimageCountOverride": -1
         }
     ]
 }

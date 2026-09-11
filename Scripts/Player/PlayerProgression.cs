@@ -150,7 +150,7 @@ namespace MyGame.Player
         public bool IsAtCap(PlayerStat stat)
         {
             EnsureBound();
-            return LevelOf(stat) >= Mathf.Max(0, _tuning.maxLevelPerStat);
+            return _tuning == null || LevelOf(stat) >= Mathf.Max(0, _tuning.maxLevelPerStat);
         }
 
         /// <summary>
@@ -216,6 +216,10 @@ namespace MyGame.Player
         public void SetLevels(int vitality, int endurance, int strength, int resolve)
         {
             EnsureBound();
+            if (_tuning == null)
+            {
+                return;
+            }
 
             int cap = Mathf.Max(0, _tuning.maxLevelPerStat);
             vitalityLevel = Mathf.Clamp(vitality, 0, cap);
@@ -235,6 +239,10 @@ namespace MyGame.Player
         public void ApplyToPlayer()
         {
             EnsureBound();
+            if (_tuning == null)
+            {
+                return;
+            }
 
             _health?.SetMaxHealth(_baseMaxHealth + Gain(_tuning.vitalityPerLevel, vitalityLevel));
             _stamina?.SetMaxStamina(_baseMaxStamina + Gain(_tuning.endurancePerLevel, enduranceLevel));
@@ -279,6 +287,12 @@ namespace MyGame.Player
             _actions = _owner.GetComponentInParent<PlayerActionController>();
 
             _tuning ??= ProgressionTuningData.Load();
+            if (_tuning == null)
+            {
+                // Same answer as GameplayBootstrap: the loader has named the file, and nothing here
+                // guesses a curve. Every stat reads as capped, so no level is bought or applied.
+                GD.PushError("PlayerProgression: ProgressionTuning.json is missing; no level can be bought or applied.");
+            }
 
             _baseMaxHealth = _health != null ? _health.MaxHealth : 0f;
             _baseMaxStamina = _stamina != null ? _stamina.MaxStamina : 0f;

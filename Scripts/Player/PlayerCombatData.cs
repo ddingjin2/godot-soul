@@ -22,47 +22,47 @@ namespace MyGame.Player
         public const string FileName = "PlayerCombat";
 
         // Dodge
-        [Export] public float dodgeSpeed = World.U(15f);
-        [Export] public float dodgeDuration = 0.2f;
-        [Export] public float dodgeCooldown = 0.8f;
-        [Export] public float dodgeInvulnerabilityTime = 0.15f;
+        [Export] public float dodgeSpeed;
+        [Export] public float dodgeDuration;
+        [Export] public float dodgeCooldown;
+        [Export] public float dodgeInvulnerabilityTime;
 
         // Attack
-        [Export] public float attackDuration = 0.3f;
-        [Export] public float attackCooldown = 0.5f;
-        [Export] public float attackActiveWindow = 0.1f;
-        [Export] public float attackDamage = 20f;
-        [Export] public float attackKnockback = World.U(4f);
-        [Export] public float attackCancelWindow = 0.08f;
+        [Export] public float attackDuration;
+        [Export] public float attackCooldown;
+        [Export] public float attackActiveWindow;
+        [Export] public float attackDamage;
+        [Export] public float attackKnockback;
+        [Export] public float attackCancelWindow;
 
         // Heavy attack
-        [Export] public float heavyAttackDuration = 0.45f;
-        [Export] public float heavyAttackCooldown = 0.85f;
-        [Export] public float heavyAttackActiveWindow = 0.16f;
-        [Export] public float heavyAttackDamageMultiplier = 1.8f;
-        [Export] public float heavyAttackKnockbackMultiplier = 1.4f;
+        [Export] public float heavyAttackDuration;
+        [Export] public float heavyAttackCooldown;
+        [Export] public float heavyAttackActiveWindow;
+        [Export] public float heavyAttackDamageMultiplier;
+        [Export] public float heavyAttackKnockbackMultiplier;
 
         // Parry
-        [Export] public float parryWindow = 0.2f;
-        [Export] public float perfectParryWindow = 0.08f;
-        [Export] public float parryCooldown = 0.5f;
-        [Export] public float parryStunDuration = 0.8f;
-        [Export] public float perfectParryStunMultiplier = 1.6f;
+        [Export] public float parryWindow;
+        [Export] public float perfectParryWindow;
+        [Export] public float parryCooldown;
+        [Export] public float parryStunDuration;
+        [Export] public float perfectParryStunMultiplier;
 
         /// <summary>How long the player is locked out of actions after their poise gauge breaks.</summary>
-        [Export] public float staggerDuration = 0.5f;
+        [Export] public float staggerDuration;
 
-        [Export] public float inputBufferTime = 0.15f;
+        [Export] public float inputBufferTime;
 
         // Combo
-        [Export] public int maxComboSteps = 3;
-        [Export] public float comboStepDamageMultiplier = 1.15f;
+        [Export] public int maxComboSteps;
+        [Export] public float comboStepDamageMultiplier;
 
         // Stamina costs
-        [Export] public float attackStaminaCost = 20f;
-        [Export] public float heavyAttackStaminaCost = 35f;
-        [Export] public float dodgeStaminaCost = 25f;
-        [Export] public float parryStaminaCost = 15f;
+        [Export] public float attackStaminaCost;
+        [Export] public float heavyAttackStaminaCost;
+        [Export] public float dodgeStaminaCost;
+        [Export] public float parryStaminaCost;
 
         /// <summary>The authored file scaled into pixels, or null when it is missing.</summary>
         public static PlayerCombatData Load()

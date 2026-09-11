@@ -22,22 +22,22 @@ namespace MyGame.Enemy
     {
         // Chapter
         [Export] public RainbowChapterColor chapterColor;
-        [Export] public int chapterIndex = 1;
-        [Export] public string chapterName = "Red Chapter";
+        [Export] public int chapterIndex;
+        [Export] public string chapterName;
 
         // Boss Identity
-        [Export] public string bossId = "red_boss";
-        [Export] public string bossName = "The Red Gatekeeper";
-        [Export(PropertyHint.MultilineText)] public string designPillar = "Pressure, restraint, and readable punishment.";
+        [Export] public string bossId;
+        [Export] public string bossName;
+        [Export(PropertyHint.MultilineText)] public string designPillar;
 
         // Combat Stats
-        [Export] public float maxHealth = 240f;
-        [Export] public float moveSpeed = 2.5f;
-        [Export] public float detectionRange = 8f;
-        [Export] public float attackRange = 2f;
-        [Export] public float phaseTwoHealthThreshold = 0.5f;
-        [Export] public float phaseTwoSpeedMultiplier = 1.2f;
-        [Export] public float phaseTwoCooldownMultiplier = 0.75f;
+        [Export] public float maxHealth;
+        [Export] public float moveSpeed;
+        [Export] public float detectionRange;
+        [Export] public float attackRange;
+        [Export] public float phaseTwoHealthThreshold;
+        [Export] public float phaseTwoSpeedMultiplier;
+        [Export] public float phaseTwoCooldownMultiplier;
 
         // Approach
         /// <summary>
@@ -52,7 +52,7 @@ namespace MyGame.Enemy
         /// The sign flip into Godot's +Y-down space happens where the hop is applied, not here. Only
         /// read when approachHopInterval is above zero.
         /// </summary>
-        [Export] public float approachHopImpulse = 5f;
+        [Export] public float approachHopImpulse;
 
         // Chant
         /// <summary>
@@ -66,9 +66,9 @@ namespace MyGame.Enemy
         /// How long a chant runs if nobody stops it. Long enough to be reached from across the arena, or
         /// interrupting it is a coin flip rather than a decision.
         /// </summary>
-        [Export] public float chantDuration = 2.5f;
+        [Export] public float chantDuration;
 
-        [Export] public float chantHealPerSecond = 12f;
+        [Export] public float chantHealPerSecond;
 
         // Afterimages
         /// <summary>
@@ -78,13 +78,13 @@ namespace MyGame.Enemy
         [Export] public int afterimageCount;
 
         /// <summary>How far to either side the copies stand.</summary>
-        [Export] public float afterimageSpread = 2.2f;
+        [Export] public float afterimageSpread;
 
         /// <summary>
         /// How long a copy lasts. Shorter than the telegraph means the player never has to choose; much
         /// longer means the arena is never legible again.
         /// </summary>
-        [Export] public float afterimageLifetime = 0.9f;
+        [Export] public float afterimageLifetime;
 
         // Stances
         /// <summary>
@@ -98,32 +98,32 @@ namespace MyGame.Enemy
         /// Deep enough that chip damage never staggers a boss: breaking it should take committed heavy
         /// attacks, which is the trade the poise gauge exists to force.
         /// </summary>
-        [Export] public float maxPoise = 90f;
+        [Export] public float maxPoise;
 
-        [Export] public float poiseHeavyMultiplier = 2f;
-        [Export] public float poiseRegenDelay = 3f;
-        [Export] public float poiseRegenRate = 30f;
+        [Export] public float poiseHeavyMultiplier;
+        [Export] public float poiseRegenDelay;
+        [Export] public float poiseRegenRate;
 
         /// <summary>
         /// Seconds a parry or a poise break takes the boss out of the fight for. Every chapter boss was
         /// stunned for exactly one second regardless of its file until this field existed - a perfect
         /// parry multiplies it, and the multiplier is <c>PlayerCombat.json</c>'s.
         /// </summary>
-        [Export] public float stunDuration = 1f;
+        [Export] public float stunDuration;
 
         /// <summary>Souls the kill is worth. The wallet is the drop table, so this is the reward.</summary>
-        [Export] public int soulReward = 300;
+        [Export] public int soulReward;
 
         // Presentation
-        [Export] public Color primaryColor = Colors.Red;
-        [Export] public Color secondaryColor = Colors.Black;
-        [Export] public Vector2 bodySize = new Vector2(1.6f, 2.3f);
+        [Export] public Color primaryColor;
+        [Export] public Color secondaryColor;
+        [Export] public Vector2 bodySize;
 
         /// <summary>Radians per second the wind-up pulse runs at. Unitless, so it is not scaled.</summary>
-        [Export] public float telegraphPulseSpeed = 8f;
+        [Export] public float telegraphPulseSpeed;
 
         /// <summary>How far the wind-up pulse swings, as a fraction of rest scale. The colour it swings to is per attack row (<c>telegraphColor</c>).</summary>
-        [Export] public float telegraphPulseAmplitude = 0.2f;
+        [Export] public float telegraphPulseAmplitude;
 
         // Attacks
         [Export] public BossAttackProfile[] attacks = System.Array.Empty<BossAttackProfile>();

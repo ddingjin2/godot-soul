@@ -53,24 +53,24 @@ namespace MyGame.Gameplay
     /// A missing file is an error: <see cref="Load"/> returns null, <c>Res.LoadJson</c> has said which
     /// file, and <c>GameplayBootstrap</c> refuses to build the arena. Should a director still be asked
     /// to <c>Play</c> with no file, it takes its missing-shot path - clear the overlay, hand the
-    /// continuation back, carry on. The scalar initialisers are what a key the file leaves out reads
-    /// as; the shots have no such twin, because duplicating four keyframe tables in C# would be the
-    /// fallback drift the numbers audit (§2.8) exists to stop.
+    /// continuation back, carry on. A scalar key the file leaves out reads as zero and a shot it
+    /// leaves out does not run; neither has a C# twin, because duplicating the numbers here would
+    /// be the fallback drift the numbers audit (§2.8) exists to stop.
     /// </remarks>
     public partial class CutsceneTuningData : Resource
     {
         public const string FileName = "CutsceneTuning";
 
         // GameplayBootstrap's entry beat: the rig settles one unit down onto its rest, landing with the fade.
-        [Export] public float enterSettleHeight = 1f;
-        [Export] public float enterSettleDuration = 1.2f;
+        [Export] public float enterSettleHeight;
+        [Export] public float enterSettleDuration;
 
         // GameplayCutsceneTriggers' beats (CutsceneDirection.md 3 and 5).
-        [Export] public float bossIntroMoveDuration = 0.5f;
-        [Export] public float deathHitStop = 0.12f;
-        [Export] public float deathMoveDelay = 0.45f;
-        [Export] public float deathMoveDuration = 0.35f;
-        [Export] public float deathMoveDistance = 0.6f;
+        [Export] public float bossIntroMoveDuration;
+        [Export] public float deathHitStop;
+        [Export] public float deathMoveDelay;
+        [Export] public float deathMoveDuration;
+        [Export] public float deathMoveDistance;
 
         /// <summary>Not [Export]ed for the same reason as <c>SinTuningData.sins</c>: plain JSON rows, not Resources.</summary>
         public CutsceneShot[] shots;

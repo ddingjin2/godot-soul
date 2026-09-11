@@ -27,25 +27,25 @@ namespace MyGame.Player
         private const string DesignResourceFolder = "Design/";
 
         /// <summary>How many levels one stat can take. A ceiling, not a target - the campaign's soul income buys far fewer than this across all four.</summary>
-        [Export] public int maxLevelPerStat = 20;
+        [Export] public int maxLevelPerStat;
 
         /// <summary>Vitality: added to the player's maximum health per level.</summary>
-        [Export] public float vitalityPerLevel = 12f;
+        [Export] public float vitalityPerLevel;
 
         /// <summary>Endurance: added to the player's maximum stamina per level.</summary>
-        [Export] public float endurancePerLevel = 8f;
+        [Export] public float endurancePerLevel;
 
         /// <summary>Strength: added to the player's base attack damage per level. Heavy attacks and combo steps scale off that base, so they gain with it.</summary>
-        [Export] public float strengthPerLevel = 2f;
+        [Export] public float strengthPerLevel;
 
         /// <summary>Resolve: added to the player's maximum poise per level.</summary>
-        [Export] public float resolvePerLevel = 6f;
+        [Export] public float resolvePerLevel;
 
         /// <summary>Souls for the very first level bought, of any stat.</summary>
-        [Export] public int baseCost = 80;
+        [Export] public int baseCost;
 
         /// <summary>Multiplier applied per level already bought, counting all four stats together - so the fifth level costs the same whichever stat it goes into.</summary>
-        [Export] public float costGrowth = 1.07f;
+        [Export] public float costGrowth;
 
         /// <summary>
         /// Souls for the next level, given how many levels have been bought across every stat. Driven by
@@ -61,19 +61,19 @@ namespace MyGame.Player
         }
 
         /// <summary>
-        /// The authored file, or the defaults above when it is missing. Unlike the Gameplay catalog this
-        /// never returns null: progression is a save-backed system, and a missing tuning file must leave
-        /// the levels a slot already holds applicable rather than silently inert.
+        /// The authored file, or null when it is missing - <c>Res.LoadJson</c> has already said which
+        /// file. This used to substitute the class defaults so that save-backed levels stayed
+        /// applicable; under the missing-file policy (PushError, halted boot) that was a code copy of
+        /// the shipped curve, and <see cref="PlayerProgression"/> now refuses to apply levels instead.
         /// </summary>
         public static ProgressionTuningData Load()
         {
             var loaded = Res.LoadJson<ProgressionTuningData>(DesignResourceFolder + FileName);
-            if (loaded == null)
+            if (loaded != null)
             {
-                return new ProgressionTuningData { ResourceName = FileName };
+                loaded.ResourceName = FileName;
             }
 
-            loaded.ResourceName = FileName;
             return loaded;
         }
     }

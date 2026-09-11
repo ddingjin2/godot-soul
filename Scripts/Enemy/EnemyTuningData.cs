@@ -18,38 +18,38 @@ namespace MyGame.Enemy
     public partial class EnemyTuningData : Resource
     {
         // Base Stats
-        [Export] public float maxHealth = 50f;
-        [Export] public float moveSpeed = 2f;
-        [Export] public float attackDamage = 10f;
-        [Export] public float attackKnockback = 5f;
+        [Export] public float maxHealth;
+        [Export] public float moveSpeed;
+        [Export] public float attackDamage;
+        [Export] public float attackKnockback;
 
         // Detection
-        [Export] public float detectionRange = 5f;
-        [Export] public float attackRange = 1.5f;
+        [Export] public float detectionRange;
+        [Export] public float attackRange;
 
         // Combat
-        [Export] public float telegraphTime = 0.85f;
-        [Export] public float attackDuration = 0.35f;
-        [Export] public float attackCooldown = 1.5f;
-        [Export] public float stunDuration = 0.8f;
-        [Export] public Color enemyColor = Colors.Red;
+        [Export] public float telegraphTime;
+        [Export] public float attackDuration;
+        [Export] public float attackCooldown;
+        [Export] public float stunDuration;
+        [Export] public Color enemyColor;
 
         // Poise
         /// <summary>Stagger resistance. Zero means this enemy cannot be staggered at all.</summary>
-        [Export] public float maxPoise = 30f;
+        [Export] public float maxPoise;
 
         /// <summary>How much harder a heavy attack hits poise than a light one.</summary>
-        [Export] public float poiseHeavyMultiplier = 2f;
+        [Export] public float poiseHeavyMultiplier;
 
-        [Export] public float poiseRegenDelay = 2f;
-        [Export] public float poiseRegenRate = 25f;
+        [Export] public float poiseRegenDelay;
+        [Export] public float poiseRegenRate;
 
         // Reward
         /// <summary>Souls handed to whoever lands the killing blow.</summary>
-        [Export] public int soulReward = 20;
+        [Export] public int soulReward;
 
         // Visuals
-        [Export] public Vector2 bodySize = new Vector2(0.6f, 1f);
+        [Export] public Vector2 bodySize;
 
         /// <summary>
         /// Guards against a second pass over the same asset. The scaling is destructive - it rewrites the
@@ -77,8 +77,8 @@ namespace MyGame.Enemy
 
         /// <summary>
         /// Unity's <c>Resources.Load&lt;T&gt;("Design/MeleeGrunt")</c>, with the unit conversion folded
-        /// in so no caller can forget it. Returns null when the file is missing, which every archetype
-        /// already handles by falling back to its inline defaults.
+        /// in so no caller can forget it. Null when the file is missing; <c>Res.LoadJson</c> has already
+        /// said which file.
         /// </summary>
         protected static T LoadFrom<T>(string designPath) where T : EnemyTuningData
         {
