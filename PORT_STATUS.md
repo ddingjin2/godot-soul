@@ -544,3 +544,46 @@ instead of an empty object, and `GameplayBootstrap._Ready` checks `GameplayTunin
 plus the three `.Shared` before building anything. One file missing means two error lines and no
 arena. Proven by moving `WorldTuning.json` aside for one headless boot, then restoring it. With every
 file present - which is every shipped build, since they travel in the PCK - nothing changed.
+
+### Second phase K2-K4 - the code copies are gone
+
+Three stages landed together once K1 had taken the suite off the fallbacks.
+
+K2: the four archetypes (`MeleeGrunt`, `LeapingAttacker`, `RangedCaster`, `WrathMiniBoss`) read every
+number from `tuningData`; the 67 `??` sites, 39 ternaries and two null early-outs are gone, as are the
+two `bossData?.` reads in `RainbowChapterBossBehaviour.PulseTelegraph`. An archetype that enters the
+tree without `SetTuningData` logs one error and freezes (`SetProcess(false)`, `SetPhysicsProcess(false)`)
+instead of playing on inline numbers. The spawner and the tests both hand the file over, so nothing
+shipped changed.
+
+K3: the 17 tuning Data classes carry no `[Export]` initialiser any more (309 to 1; the survivor is
+`RainbowChapterBossData.attacks = Array.Empty`, a null guard). A key a design file omits now reads as
+zero. The files were completed first, additively and at the former default in every case: the three
+shortcut-gate keys in the eight `SceneLayout*.json` (only `SceneLayout_Chapter02_Orange` has
+`hasShortcutGate: true`, so the earlier "seven gates at size 0" warning was overstated - the one live
+key was `shortcutOpensFromRight` there), four phase-two weights in `Chapter01_Red_Encounter.json`, 360
+keys across the eight chapter-boss files (top-level hop/chant/afterimage numbers and the attack rows
+against `BossAttackProfile`), and the four zero-valued switches (`approachHopInterval`,
+`chantInterval`, `afterimageCount`, `stanceRotationInterval`) written as explicit zeros where a boss
+does not use them. `ProgressionTuningData.Load` returns null for a missing file like every other
+loader; `PlayerProgression` then reports every stat as capped and applies nothing, with one error,
+instead of running the shipped curve from code.
+
+K4: `GameplaySceneDefaults.Create()` and `CreateForScene()` build from the layout file only (92
+literals gone) and return null when it is missing. `GameplayReadabilityDefaults.CreateBase()` is gone;
+`Create()` applies `Art/Readability.json` and `Design/ReadabilityLayout.json` over the twenty sorting
+orders that stay in code by decision D2 (197 literals gone). The editor dock lost
+`ReadabilityThemeWriter` (D7). The two identity tests that compared the files against the code copy
+are replaced by `DesignFileCompletenessTests`, which fails naming the file and the keys whenever a
+design file does not name every field of its type (D6).
+
+Test fixtures: six chapter-boss test files gained the keys their inline JSON used to inherit from
+class defaults (`stunDuration`, `bodySize`, the poise block, `telegraphPulse*`), all at the former
+default. No expected value changed in those fixtures; one assertion did, below.
+
+Discovery, the kind the plan predicted: `P0CombatStabilityTests.GameplaySceneIncludesCheckpointRunSection`
+looked for a platform named `CheckpointRunPlatform`. That name existed only in the code copy of the
+layout that K4 deleted; `SceneLayout.json` sets `overridePlatforms: true` with its own list (`FirstStep`
+... `KilnStep`) and no such platform ever shipped, so the test was verifying a fixture the game did not
+use. It is replaced by `GameplaySceneNamesEveryPlatformItShips`: the shipped list is non-empty and every
+platform carries a name, which is the contract the instanced platforms and two other tests rely on.

@@ -85,7 +85,7 @@ tools/run-tests.ps1 -Filter X  # 클래스 또는 메서드 이름 부분 일치
   파일 27개, 키 190개가 코드 리터럴을 대신하며 값은 출하 당시 그대로입니다. 그 뒤 완료 기준의 나머지
   절반(코드 fallback 사본 제거, 중복 보관 제거)을 닫는 2차 전환이
   [docs/migrations/scene-data/PLAN_CLOSEOUT.md](docs/migrations/scene-data/PLAN_CLOSEOUT.md)에 승인돼
-  있고 K0까지 착지했습니다. 다음 시작점은 `SESSION_HANDOFF.md`입니다.
+  있고 K0~K4까지 착지했습니다. 다음 시작점은 `SESSION_HANDOFF.md`입니다.
 - **전환이 실제 결함 6건을 찾아냈습니다.** 넉백이 400px 대신 3px로 나가던 것, 챕터 보스 처치
   보상이 0 소울이던 것 등. 전부 컴파일러도 기존 스위트도 잡지 못하던 것들이며 내역은
   [PORT_STATUS.md](PORT_STATUS.md)에 있습니다.

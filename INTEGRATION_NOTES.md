@@ -316,3 +316,35 @@ fresh object, so a test may still edit one field before handing it to `SetTuning
 `GameplayEnemySpawner` reads `catalog.X` directly; the catalog is complete by the time it runs (K0).
 The four constants (`SoulStainPickupDelay`, `CheckpointZoneRadius`, `LockOnRange`, `LockOnBreakRange`)
 stay until K5.
+
+### The archetypes have no inline numbers (K2)
+
+`MeleeGrunt`, `LeapingAttacker`, `RangedCaster` and `WrathMiniBoss` read `tuningData.x` unguarded,
+including the public `DetectionRange` / `AttackRange` / `AttackRadius` properties. An archetype that
+enters the tree without `SetTuningData` logs `<Class> '<Node>' entered the tree without tuning data;
+call SetTuningData first.`, disables both process callbacks and returns from `_Ready` before `_health`
+is resolved - a later `TakeDamage` / `Stun` / `IsDead` on such a node null-references, by design. No
+signature changed. The `encounterData` `Default*` constants in both bosses are untouched and await a
+decision.
+
+### Data classes carry no defaults (K3)
+
+Every `[Export]` initialiser on the 17 tuning Data classes is gone. A key a design file does not set
+reads as zero or null, so a Data object built in code (`new XData()`, a partial inline JSON) no longer
+carries shipped numbers - a test that needs a number must state it. `ProgressionTuningData.Load()`
+returns null for a missing file like every other `Load`; `PlayerProgression` then reports every stat
+as capped (`IsAtCap` true, `CostOf` 0, `TryPurchase` false) and applies nothing, after one
+`PushError`. The eight `SceneLayout*.json`, `Chapter01_Red_Encounter.json` and the eight chapter-boss
+files gained the keys the classes used to default; the boss attack rows are now complete against
+`BossAttackProfile`, whose own defaults are still in place.
+
+### The layout and readability tables are files, not code (K4)
+
+`GameplayReadabilityDefaults.CreateBase()` is gone; `Create()` is the only constructor and returns
+null when `Resources/Art/Readability.json` or `Resources/Design/ReadabilityLayout.json` is missing.
+`GameplaySceneDefaults.Create()` / `CreateForScene()` keep their signatures but return null when the
+layout file is missing. Deleted with them: the `internal` `ToGodot(float, float)` /
+`ToGodotSize(float, float)` overloads (the `Vector3` / `Vector2` forms remain),
+`GameplayReadabilityThemeData.CopyFrom`, `addons/mygame_tools/ReadabilityThemeWriter` and its dock
+button. `Tests/Unit/DesignFileCompletenessTests` is the new permanent test; the two
+`Applied*_ReproducesEveryShipped*` identity tests are gone.
