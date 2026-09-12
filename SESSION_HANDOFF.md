@@ -19,7 +19,7 @@ PLAN_CLOSEOUT §종결에 숫자로 있다.
 
 ## 브랜치
 
-`refactor/godot-scene-data`는 2026-09-12 `524f8be`로 `master`에 병합됐다(`--no-ff`, 이력 보존). **이제 작업 브랜치는 `master`.** 원격은 2026-09-12부터 `origin` = https://github.com/ddingjin2/godot-soul (public, 기본 브랜치 `master`), 두 브랜치 모두 push됨.
+`refactor/godot-scene-data`는 2026-09-12 `524f8be`로 `master`에 병합됐다(`--no-ff`, 이력 보존). **이제 작업 브랜치는 `master`.** 원격은 2026-09-12부터 `origin` = https://github.com/ddingjin2/godot-soul (public, 기본 브랜치 `master`). 병합 뒤 `refactor/godot-scene-data`는 로컬·원격 모두 삭제했다 — **브랜치는 `master` 하나뿐**, 전환 이력은 머지 커밋 `524f8be` 아래에 있다.
 이번 세션(09-12) 커밋 23개: K5b 3, K7 4, K7b 2, 수정 1, 문서·잡무 7, .gitignore 2(브랜치별), 원격·병합 문서 3, 머지 1. 풀 스위트 3회(K5b, K7, K7b 각 착지 뒤),
 전부 210 / 1 / 1.
 
