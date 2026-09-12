@@ -385,3 +385,19 @@ every spawn by `ResizeCapsuleCollider`, `DressActorVisual` / `DressSprite`, `Dre
 textures and the transforms nothing writes are untouched; a probe of all 493 spawned values before and after was
 identical. `GameplaySceneDefaultsAsset` keeps its four `[Export]`s without initialisers; they are read only behind
 `overrideCamera` / `overrideSpawn`. No signature changed.
+
+### The state machine must be configured, and `GetDetectionRange` is abstract (K5b)
+
+- `EnemyStateMachine.GetDetectionRange()` is `protected abstract`. The `World.U(5f)` body was unreachable:
+  the four archetypes override `DetectPlayer` and the chapter boss already overrode this. `MeleeGrunt`,
+  `LeapingAttacker` and `RangedCaster` answer `tuningData.detectionRange`, `WrathMiniBoss` its encounter's
+  `DetectionRange`, and a subclass built for a test answers 0.
+- `EnemyStateMachine.Configure(...)` is required. The eight shared numbers have no initialiser and `_Ready`
+  stops the machine with one error if it was never called. Code that builds an enemy by hand calls
+  `MyGame.Tests.EnemyFixture.ConfigureFromDesign<T>(machine)` before adding it to the tree (moved out of
+  `P0CombatStabilityTests`, which keeps a one-line forward under its old private name).
+- `GameplayPlayerSpawner.Spawn(...)` returns `default` with one error when `PlayerResources.json` is
+  missing; the code copy of 100 / 100 / 100 is gone.
+- `GameplayHud.GetSinColor` reads `MenuTheme.tres` `Palette/colors/sin_<name>` through `Hue(token)`.
+- `GameplayWorldHealthBar` has no size, offset or fill colour of its own until `Initialize` runs. Both
+  spawners call it in the same frame as `AddChild`, through `AddHealthBar`.

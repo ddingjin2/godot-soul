@@ -606,3 +606,34 @@ Editor-view trade-off accepted with D4: the actor scenes now open in the Godot e
 unscaled body on a 10 x 20 capsule, role label and health bar on the origin - because every size, colour,
 sorting order and offset lives only in `ReadabilityLayout.json` and `Readability.json`. Run the scene to see the
 real proportions. Nothing about a spawned actor changed.
+
+### Second phase K5b - the remainders K5 and K6 left
+
+No shipped behaviour changed. The seven hues the sin readout tints its name with are `MenuTheme.tres`
+`Palette` items (`sin_wrath` .. `sin_lust`) read through the HUD's existing `Hue(token)`, not a switch of
+`Color` literals in `GameplayHud.GetSinColor`. Neither `SinTuning.json` nor `Art/Readability.json` carried a
+sin palette; the one byte-identical colour (`bossColor`, the chapter-one boss tint) is a coincidence the
+tres records rather than a shared token. The player spawner's `StartingHealth`/`StartingHumanity`
+constants are gone - `PlayerResources.json` already said 100 / 100 / 100 - and a missing file is now no
+player plus one error (D1). `WorldHealthBar.tscn`, `AttackReadout.tscn` and `Checkpoint.tscn` lost the
+eight values the spawners rewrite on every spawn (bar position, frame and fill scale, fill tint; readout
+scale, tint and sorting order; the checkpoint trigger radius), proved the K6 way with a 465-value dump of
+a booted `GameplayScene` identical before and after. `EnemyStateMachine` carries no initialiser for
+gravity, the two ledge-probe distances or the perfect-parry multiplier: `Configure` is the only writer,
+and an enemy that reaches the tree without it logs one error and stops ticking. `GetDetectionRange` is
+abstract - its 5 m body was reachable by no archetype. The last two `GameplayReadabilityDefaults.Create()`
+callers that never checked for null (`GameplayLockOnMarker.BuildMarker`, `GateTravelZone.EnsureMarker`)
+do now, in the shape `CheckpointZone` already had.
+
+Discovery: six test fixtures built enemies by hand and never called `Configure`, so until now they ran on
+the initialisers just deleted - gravity from code rather than from `WorldTuning.json`. They call
+`EnemyFixture.ConfigureFromDesign` before the tree now, which is the helper `P0CombatStabilityTests`
+already had, moved to `Tests/Framework`. No expected value changed.
+
+Found and not fixed: the `[Export]` initialisers on the Combat and Player *components* were never in the
+A1-A8 inventory - A1 counted only the `*Data` classes and A7 only seven `Scripts/Gameplay` files. There
+are 84 (`PlayerActionController` 31, `SinResonanceController` 9, `StaminaSystem` 8, `PlayerMotor2D` 8,
+`HumanityController` 6, `DeathStateController` 5, `Poise` 5, `DamageHitbox2D` 4, `PlayerLockOn` 2,
+`GameplayFallDeath` 2, `Health` 1, `ShortcutGate` 1, `MyGameRuntimeAgentDriver` 2), every one overwritten
+by `ApplyTuning`/`Configure` on spawn - the same kind of copy K5b just removed from `EnemyStateMachine`.
+Their fate is an open decision in `PLAN_CLOSEOUT.md`.
