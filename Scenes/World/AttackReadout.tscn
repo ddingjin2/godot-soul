@@ -1,0 +1,32 @@
+; The translucent disc that shows where an attack will land - the player's swing arc and every
+; enemy's danger zone. Replaces two verbatim-identical builders, GameplayPlayerSpawner
+; .CreateAttackReadout and GameplayEnemySpawner.CreateAttackReadout; nothing differed between them.
+; Name, local position, size, colour and sorting order all vary per readout and stay bound.
+;
+; This scene is deliberately NOT merged with MarkerDisc.tscn. Here the pulse is the child of the
+; sprite; there it is the parent. GameplayTelegraphPulse caches the colour and the scale it finds
+; when it is readied, so swapping the two is a behaviour change, not a refactor.
+;
+; UNITS: 1 Unity metre = 100 px (World.Ppu). No size is authored here at all - the spawner that
+; places an instance writes it, already converted.
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Gameplay/GameplayTelegraphPulse.cs" id="2"]
+[ext_resource type="Texture2D" path="res://Resources/Art/Disc.png" id="1"]
+
+[node name="AttackReadout" type="Sprite2D"]
+; GameplayVisualFactory.Pivot(SpriteKind.Disc) is (0.5, 0.5), which is Sprite2D's own centring, so
+; there is no offset to author.
+texture = ExtResource("1")
+; No scale, modulate or z_index: every instance of this scene is dressed on the spawn that places it -
+; GameplayEnemySpawner.DressAttackReadout for the five danger discs and GameplayPlayerSpawner
+; .DressSprite for the player's swing arc - from ReadabilityLayout.json and Art/Readability.json. The
+; three authored here were the same numbers a second time (PLAN_CLOSEOUT K5b item 3, decision D4).
+; GameplayTelegraphPulse caches only its OWN scale at _Ready, not this sprite's, so dropping them
+; changes nothing about the pulse.
+
+[node name="GameplayTelegraphPulse" type="Node2D" parent="."]
+; Named for the type, because the runtime builder this scene replaced named it that and
+; NodeExt.GetComponent<T>() reads the tree back by type. Its own scale stays 1: the sprite above
+; carries the size, and the pulse caches this scale when it is readied.
+script = ExtResource("2")

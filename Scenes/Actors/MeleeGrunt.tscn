@@ -1,0 +1,47 @@
+; The baseline enemy. Inherits Scenes/Actors/EnemyBase.tscn and adds the three things only a grunt
+; has: the point its swing is measured from, the disc that telegraphs where the swing lands, and the
+; cleanup that removes the body after it dies. Replaces the construction half of
+; GameplayEnemySpawner.CreateMeleeGruntAt.
+;
+; The root carries the MeleeGrunt script - EnemyStateMachine is the CharacterBody2D in this port, so
+; the behaviour *is* the actor - and keeps the name GameplayPrefabNames.MeleeGrunt, which the save
+; data, the debug jump menu and the tests all read.
+;
+; STILL BOUND AT RUNTIME: MeleeGruntData (Resources/Design/MeleeGrunt.json, or the per-spawn variant
+; file a placement names) through SetTuningData, the attack point through SetAttackPoint, and every
+; size, colour and sorting order from GameplayReadabilityDefaults / Resources/Art/Readability.json -
+; which since decision D4 is all of them. The one number left in this file is AttackPoint's local
+; position, which nothing writes; see the header of EnemyBase.tscn.
+;
+; UNITS: 1 Unity metre = 100 px (World.Ppu), +Y down.
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="PackedScene" path="res://Scenes/Actors/EnemyBase.tscn" id="1"]
+[ext_resource type="Script" path="res://Scripts/Enemy/MeleeGrunt.cs" id="2"]
+[ext_resource type="Texture2D" path="res://Resources/Art/ActorGrunt.png" id="3"]
+[ext_resource type="PackedScene" path="res://Scenes/World/AttackReadout.tscn" id="4"]
+[ext_resource type="Script" path="res://Scripts/Enemy/EnemyDeathCleanup.cs" id="5"]
+
+[node name="MeleeGrunt" instance=ExtResource("1")]
+script = ExtResource("2")
+
+[node name="Visual" parent="."]
+texture = ExtResource("3")
+
+; The pulse target MeleeGrunt scales while it winds up an attack, and the origin its attack overlap
+; is centred on. World.U(0.6) = 60 px ahead of the body; the grunt mirrors it by flipping its own
+; scale, so there is no second authored position for facing left.
+[node name="AttackPoint" type="Node2D" parent="."]
+position = Vector2(60, 0)
+
+; The disc that telegraphs where the swing lands. No numbers, by decision D4: DressAttackReadout
+; writes the position, the size, the colour and the sorting order from ReadabilityLayout.json /
+; Readability.json on every spawn. AttackReadout.tscn authors none of them either since K5b, so in
+; the editor this opens at Godot's own Sprite2D defaults, sitting on the grunt's origin.
+[node name="SlashDanger" parent="." instance=ExtResource("4")]
+
+; Authored here because a grunt is one of the three archetypes that despawn on death. Neither boss
+; scene carries this, which is what the destroyOnDeath flag decided before; since K7
+; GameplayEnemySpawner.EnsureEnemyHealthRig only looks the node up under that flag and never adds it.
+[node name="EnemyDeathCleanup" type="Node" parent="."]
+script = ExtResource("5")

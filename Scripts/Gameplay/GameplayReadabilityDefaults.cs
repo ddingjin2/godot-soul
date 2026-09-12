@@ -7,9 +7,14 @@ namespace MyGame.Gameplay
     /// How the greybox reads: what colour everything is, how big it is, where it sits relative to the
     /// actor wearing it, and what draws in front of what.
     ///
+    /// Two files own it - the artist's palette (<c>Resources/Art/Readability.json</c>) and the
+    /// designer's layout (<c>Resources/Design/ReadabilityLayout.json</c>) - and the only numbers in
+    /// this class are the twenty sorting orders in <see cref="WithSortingOrders"/>.
+    ///
     /// UNITS - this is one of the two conversion boundaries in the arena code (the other is
-    /// <see cref="GameplaySceneDefaults"/>). Everything in <see cref="CreateBase"/> is authored in
-    /// Unity metres with +Y up and converted <b>here, once</b>:
+    /// <see cref="GameplaySceneDefaults"/>). Every spatial value is authored in Unity metres with +Y
+    /// up and converted <b>once</b>, in <see cref="GameplayReadabilityLayoutData.ApplyTo"/>, into the
+    /// pixels these properties hold:
     /// <list type="bullet">
     /// <item>sizes (<c>*Size</c>) are scaled by <see cref="World.Ppu"/> - no sign change, a size has none;</item>
     /// <item>local positions and offsets (<c>*LocalPosition</c>, <c>*Offset</c>) go through
@@ -39,6 +44,7 @@ namespace MyGame.Gameplay
         public Color ArenaGateColor { get; internal set; }
         public Color PlatformRimColor { get; internal set; }
         public Color SpiritPlatformColor { get; internal set; }
+        public Color SpiritTint { get; internal set; }
         public Color SwordColor { get; internal set; }
         public Color ProjectileColor { get; internal set; }
 
@@ -61,6 +67,15 @@ namespace MyGame.Gameplay
         /// </summary>
         public Color EnemyHealthBarColor { get; internal set; }
         public Color BossHealthBarColor { get; internal set; }
+
+        /// <summary>
+        /// The bar's frame, and the bone its fill lifts toward at low health. Both were
+        /// <c>static readonly Color</c> on <see cref="GameplayWorldHealthBar"/>, with the frame's copy
+        /// authored a second time in <c>Scenes/World/WorldHealthBar.tscn</c> (PLAN_CLOSEOUT B3).
+        /// </summary>
+        public Color HealthBarFrameColor { get; internal set; }
+        public Color HealthBarLowHealthTint { get; internal set; }
+
         public Color MeleeRoleColor { get; internal set; }
         public Color LeapRoleColor { get; internal set; }
         public Color CastRoleColor { get; internal set; }
@@ -77,17 +92,11 @@ namespace MyGame.Gameplay
         public Vector2 BossColliderSize { get; internal set; }
         public Vector2 BossVisualSize { get; internal set; }
 
-        public Vector2 PlayerHitboxAnchorLocalPosition { get; internal set; }
+        // The hitbox anchor's, the sword's and the attack arc's local transforms are authored in
+        // Scenes/Actors/Player.tscn and have no property here: a number nothing reads is worse than
+        // a literal, because it looks like tuning.
         public float PlayerHitboxRadius { get; internal set; }
         public Vector2 PlayerHitboxOffset { get; internal set; }
-        public Vector2 SwordLocalPosition { get; internal set; }
-
-        /// <summary>
-        /// Was Unity's <c>SwordLocalEulerAngles</c>, a Vector3 whose x and y were always zero. Godot's
-        /// <c>Node2D.Rotation</c> is a single value in radians, and it turns the other way because +Y
-        /// is down - so Unity's -28 degrees is +28 here.
-        /// </summary>
-        public float SwordLocalRotation { get; internal set; }
         public Vector2 SwordSize { get; internal set; }
 
         public Vector2 PlayerHealthBarSize { get; internal set; }
@@ -99,7 +108,15 @@ namespace MyGame.Gameplay
         public Vector2 CasterHealthBarOffset { get; internal set; }
         public Vector2 BossHealthBarOffset { get; internal set; }
 
-        public Vector2 AttackArcLocalPosition { get; internal set; }
+        /// <summary>Pixels the frame extends past the fill on every side.</summary>
+        public float HealthBarFrameMargin { get; internal set; }
+
+        /// <summary>Normalised health at or below which the fill lifts toward bone.</summary>
+        public float HealthBarLowHealthThreshold { get; internal set; }
+
+        /// <summary>How far toward bone the fill lifts, 0-1.</summary>
+        public float HealthBarLowHealthTintBlend { get; internal set; }
+
         public Vector2 AttackArcSize { get; internal set; }
         public Vector2 MeleeDangerLocalPosition { get; internal set; }
         public Vector2 MeleeDangerSize { get; internal set; }
@@ -124,6 +141,19 @@ namespace MyGame.Gameplay
         public int WorldLabelFontSize { get; internal set; }
         public float RoleMarkerCharacterSize { get; internal set; }
         public int RoleMarkerFontSize { get; internal set; }
+
+        /// <summary>Where the lock-on disc hovers relative to its target, in pixels with +Y down.</summary>
+        public Vector2 LockOnMarkerOffset { get; internal set; }
+
+        /// <summary>The bright edge along the top of a platform: its thickness in pixels, and where it sits as a fraction of the platform's height above centre.</summary>
+        public float PlatformRimThickness { get; internal set; }
+        public float PlatformRimHeightFraction { get; internal set; }
+
+        /// <summary>The slow breathing on every live mark: rad/s, a scale fraction, and the alpha floor and ceiling.</summary>
+        public float MarkerPulseSpeed { get; internal set; }
+        public float MarkerPulseAmount { get; internal set; }
+        public float MarkerPulseAlphaMin { get; internal set; }
+        public float MarkerPulseAlphaMax { get; internal set; }
 
         /// <summary>
         /// The pixel font size a Godot <see cref="Label"/> needs to render a world label at the height
@@ -159,142 +189,52 @@ namespace MyGame.Gameplay
         public int RoleMarkerSortingOrder { get; internal set; }
 
         /// <summary>
-        /// The greybox read, with the artist-owned palette applied over it. Sizes, offsets and sorting
-        /// orders are deliberately not in that file: they are readability engineering - what overlaps
-        /// what, how big a danger zone has to be to be seen - and moving them would hand out a knob that
-        /// silently breaks the reads the whole slice is built to prove. Colour is the palette; the rest
-        /// is layout.
+        /// The greybox read: the artist-owned palette (<c>Resources/Art/Readability.json</c>) and the
+        /// designer-owned layout (<c>Resources/Design/ReadabilityLayout.json</c>) applied over the
+        /// sorting orders. Two files because two owners. Null when either file is missing - the loader
+        /// has already said which, and the bootstrap refuses to build on an incomplete catalog
+        /// (PLAN_CLOSEOUT D1). There are no colours or sizes in code to fall back to.
         /// </summary>
         public static GameplayReadabilityDefaults Create()
         {
-            GameplayReadabilityDefaults defaults = CreateBase();
-            GameplayTuningCatalog.Load()?.ReadabilityTheme?.ApplyTo(defaults);
+            GameplayTuningCatalog catalog = GameplayTuningCatalog.Load();
+            if (catalog.ReadabilityTheme == null || catalog.ReadabilityLayout == null)
+                return null;
+
+            GameplayReadabilityDefaults defaults = WithSortingOrders();
+            catalog.ReadabilityTheme.ApplyTo(defaults);
+            catalog.ReadabilityLayout.ApplyTo(defaults);
             return defaults;
         }
 
-        // The three unit conversions, spelled once so every literal below can stay the Unity number a
-        // designer authored and can still be diffed against the Unity source line for line.
-        private static Vector2 P(float x, float y) => World.V(new Vector2(x, y));
-        private static Vector2 S(float x, float y) => new Vector2(World.U(x), World.U(y));
-
         /// <summary>
-        /// The shipped values with no theme applied. This is what <c>Readability.json</c> is generated
-        /// from, so the file starts life identical to the code and any drift is the artist's edit rather
-        /// than a transcription mistake.
+        /// The twenty sorting orders, and nothing else. They are in neither file on purpose: a z-order
+        /// is a contract between the things drawn - what covers what - and a wrong one is a bug rather
+        /// than a taste, so it stays code (numbers audit §3.6, PLAN_CLOSEOUT D2). Every other number
+        /// on this class comes from a file.
         /// </summary>
-        public static GameplayReadabilityDefaults CreateBase()
+        private static GameplayReadabilityDefaults WithSortingOrders() => new()
         {
-            return new GameplayReadabilityDefaults
-            {
-                BackgroundColor = new Color(0.043137256f, 0.047058824f, 0.05882353f),
-                GroundColor = new Color(0.12156863f, 0.11764706f, 0.105882354f),
-                PlatformColor = new Color(0.16470589f, 0.15686275f, 0.14509805f),
-                PlayerColor = new Color(0.68235296f, 0.72156864f, 0.7607843f),
-                EnemyColor = new Color(0.41960785f, 0.22745098f, 0.2f),
-                LeaperColor = new Color(0.47843137f, 0.29411766f, 0.17254902f),
-                CasterColor = new Color(0.29411766f, 0.27058825f, 0.3764706f),
-                BossColor = new Color(0.54901963f, 0.20392157f, 0.15686275f),
-
-                MoonColor = new Color(0.43137255f, 0.45490196f, 0.5019608f, 0.42f),
-                DistantArchColor = new Color(0.08235294f, 0.08627451f, 0.105882354f, 0.9f),
-                DistantArchMidColor = new Color(0.0627451f, 0.06666667f, 0.08627451f, 0.95f),
-                GroundRimColor = new Color(0.43137255f, 0.40784314f, 0.36078432f, 0.5f),
-                ArenaGateColor = new Color(0.2f, 0.1882353f, 0.16862746f),
-                PlatformRimColor = new Color(0.36862746f, 0.34901962f, 0.30588236f, 0.45f),
-                SpiritPlatformColor = new Color(0.36862746f, 0.41960785f, 0.45882353f, 0.6f),
-                SwordColor = new Color(0.5568628f, 0.54901963f, 0.50980395f),
-                ProjectileColor = new Color(0.86f, 0.42f, 1f),
-
-                CheckpointLabelColor = new Color(0.5176471f, 0.57254905f, 0.627451f),
-                DuelFloorLabelColor = new Color(0.43137255f, 0.40784314f, 0.36078432f),
-                WrathAltarLabelColor = new Color(0.65882355f, 0.29411766f, 0.2f),
-
-                PlayerAttackReadoutColor = new Color(0.82f, 0.9f, 1f, 0.16f),
-                MeleeDangerColor = new Color(1f, 0.08f, 0.04f, 0.2f),
-                LeapDangerColor = new Color(1f, 0.62f, 0.08f, 0.18f),
-                CastDangerColor = new Color(0.62f, 0.35f, 1f, 0.24f),
-                BossSlashDangerColor = new Color(1f, 0.06f, 0.02f, 0.22f),
-                BossSlamDangerColor = new Color(1f, 0.22f, 0.02f, 0.13f),
-
-                PlayerHealthBarColor = new Color(0.5176471f, 0.57254905f, 0.627451f),
-                EnemyHealthBarColor = new Color(0.49411765f, 0.18039216f, 0.13333334f),
-                BossHealthBarColor = new Color(0.65882355f, 0.29411766f, 0.2f),
-                MeleeRoleColor = new Color(0.43137255f, 0.40784314f, 0.36078432f),
-                LeapRoleColor = new Color(0.43137255f, 0.40784314f, 0.36078432f),
-                CastRoleColor = new Color(0.43137255f, 0.40784314f, 0.36078432f),
-                BossRoleColor = new Color(0.43137255f, 0.40784314f, 0.36078432f),
-
-                PlayerColliderSize = S(0.58f, 1.28f),
-                PlayerVisualSize = S(0.9f, 1.45f),
-                MeleeColliderSize = S(0.6f, 1f),
-                MeleeVisualSize = S(0.88f, 1.18f),
-                LeaperColliderSize = S(0.55f, 0.9f),
-                LeaperVisualSize = S(0.9f, 1.08f),
-                CasterColliderSize = S(0.5f, 0.9f),
-                CasterVisualSize = S(0.82f, 1.1f),
-                BossColliderSize = S(1.2f, 2f),
-                BossVisualSize = S(1.75f, 2.35f),
-
-                PlayerHitboxAnchorLocalPosition = P(0.4f, 0f),
-                PlayerHitboxRadius = World.U(0.4f),
-                PlayerHitboxOffset = P(0.4f, 0f),
-                SwordLocalPosition = P(0.12f, 0.22f),
-                // Unity: new Vector3(0f, 0f, -28f) euler. Sign flips with the Y axis.
-                SwordLocalRotation = Mathf.DegToRad(28f),
-                SwordSize = S(0.95f, 0.22f),
-
-                PlayerHealthBarSize = S(1.2f, 0.12f),
-                PlayerHealthBarOffset = P(0f, 1.24f),
-                EnemyHealthBarSize = S(1f, 0.1f),
-                BossHealthBarSize = S(2.25f, 0.16f),
-                MeleeHealthBarOffset = P(0f, 0.9f),
-                LeaperHealthBarOffset = P(0f, 0.86f),
-                CasterHealthBarOffset = P(0f, 0.84f),
-                BossHealthBarOffset = P(0f, 1.65f),
-
-                AttackArcLocalPosition = Vector2.Zero,
-                AttackArcSize = S(1.05f, 0.75f),
-                MeleeDangerLocalPosition = P(0.55f, 0f),
-                MeleeDangerSize = S(1.55f, 1.05f),
-                LeapDangerLocalPosition = P(0f, -0.08f),
-                LeapDangerSize = S(1.9f, 1.25f),
-                CastDangerLocalPosition = P(0f, -0.1f),
-                CastDangerSize = S(2.35f, 0.22f),
-                BossSlashDangerLocalPosition = P(0.85f, 0f),
-                BossSlashDangerSize = S(2.7f, 1.55f),
-                BossSlamDangerLocalPosition = P(0f, -0.15f),
-                BossSlamDangerSize = S(4.2f, 1.45f),
-
-                MeleeRoleLocalPosition = P(0f, -0.72f),
-                LeapRoleLocalPosition = P(0f, -0.68f),
-                CastRoleLocalPosition = P(0f, -0.68f),
-                BossRoleLocalPosition = P(0f, -1.35f),
-                WorldLabelCharacterSize = World.U(0.22f),
-                WorldLabelFontSize = 42,
-                RoleMarkerCharacterSize = World.U(0.16f),
-                RoleMarkerFontSize = 34,
-
-                BackdropSortingOrder = -100,
-                MoonSortingOrder = -95,
-                DistantArchSortingOrder = -90,
-                DistantArchMidSortingOrder = -91,
-                GroundSortingOrder = -1,
-                GroundRimSortingOrder = 1,
-                GateSortingOrder = 2,
-                PlatformSortingOrder = 0,
-                PlatformRimSortingOrder = 2,
-                SpiritPlatformSortingOrder = 5,
-                ActorSortingOrder = 5,
-                PlayerSortingOrder = 10,
-                SwordSortingOrder = 12,
-                ProjectileSortingOrder = 10,
-                PlayerReadoutSortingOrder = 8,
-                EnemyReadoutSortingOrder = 3,
-                BossSlashReadoutSortingOrder = 4,
-                BossSlamReadoutSortingOrder = 2,
-                WorldLabelSortingOrder = 25,
-                RoleMarkerSortingOrder = 30,
-            };
-        }
+            BackdropSortingOrder = -100,
+            MoonSortingOrder = -95,
+            DistantArchSortingOrder = -90,
+            DistantArchMidSortingOrder = -91,
+            GroundSortingOrder = -1,
+            GroundRimSortingOrder = 1,
+            GateSortingOrder = 2,
+            PlatformSortingOrder = 0,
+            PlatformRimSortingOrder = 2,
+            SpiritPlatformSortingOrder = 5,
+            ActorSortingOrder = 5,
+            PlayerSortingOrder = 10,
+            SwordSortingOrder = 12,
+            ProjectileSortingOrder = 10,
+            PlayerReadoutSortingOrder = 8,
+            EnemyReadoutSortingOrder = 3,
+            BossSlashReadoutSortingOrder = 4,
+            BossSlamReadoutSortingOrder = 2,
+            WorldLabelSortingOrder = 25,
+            RoleMarkerSortingOrder = 30,
+        };
     }
 }

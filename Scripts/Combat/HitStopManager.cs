@@ -8,7 +8,8 @@ namespace MyGame.Combat
         public static HitStopManager Instance { get; private set; }
 
         private float _pauseTimer;
-        private float _pauseScale = 0.05f;
+        // Multiplier, authored in CombatTuning.json as hitStopPauseScale. Unitless - not scaled.
+        private float _pauseScale = CombatTuningData.Shared.hitStopPauseScale;
         private float _normalTimeScale = 1f;
         private bool _active;
         private bool _suppress;

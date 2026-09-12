@@ -5,6 +5,10 @@ https://github.com/ddingjin2/MyGame. That checkout is no longer kept here; clone
 check what a piece of this code was before the port. `PORT_STATUS.md` records every behavioural
 difference, so most such questions are answered without it.
 
+**Read `AGENTS.md` before writing code here.** It carries the four user-approved Godot production
+rules this project is held to, and an honest statement of where this codebase currently breaks them.
+`SESSION_HANDOFF.md` is the checkpoint a new session starts from.
+
 ## Layout
 
 ```
@@ -21,7 +25,10 @@ Tests/Unit/         ported edit-mode P0 suite
 addons/mygame_tools/ the editor dock: design CSV round trip, sprite baking, scene creation
 Resources/Design/   *.json - the tuning source of truth, owned by the designer
 Resources/Art/, Resources/PixelActors/  generated placeholder art
-Scenes/             nine near-empty shells; the world is built in code
+localization/       ui.csv - all product text, ko + en, keyed
+Scenes/             eight chapter shells, one line each, inheriting Scenes/World/GameplayShell.tscn;
+                    TitleScene; the authored scenes under Scenes/UI, World, Actors, Effects
+docs/migrations/scene-data/  the production-rule audits and the plan of record
 ```
 
 Godot has no assembly definitions, so the Unity dependency rules above are convention now. Keep them:
@@ -38,8 +45,11 @@ tools/godot.ps1               # open the editor (resolves the winget install its
 tools/godot.ps1 --headless --quit-after 200 res://Scenes/GameplayScene.tscn   # smoke run
 ```
 
-Nothing takes a lock. The Unity editor mutex, the two serialised suite runners and UnityMCP are all
-gone: a headless run owns nothing, so several can run at once.
+The Unity editor mutex, the two serialised suite runners and UnityMCP are all gone - a headless run
+holds no editor lock. **That does not make two runs safe.** `user://playerprefs.cfg` is one file
+shared by every run on this machine, and the suites that touch saves clear it in `[SetUp]`, so
+concurrent runs corrupt each other's fixtures. Run one at a time, or accept that a number measured
+alongside another run is not evidence.
 
 ## The conventions that matter
 
@@ -53,6 +63,11 @@ Full detail in `PORTING_GUIDE.md`; the two that break things silently:
   vertical min/max pair swaps as well as changing sign.
 
 `Resources/Design/*.json` outranks any number quoted in a doc, exactly as in the Unity project.
+
+**All product text goes through the translation table**, never a literal: `localization/ui.csv` with
+ko and en columns, read as `Tr("UI_...")` (or `TranslationServer.Translate` from a static). Never
+name a node after translated text - a change of locale renames the node and every lookup by name
+breaks with it.
 
 ## Traps
 
@@ -73,13 +88,40 @@ Full detail in `PORTING_GUIDE.md`; the two that break things silently:
   its overloaded `==`.
 - **`PlayerPrefs` is a real file** at `user://playerprefs.cfg` and outlives a headless run. Any test
   touching saves clears it in `[SetUp]`.
-- **Enemy gravity is applied in code** (`World.U(9.81f)`), because `project.godot` sets
-  `default_gravity = 0` - the motors write their own authored gravity.
+- **Enemy gravity is applied in code**, from `WorldTuning.json`'s `enemyGravity` pushed in by
+  `EnemyStateMachine.Configure`, because `project.godot` sets `default_gravity = 0` - the motors write
+  their own authored gravity.
+- **Components carry no numeric defaults.** A field read before its `ApplyTuning`/`Configure` call reads
+  zero, and a component that reaches the end of its first frame in the tree unconfigured logs an error
+  and stops (`Scripts/Core/TuningGuard.cs`). The spawners tune *after* `AddChild` on purpose, so the
+  check is deferred from `_Ready`, never run inside it. A test that builds a component by hand
+  configures it with `Tests/Framework/PlayerFixture.cs` or `EnemyFixture.cs` before advancing a frame.
+- **Authored system nodes leave the tree after the runtime-spawned ones.** The shell authors
+  `CutsceneDirector` at the front of `GameplayRoot`; children exit last-first, so on teardown its
+  `_ExitTree` runs when the HUD and actors are already gone. Whatever it triggers has to tolerate nodes
+  out of the tree (`GameplayHud.ShowVictory` guards `GrabFocus` for exactly this).
 
 ## What the port dropped
 
 Unity Timeline (cutscenes are coded `async` sequences in `CutsceneDirector`), prefabs and
-ScriptableObject `.asset` files (the JSON is the source of truth and the spawners build actors in
-code), `.anim`/`.controller`, the Build Settings scene list (`ChapterRoute` enumerates
+ScriptableObject `.asset` files (the JSON is the source of truth and the spawners instance and
+configure the actor scenes), `.anim`/`.controller`, the Build Settings scene list (`ChapterRoute` enumerates
 `res://Scenes/*.tscn`), `.meta` files, and UnityMCP. `PORT_STATUS.md` lists every behavioural
 difference and every bug the port introduced and fixed.
+
+## Where this went
+
+The port deliberately kept Unity's build-the-world-in-code shape. Two migrations then brought it to the
+production rules in `AGENTS.md`: `docs/migrations/scene-data/PLAN.md` (scenes and data) and
+`PLAN_CLOSEOUT.md` (no code fallbacks, no duplicated values, missing data is an error), both complete
+2026-09-12 on `refactor/godot-scene-data`. Every screen, actor, world piece and the chapter shell is a
+`.tscn`; every number a designer owns is in `Resources/Design` or `Resources/Art` and loaded through the
+type's `Load()`; the spawners instance and configure. What is still built in code is a short exemption
+list in `PLAN_CLOSEOUT.md` (K7), and `PORTING_GUIDE.md`'s "build everything in code" section is kept
+only as the explanation of why the spawners and builders are shaped the way they are.
+
+**New code follows the production rules.** A new number is a JSON field first (unit and missing-file
+behaviour decided, then the code). A new reusable thing is a scene first. A new component with numbers
+has no initialiser, takes them through `ApplyTuning`/`Configure`, and calls `TuningGuard` deferred from
+`_Ready` - `StaminaSystem` is the model. Do not add a runtime-built screen or node beside the existing
+scenes.

@@ -280,12 +280,13 @@ namespace MyGame.Tests
         /// The stain's grace is authored in PlayerResources.json now, not fixed in code, so no wait here may
         /// assume a number: a fixed 0.3s beat was a silent bet on 0.2, and raising the JSON value past it
         /// turned this file red with a message that blamed the pickup instead of the tuning.
-        /// Falls back to the same constant the spawner does when no tuning asset loads.
+        /// The file is required: a missing PlayerResources.json fails here instead of borrowing a code copy.
         /// </summary>
         private static float PickupDelay()
         {
-            PlayerResourceData resources = GameplayTuningCatalog.Load()?.PlayerResources;
-            float delay = resources != null ? resources.soulStainPickupDelay : GameplayTuningDefaults.SoulStainPickupDelay;
+            PlayerResourceData resources = PlayerResourceData.Load();
+            Assert.NotNull(resources, "PlayerResources.json has to load; the stain grace has no other home.");
+            float delay = resources.soulStainPickupDelay;
 
             // Zero would break these tests from the other side: the respawn stands the player on their own
             // stain, so with no grace at all it is reclaimed before the test can step off, and "standing

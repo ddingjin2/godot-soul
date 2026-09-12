@@ -28,5 +28,18 @@
     "leapHeight": 2.5,
     "maintainDistance": 3.5,
     "landingVulnerabilityTime": 0.6000000238418579,
-    "leapTelegraphTime": 1.100000023841858
+    "leapTelegraphTime": 1.100000023841858,
+    "patrolDistance": 3.0,
+    "patrolIdleTime": 0.5,
+    "maintainDistanceDeadband": 1.0,
+    "landingPunishMultiplier": 2.0,
+    "telegraphPulseSpeed": 8.0,
+    "telegraphPulseAmplitude": 0.15000000596046449,
+    "telegraphBlend": 0.699999988079071,
+    "telegraphColor": {
+        "r": 1.0,
+        "g": 0.5,
+        "b": 0.0,
+        "a": 1.0
+    }
 }

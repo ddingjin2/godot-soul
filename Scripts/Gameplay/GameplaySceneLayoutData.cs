@@ -10,11 +10,11 @@ namespace MyGame.Gameplay
     /// </summary>
     public sealed partial class GameplayPlatformRow : Resource
     {
-        [Export] public string name = "Platform";
+        [Export] public string name;
 
         /// <summary>Unity metres, +Y up - straight out of the design file. Converted by <see cref="GameplaySceneLayoutData.ApplyTo"/>.</summary>
         [Export] public Vector3 position;
-        [Export] public Vector2 size = new Vector2(4f, 0.4f);
+        [Export] public Vector2 size;
     }
 
     /// <summary>
@@ -23,18 +23,18 @@ namespace MyGame.Gameplay
     /// </summary>
     public sealed partial class GameplaySceneryRow : Resource
     {
-        [Export] public string name = "Scenery";
+        [Export] public string name;
 
         /// <summary>
         /// Name of a <see cref="GameplayVisualFactory.SpriteKind"/> value - Disc, Arch and so on.
         /// Spelled out rather than serialized as a number so the file stays readable when the enum
         /// gains a value.
         /// </summary>
-        [Export] public string spriteKind = "Disc";
+        [Export] public string spriteKind;
 
         /// <summary>Unity metres, +Y up.</summary>
         [Export] public Vector3 position;
-        [Export] public Vector2 size = Vector2.One;
+        [Export] public Vector2 size;
     }
 
     /// <summary>
@@ -51,7 +51,7 @@ namespace MyGame.Gameplay
         /// Name of an <c>EnemyTuningData</c> file under <c>Resources/Design</c>, without the extension.
         /// Empty uses the shared archetype tuning, which is what every placement does today.
         /// </summary>
-        [Export] public string dataFile = "";
+        [Export] public string dataFile;
     }
 
     /// <summary>
@@ -61,8 +61,7 @@ namespace MyGame.Gameplay
     ///
     /// Every field is optional in the sense that matters: <see cref="ApplyTo"/> only writes a section
     /// when its own flag is set, so a designer can move the platforms without inheriting responsibility
-    /// for the camera. What is not overridden keeps the shipped values, and a missing file changes
-    /// nothing at all.
+    /// for the camera. A section that is not overridden is not written.
     ///
     /// UNITS: every field here is the <b>authored Unity number</b> - metres, +Y up - because that is
     /// what is in <c>Resources/Design/SceneLayout*.json</c> and the file is the source of truth. The
@@ -75,22 +74,22 @@ namespace MyGame.Gameplay
     {
         // Camera
         [Export] public bool overrideCamera;
-        [Export] public Vector3 cameraPosition = new Vector3(0f, 2f, -10f);
-        [Export] public float cameraOrthographicSize = 6.8f;
-        [Export] public Vector2 cameraHorizontalBounds = new Vector2(-4f, 34f);
-        [Export] public Vector2 cameraVerticalBounds = new Vector2(0.5f, 7.5f);
-        [Export] public float fallDeathY = -8f;
+        [Export] public Vector3 cameraPosition;
+        [Export] public float cameraOrthographicSize;
+        [Export] public Vector2 cameraHorizontalBounds;
+        [Export] public Vector2 cameraVerticalBounds;
+        [Export] public float fallDeathY;
 
         // Spawn
         [Export] public bool overrideSpawn;
-        [Export] public Vector3 playerSpawnPosition = new Vector3(-2f, 0.5f, 0f);
+        [Export] public Vector3 playerSpawnPosition;
 
         /// <summary>
         /// The single checkpoint every arena was written with. Kept as the fallback for
         /// <see cref="checkpointPositions"/>, not as a second way to author one: every shipped
         /// SceneLayout names this field and nothing else.
         /// </summary>
-        [Export] public Vector3 checkpointPosition = new Vector3(-2f, 0.5f, 0f);
+        [Export] public Vector3 checkpointPosition;
 
         /// <summary>
         /// Every bonfire in the chapter, in the order they are met. Empty falls back to
@@ -102,23 +101,23 @@ namespace MyGame.Gameplay
 
         // Terrain
         [Export] public bool overrideTerrain;
-        [Export] public Vector3 backdropPosition = new Vector3(13f, 2f, 10f);
-        [Export] public Vector2 backdropSize = new Vector2(48f, 22f);
-        [Export] public Vector3 groundPosition = new Vector3(13f, -1f, 0f);
-        [Export] public Vector2 groundSize = new Vector2(44f, 1f);
-        [Export] public Vector3 groundRimPosition = new Vector3(13f, -0.43f, -0.02f);
-        [Export] public Vector2 groundRimSize = new Vector2(44f, 0.08f);
-        [Export] public Vector3 leftArenaGatePosition = new Vector3(-8.7f, 1.35f, 0f);
-        [Export] public Vector3 rightArenaGatePosition = new Vector3(35.8f, 1.35f, 0f);
-        [Export] public Vector2 arenaGateSize = new Vector2(0.32f, 4.6f);
+        [Export] public Vector3 backdropPosition;
+        [Export] public Vector2 backdropSize;
+        [Export] public Vector3 groundPosition;
+        [Export] public Vector2 groundSize;
+        [Export] public Vector3 groundRimPosition;
+        [Export] public Vector2 groundRimSize;
+        [Export] public Vector3 leftArenaGatePosition;
+        [Export] public Vector3 rightArenaGatePosition;
+        [Export] public Vector2 arenaGateSize;
 
         // Markers
         [Export] public bool overrideMarkers;
-        [Export] public Vector3 checkpointLabelPosition = new Vector3(-2f, 1.8f, 0f);
-        [Export] public Vector3 duelFloorLabelPosition = new Vector3(7f, 0.35f, 0f);
-        [Export] public Vector3 wrathAltarLabelPosition = new Vector3(31f, 3.1f, 0f);
-        [Export] public Vector3 spiritPlatformPosition = new Vector3(20f, 5.5f, 0f);
-        [Export] public Vector2 spiritPlatformSize = new Vector2(3f, 0.3f);
+        [Export] public Vector3 checkpointLabelPosition;
+        [Export] public Vector3 duelFloorLabelPosition;
+        [Export] public Vector3 wrathAltarLabelPosition;
+        [Export] public Vector3 spiritPlatformPosition;
+        [Export] public Vector2 spiritPlatformSize;
         [Export] public bool spiritPlatformStartsActive;
 
         // Enemy Placement
@@ -128,10 +127,10 @@ namespace MyGame.Gameplay
         [Export] public Vector3[] meleeGruntSpawnPositions;
 
         /// <summary>The single leaper every shipped SceneLayout is written with. Kept as the fallback for <see cref="leapingAttackerSpawns"/>.</summary>
-        [Export] public Vector3 leapingAttackerSpawnPosition = new Vector3(16f, 0.5f, 0f);
+        [Export] public Vector3 leapingAttackerSpawnPosition;
 
         /// <summary>The single caster every shipped SceneLayout is written with. Kept as the fallback for <see cref="rangedCasterSpawns"/>.</summary>
-        [Export] public Vector3 rangedCasterSpawnPosition = new Vector3(24f, 0.5f, 0f);
+        [Export] public Vector3 rangedCasterSpawnPosition;
 
         /// <summary>Every melee grunt in the chapter, with an optional tuning file each. Empty falls back to <see cref="meleeGruntSpawnPositions"/>.</summary>
         [Export] public GameplayEnemySpawnRow[] meleeGruntSpawns;
@@ -147,22 +146,22 @@ namespace MyGame.Gameplay
         /// the leaping attacker and the ranged caster fall back to single positions that otherwise
         /// always spawn - so this is still the only way to author a room that is just the fight.
         /// </summary>
-        [Export] public bool spawnApproachEnemies = true;
-        [Export] public Vector3 wrathMiniBossSpawnPosition = new Vector3(29.5f, 1f, 0f);
+        [Export] public bool spawnApproachEnemies;
+        [Export] public Vector3 wrathMiniBossSpawnPosition;
 
         /// <summary>
         /// Name of a <c>RainbowChapterBossData</c> file under <c>Resources/Design</c>, without the
         /// extension. Empty keeps the shipped WrathMiniBoss. This is how a second arena gets a second
         /// boss without a line of code.
         /// </summary>
-        [Export] public string bossDataFile = "";
+        [Export] public string bossDataFile;
 
         /// <summary>
         /// Name of a <c>BossEncounterData</c> file under <c>Resources/Design</c>, without the extension.
         /// Empty keeps chapter one's encounter. This is how a second arena gets its own reach and punish
         /// window rather than borrowing the first one's.
         /// </summary>
-        [Export] public string bossEncounterFile = "";
+        [Export] public string bossEncounterFile;
 
         // Shortcut
 
@@ -173,16 +172,15 @@ namespace MyGame.Gameplay
         /// </summary>
         [Export] public bool hasShortcutGate;
 
-        [Export] public Vector3 shortcutGatePosition = new Vector3(12f, 1.35f, 0f);
-        [Export] public Vector2 shortcutGateSize = new Vector2(0.32f, 4.6f);
+        [Export] public Vector3 shortcutGatePosition;
+        [Export] public Vector2 shortcutGateSize;
 
         /// <summary>
         /// Which side of the door is the far one - the side the level makes the player walk the long way
         /// round to reach, and the only side Interact opens it from. True is the right (+x), which is
-        /// every arena laid out bonfire-then-door-then-boss. A file that does not name this field gets
-        /// true, so the door is never a hole the player walks straight through on the way out.
+        /// every arena laid out bonfire-then-door-then-boss.
         /// </summary>
-        [Export] public bool shortcutOpensFromRight = true;
+        [Export] public bool shortcutOpensFromRight;
 
         // Platforms And Scenery
         [Export] public bool overridePlatforms;
@@ -192,13 +190,14 @@ namespace MyGame.Gameplay
         [Export] public GameplaySceneryRow[] backdropScenery;
 
         /// <summary>
-        /// The authored layout, or null when the file is missing - which is normal and means the arena
-        /// keeps the shipped values in <see cref="GameplaySceneDefaults.Create"/>.
+        /// The authored layout, or null when the file is missing. For the shared file that is an error;
+        /// for a scene's own <c>SceneLayout_&lt;Name&gt;</c> it is normal - the catalog passes
+        /// <paramref name="required"/> false there and falls back to the shared file.
         /// No unit conversion here: the object holds the file, and <see cref="ApplyTo"/> converts.
         /// </summary>
-        public static GameplaySceneLayoutData Load(string designPath)
+        public static GameplaySceneLayoutData Load(string designPath, bool required = true)
         {
-            GameplaySceneLayoutData data = Res.LoadJson<GameplaySceneLayoutData>(designPath);
+            GameplaySceneLayoutData data = Res.LoadJson<GameplaySceneLayoutData>(designPath, required);
             if (data != null)
             {
                 data.ResourceName = designPath.GetFile();

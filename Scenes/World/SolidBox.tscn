@@ -1,0 +1,49 @@
+; A solid box of greybox ground. One scene for every piece of static collision the arena has: the
+; floor, each authored platform, the two world edges (same scene with the sprite switched off), the
+; spirit platform (same scene, then SetActive(false)) and the shortcut door's body. Replaces
+; GameplayEnvironmentBuilder.CreateSolidBox, CreateWorldEdge and the construction half of
+; CreateSpiritPlatform.
+;
+; Unity carried a BoxCollider2D, a sliced SpriteRenderer and a static Rigidbody2D on one GameObject.
+; A StaticBody2D with a CollisionShape2D child and a Sprite2D child is that same object here, and the
+; child order matters: ShortcutGate.Cache reaches the door's own shape with
+; GetParent().GetComponent<CollisionShape2D>(), which takes the first CollisionShape2D child.
+;
+; WHAT IS BOUND PER INSTANCE, and why none of it can be authored: the position, the size, the colour
+; and the sorting order all come from Resources/Design/SceneLayout_*.json and Resources/Art/
+; Readability.json by way of GameplaySceneDefaults / GameplayReadabilityDefaults. Those two classes
+; are the World.Ppu conversion boundary - they hand out Godot pixels with +Y down and nothing below
+; them re-scales - and the values are designer-owned, so baking them here would take the numbers away
+; from the design files. The texture is bound too: it is
+; GameplayVisualFactory.CreateSquareSprite(white), generated at runtime, and there is no baked
+; Resources/Art/Square.png for an ext_resource to point at.
+;
+; So every literal below is the shipped *default* a box nobody dressed would get, not a number the
+; arena runs on. UNITS: 1 Unity metre = 100 px (World.Ppu).
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_box"]
+; Local to the scene, and this line is load-bearing: without it every instance would share one
+; RectangleShape2D and sizing the last platform would resize the arena floor along with it.
+resource_local_to_scene = true
+; A typical authored platform - 4.5 m x 0.4 m in SceneLayout.json -> World.U -> 450 x 40 px.
+size = Vector2(450, 40)
+
+[node name="SolidBox" type="StaticBody2D"]
+; World.Layer.Ground = 1 << 3 = 8. Mask 0, because ground is what other bodies test against and it
+; tests against nothing itself.
+collision_layer = 8
+collision_mask = 0
+
+[node name="Shape" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_box")
+
+[node name="Sprite" type="Sprite2D" parent="."]
+; No texture - see the header. GameplayVisualFactory.Dress writes Texture, Offset and Scale per
+; instance; every solid box uses pivot (0.5, 0.5), which is Sprite2D's own centring, so the offset it
+; computes is zero and this flag is the whole of it.
+centered = true
+; GameplayReadabilityDefaults.PlatformColor / PlatformSortingOrder as shipped - the most common of
+; the five uses. Resources/Art/Readability.json still wins at runtime.
+modulate = Color(0.16470589, 0.15686275, 0.14509805, 1)
+z_index = 0

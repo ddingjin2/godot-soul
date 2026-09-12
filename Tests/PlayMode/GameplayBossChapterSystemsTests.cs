@@ -156,7 +156,7 @@ namespace MyGame.Tests
         {
             return BossJson(
                 "\"chantInterval\":0.3,\"chantDuration\":2.0,\"chantHealPerSecond\":20,",
-                "{\"attackId\":\"chant_swing\",\"damage\":5,\"telegraphTime\":0.2,\"activeTime\":0.2," +
+                "{\"attackId\":\"chant_swing\",\"damageType\":1,\"afterimageCountOverride\":-1,\"damage\":5,\"telegraphTime\":0.2,\"activeTime\":0.2," +
                 "\"recoveryTime\":0.2,\"range\":1.5,\"phaseTwoWeight\":1}");
         }
 
@@ -164,7 +164,7 @@ namespace MyGame.Tests
         {
             return BossJson(
                 "\"chantInterval\":1.5,\"chantDuration\":3.0,\"chantHealPerSecond\":20,",
-                "{\"attackId\":\"chant_swing\",\"damage\":5,\"telegraphTime\":0.2,\"activeTime\":0.2," +
+                "{\"attackId\":\"chant_swing\",\"damageType\":1,\"afterimageCountOverride\":-1,\"damage\":5,\"telegraphTime\":0.2,\"activeTime\":0.2," +
                 "\"recoveryTime\":0.2,\"range\":1.5,\"phaseTwoWeight\":1}");
         }
 
@@ -172,7 +172,7 @@ namespace MyGame.Tests
         {
             return BossJson(
                 "\"afterimageCount\":2,\"afterimageSpread\":2,\"afterimageLifetime\":0.4,",
-                "{\"attackId\":\"shadow_swing\",\"damage\":5,\"telegraphTime\":0.3,\"activeTime\":0.2," +
+                "{\"attackId\":\"shadow_swing\",\"damageType\":1,\"afterimageCountOverride\":-1,\"damage\":5,\"telegraphTime\":0.3,\"activeTime\":0.2," +
                 "\"recoveryTime\":0.2,\"range\":1.5,\"phaseTwoWeight\":1}");
         }
 
@@ -180,9 +180,9 @@ namespace MyGame.Tests
         {
             return BossJson(
                 "\"stanceRotationInterval\":0.4,",
-                "{\"attackId\":\"red_swing\",\"stanceId\":\"red\",\"damage\":5,\"telegraphTime\":0.2," +
+                "{\"attackId\":\"red_swing\",\"damageType\":1,\"afterimageCountOverride\":-1,\"stanceId\":\"red\",\"damage\":5,\"telegraphTime\":0.2," +
                 "\"activeTime\":0.2,\"recoveryTime\":0.2,\"range\":1.5,\"phaseTwoWeight\":1}," +
-                "{\"attackId\":\"violet_swing\",\"stanceId\":\"violet\",\"damage\":5,\"telegraphTime\":0.2," +
+                "{\"attackId\":\"violet_swing\",\"damageType\":1,\"afterimageCountOverride\":-1,\"stanceId\":\"violet\",\"damage\":5,\"telegraphTime\":0.2," +
                 "\"activeTime\":0.2,\"recoveryTime\":0.2,\"range\":1.5,\"phaseTwoWeight\":1}");
         }
 
@@ -190,6 +190,10 @@ namespace MyGame.Tests
         {
             return "{\"maxHealth\":200,\"moveSpeed\":2,\"detectionRange\":8,\"attackRange\":1.5," +
                    "\"phaseTwoHealthThreshold\":0.1,\"phaseTwoSpeedMultiplier\":1,\"phaseTwoCooldownMultiplier\":1," +
+                   // Stun, poise, body and pulse were class defaults until K3; a boss with a zero body or a
+                   // zero stun is not the one these tests were written against, so the fixture says them.
+                   "\"maxPoise\":90,\"poiseHeavyMultiplier\":2,\"poiseRegenDelay\":3,\"poiseRegenRate\":30,\"stunDuration\":1,\"soulReward\":300," +
+                   "\"bodySize\":{\"x\":1.6,\"y\":2.3},\"telegraphPulseSpeed\":8,\"telegraphPulseAmplitude\":0.2," +
                    "\"bossName\":\"ChapterSystemsFixture\",\"chapterName\":\"Test Chapter\"," +
                    extraFields +
                    "\"attacks\":[" + attackRows + "]}";
@@ -220,10 +224,17 @@ namespace MyGame.Tests
                 Position = Vector2.Zero,
             };
 
+            // Required since K5b: EnemyStateMachine has no initialisers for the eight shared
+            // numbers and refuses to run unconfigured. Before the tree, which is where the spawner
+            // does it.
+            EnemyFixture.ConfigureFromDesign(_boss);
+
             _boss.AddComponent<Health>();
 
             FixtureRoot.AddChild(_boss);
 
+            // Required since K5 - see GameplayBossAttackGrammarTests for why chapter one's file.
+            _boss.SetEncounterData(BossEncounterData.Load("Design/WrathEncounter"));
             _boss.SetBossData(data);
             _boss.SkipIntro();
             return _boss;

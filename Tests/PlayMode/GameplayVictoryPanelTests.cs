@@ -84,25 +84,48 @@ namespace MyGame.Tests
             // for the same reason.
             Assert.IsTrue(
                 await TestContext.Runner.WaitUntil(
-                    () => FindNamed<Label>(hud, "VictorySubtitle")?.IsVisibleInTree() == true, 8f),
+                    () => VictorySubtitle(hud)?.IsVisibleInTree() == true, 8f),
                 "The victory panel should have come up by now.");
 
-            Assert.IsTrue(FindNamed<Label>(hud, "VictorySubtitle").Text.Contains("Ember Pilgrim"),
+            Assert.IsTrue(VictorySubtitle(hud).Text.Contains("Ember Pilgrim"),
                 "The panel has to name the boss that fell. Every chapter after the first read Wrath's name.");
 
             Button primary = FindNamed<Button>(hud, "RestartButton");
             Assert.NotNull(primary, "The primary button carries its own label.");
-            Assert.AreEqual("다음 관문", primary.Text,
+            Assert.AreEqual(Tr("UI_VICTORY_NEXT_GATE"), primary.Text,
                 "Chapter two has a gate after it, so the panel offers to open it rather than to restart.");
 
             // Re-shown the way a rematch would, with no label of its own.
             hud.ShowVictory(null, null);
-            Assert.AreEqual("다시하기", primary.Text,
+            Assert.AreEqual(Tr("UI_VICTORY_RESTART"), primary.Text,
                 "Showing the panel with no label has to put the default back, not keep the last one.");
 
             GameClock.TimeScale = 1f;
             await TestContext.Runner.LoadScene(ChapterRoute.ScenePath(GameplaySceneName));
         }
+
+        /// <summary>
+        /// The localisation table, not a copy of it: the screen reads these labels through the same keys,
+        /// so re-wording one in <c>localization/ui.csv</c> moves the test with it. The guard is what keeps
+        /// that from weakening the assertion - an unimported table makes Translate hand back the key, and
+        /// both sides of every comparison would then be that key.
+        /// </summary>
+        private static string Tr(string key)
+        {
+            string text = TranslationServer.Translate(key);
+            Assert.AreNotEqual(key, text, "localization/ui.csv should carry a translation for " + key);
+            return text;
+        }
+
+        /// <summary>
+        /// The victory panel's second line, by its authored path. It was called VictorySubtitle while
+        /// the HUD built its panels in code; the four panels now inherit Scenes/UI/ModalPanel.tscn and
+        /// Godot does not let an inherited node be renamed, so the label is Subtitle in all four and the
+        /// panel it hangs off is what tells them apart. Addressed by path rather than by name for
+        /// exactly that reason - a name search would find whichever panel's Subtitle came first.
+        /// </summary>
+        private static Label VictorySubtitle(GameplayHud hud) =>
+            hud.GetNodeOrNull<Label>("HudRoot/VictoryPanel/Subtitle");
 
         /// <summary>The named node under the HUD. Unity searched for a Text on or under it; here it is the node itself.</summary>
         private static T FindNamed<T>(Node root, string nodeName) where T : Node

@@ -6,8 +6,9 @@ using MyGame.Player;
 namespace MyGame.Gameplay
 {
     /// <summary>
-    /// The souls the player dropped where they died, waiting to be walked over. Built from code like the
-    /// rest of the greybox actors, so there is no scene file to keep in step with it.
+    /// The souls the player dropped where they died, waiting to be walked over. The stain itself is
+    /// authored at <c>Scenes/World/SoulPickup.tscn</c>; <see cref="Create"/> instances it and binds the
+    /// two things that vary, the soul count and the pickup delay.
     ///
     /// The stain lands under the player's own feet on any grounded death, and spirit form neither moves
     /// them nor turns their collider off, so "whoever touches it takes it" would refund every death on
@@ -22,15 +23,11 @@ namespace MyGame.Gameplay
     /// </remarks>
     public sealed partial class SoulPickup : Area2D
     {
+        /// <summary>The scene root's name, which is what a lookup for a dropped stain matches.</summary>
         public const string ObjectName = "SoulPickup";
 
-        private static readonly Color StainColor = new(0.51764706f, 0.57254902f, 0.627451f, 0.85f);
-
-        /// <summary>Reach of the stain, in Unity metres.</summary>
-        private const float PickupRadius = 0.6f;
-
-        /// <summary>How big the disc is drawn, in Unity metres.</summary>
-        private const float StainSize = 0.55f;
+        /// <summary>The authored stain: the reach shape, the pulse and the disc, sized and tinted.</summary>
+        private const string ScenePath = "res://Scenes/World/SoulPickup.tscn";
 
         [Export] private int souls;
 
@@ -42,36 +39,15 @@ namespace MyGame.Gameplay
         /// <summary><paramref name="position"/> is a Godot world position, already in pixels.</summary>
         public static SoulPickup Create(Vector2 position, int souls, float pickupDelay)
         {
-            var sprite = new Sprite2D
-            {
-                Name = "Stain",
-                Texture = GameplayVisualFactory.CreateDiscSprite(),
-                Modulate = StainColor,
-                ZIndex = 40
-            };
-            sprite.SetSpriteSize(new Vector2(World.U(StainSize), World.U(StainSize)));
+            var pickup = GD.Load<PackedScene>(ScenePath).Instantiate<SoulPickup>();
 
-            // Reuses the telegraph pulse so the stain reads as something to walk into, not scenery.
-            var pulse = new GameplayTelegraphPulse { Name = "Pulse" };
-            pulse.AddChild(sprite);
-
-            var pickup = new SoulPickup
-            {
-                Name = ObjectName,
-                GlobalPosition = position,
-                CollisionLayer = World.Layer.Trigger,
-                CollisionMask = World.Layer.Player,
-                souls = Mathf.Max(0, souls)
-            };
+            // Written before the node enters the tree, as every spawner here does: a body added at
+            // the origin and moved afterwards sweeps from the origin on its first physics step,
+            // hitting whatever stands in between.
+            pickup.GlobalPosition = position;
+            pickup.souls = Mathf.Max(0, souls);
             pickup._pickupDelay = Mathf.Max(0f, pickupDelay);
             pickup._armedAt = GameClock.Time + pickup._pickupDelay;
-
-            pickup.AddChild(new CollisionShape2D
-            {
-                Name = "Reach",
-                Shape = new CircleShape2D { Radius = World.U(PickupRadius) }
-            });
-            pickup.AddChild(pulse);
 
             // Unity's Instantiate put it in the active scene; so does this.
             GameplayBuildShim.SceneRoot?.AddChild(pickup);

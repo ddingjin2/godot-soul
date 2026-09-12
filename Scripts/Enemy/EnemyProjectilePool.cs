@@ -9,9 +9,8 @@ namespace MyGame.Enemy
     /// rate during a fight.
     ///
     /// One pool per caster rather than one static pool for the game. A static pool would outlive the
-    /// scene, hold references to freed nodes across a reload, and need a key per template that then
-    /// leaks an entry every time a runtime-built template is thrown away. A field on the caster dies
-    /// with the caster and needs none of that.
+    /// scene, hold references to freed nodes across a reload, and need a key per projectile scene. A
+    /// field on the caster dies with the caster and needs none of that.
     /// </summary>
     /// <remarks>
     /// Not a node, exactly as in Unity. What it does need that Unity gave it for free is somewhere to
@@ -23,23 +22,33 @@ namespace MyGame.Enemy
     /// </remarks>
     public sealed class EnemyProjectilePool
     {
-        private readonly Node2D _prefab;
+        private readonly PackedScene _scene;
         private readonly Node _parent;
+        private readonly Color? _tint;
+        private readonly int? _sortingOrder;
         private readonly Stack<EnemyProjectile> _idle = new();
 
-        /// <param name="prefab">A detached template node, duplicated per shot. Never added to the tree itself.</param>
+        /// <param name="scene">
+        /// <see cref="EnemyProjectile.ScenePath"/>, instanced per shot. This used to be a detached
+        /// template node copied with <c>Duplicate()</c>, which is what Rule 2 names: a scene instance
+        /// carries no runtime state its template happened to be left in.
+        /// </param>
         /// <param name="parent">Where new projectiles are parented - the scene root, like Unity's Instantiate.</param>
-        public EnemyProjectilePool(Node2D prefab, Node parent)
+        /// <param name="tint">Readability's projectile colour, or null to keep the scene's own.</param>
+        /// <param name="sortingOrder">Readability's projectile sorting order, or null to keep the scene's own.</param>
+        public EnemyProjectilePool(PackedScene scene, Node parent, Color? tint = null, int? sortingOrder = null)
         {
-            _prefab = prefab;
+            _scene = scene;
             _parent = parent;
+            _tint = tint;
+            _sortingOrder = sortingOrder;
         }
 
         public int IdleCount => _idle.Count;
 
         public EnemyProjectile Spawn(Vector2 position)
         {
-            if (!GodotObject.IsInstanceValid(_prefab) || !GodotObject.IsInstanceValid(_parent))
+            if (!GodotObject.IsInstanceValid(_scene) || !GodotObject.IsInstanceValid(_parent))
             {
                 return null;
             }
@@ -61,20 +70,19 @@ namespace MyGame.Enemy
                 return pooled;
             }
 
-            var body = (Node2D)_prefab.Duplicate();
+            Node body = _scene.Instantiate();
 
             // Unity threw the instance away when the prefab carried no EnemyProjectile component; the
-            // node equivalent is a template whose root is not one.
+            // scene equivalent is a scene whose root is not one.
             if (body is not EnemyProjectile projectile)
             {
-                body.QueueFree();
+                body?.QueueFree();
                 return null;
             }
 
             _parent.AddChild(projectile);
             projectile.GlobalPosition = position;
-            projectile.Visible = true;
-            projectile.ProcessMode = Node.ProcessModeEnum.Inherit;
+            projectile.SetAppearance(_tint, _sortingOrder);
             projectile.SetPool(this);
             return projectile;
         }

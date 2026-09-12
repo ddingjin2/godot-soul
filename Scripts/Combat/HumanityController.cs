@@ -1,16 +1,37 @@
 using System;
 using Godot;
+using MyGame.Core;
 
 namespace MyGame.Combat
 {
     public partial class HumanityController : Node
     {
-        [Export] private float maxHumanity = 100f;
-        [Export] private float currentHumanity = 100f;
-        [Export] private float lowHumanityThreshold = 30f;
-        [Export] private float humanityLossOnHit = 5f;
-        [Export] private float humanityRegenRate = 0.5f;
-        [Export] private float humanityRegenDelay = 5f;
+        [Export] private float maxHumanity;
+        [Export] private float currentHumanity;
+        [Export] private float lowHumanityThreshold;
+        [Export] private float humanityLossOnHit;
+        [Export] private float humanityRegenRate;
+        [Export] private float humanityRegenDelay;
+
+        /// <summary>
+        /// Writes the authored humanity numbers. Gauge points and seconds - no unit conversion, and
+        /// none is wanted: nothing here is a distance.
+        ///
+        /// Pushed in from the outside rather than loaded here, because these live in
+        /// <c>PlayerResources.json</c> and <c>MyGame.Combat</c> must not learn about
+        /// <c>MyGame.Player</c> (see CLAUDE.md). <c>GameplayPlayerSpawner</c> owns the call, exactly as
+        /// it does for <see cref="Poise.Configure"/>.
+        /// </summary>
+        public void Configure(float max, float lowThreshold, float lossOnHit, float regenRate, float regenDelay)
+        {
+            _configured = true;
+            maxHumanity = Mathf.Max(0f, max);
+            lowHumanityThreshold = lowThreshold;
+            humanityLossOnHit = lossOnHit;
+            humanityRegenRate = regenRate;
+            humanityRegenDelay = regenDelay;
+            currentHumanity = Mathf.Min(currentHumanity, maxHumanity);
+        }
 
         public event Action<float> OnHumanityChanged;
         public event Action OnHumanityDepleted;
@@ -25,6 +46,14 @@ namespace MyGame.Combat
 
         private float _regenTimer;
         private bool _wasLow;
+        private bool _configured;
+
+        public override void _Ready()
+        {
+            CallDeferred(nameof(CheckConfigured));
+        }
+
+        private void CheckConfigured() => TuningGuard.Check(this, _configured, "Configure");
 
         public override void _Process(double delta)
         {

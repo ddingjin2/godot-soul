@@ -1,0 +1,51 @@
+; Chapter one's fight, and the fallback whenever an arena names boss data that will not load.
+; Inherits Scenes/Actors/EnemyBase.tscn and adds its two danger discs - the horizontal slash and the
+; ground slam. Replaces the construction half of GameplayEnemySpawner.CreateWrathMiniBoss.
+;
+; No EnemyDeathCleanup, deliberately: a boss body stays in the arena after it dies, because the
+; victory beat and the outro cutscene both play over it. That is what the destroyOnDeath = false
+; argument decided before this scene existed.
+;
+; STILL BOUND AT RUNTIME: WrathMiniBossData (Resources/Design/WrathMiniBoss.json) through
+; SetTuningData, BossEncounterData through SetEncounterData, and every size, colour and sorting order
+; from GameplayReadabilityDefaults / Resources/Art/Readability.json - which since decision D4 is all
+; of them, so this file authors none. See the header of EnemyBase.tscn.
+;
+; UNITS: 1 Unity metre = 100 px (World.Ppu), +Y down.
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="PackedScene" path="res://Scenes/Actors/EnemyBase.tscn" id="1"]
+[ext_resource type="Script" path="res://Scripts/Enemy/WrathMiniBoss.cs" id="2"]
+[ext_resource type="Texture2D" path="res://Resources/Art/ActorBoss.png" id="3"]
+[ext_resource type="PackedScene" path="res://Scenes/World/AttackReadout.tscn" id="4"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_boss"]
+; Local to the scene - see the base. WrathMiniBoss:211 reads this back as
+; FindComponent<CollisionShape2D>()?.Shape as CapsuleShape2D to find its own half-height, so it has to
+; stay a capsule and it has to be the first CollisionShape2D child.
+; No radius and no height (decision D4): ResizeCapsuleCollider writes both from ReadabilityLayout.json
+; BossColliderSize before the boss enters the tree, and WrathMiniBoss:211 reads back what it wrote.
+resource_local_to_scene = true
+
+[node name="WrathMiniBoss" instance=ExtResource("1")]
+script = ExtResource("2")
+
+[node name="Collider" parent="."]
+shape = SubResource("CapsuleShape2D_boss")
+
+; The texture only. The size and the colour are DressActorVisual's, from BossVisualSize and BossColor
+; (decision D4); the RoleMarker and HealthBar overrides that used to sit here carried nothing but
+; BossRoleLocalPosition and BossHealthBarOffset, which DressRoleMarker and
+; GameplayWorldHealthBar.ApplyLayout write, so both blocks are gone with them.
+[node name="Visual" parent="."]
+texture = ExtResource("3")
+
+; The horizontal slash, out in front of the body and mirrored by the boss flipping its own scale.
+; No numbers: DressAttackReadout writes the position, the size, the colour and the sorting order from
+; BossSlashDanger* on every spawn - including the sorting order that keeps it above the slam, so the
+; two overlapping discs still read apart.
+[node name="BossSlashDanger" parent="." instance=ExtResource("4")]
+
+; The ground slam - the widest readout in the game, which is BossSlamDangerSize saying so in
+; ReadabilityLayout.json. Same as above: DressAttackReadout writes all four.
+[node name="BossSlamDanger" parent="." instance=ExtResource("4")]

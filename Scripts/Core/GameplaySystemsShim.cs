@@ -12,9 +12,10 @@ namespace MyGame.Core
     /// from wiring and from rare events (a rest, a travel), never per frame.
     /// </summary>
     /// <remarks>
-    /// The other two scene-level Unity idioms - <c>new GameObject</c>/<c>AddComponent</c> and
-    /// <c>SceneManager.GetActiveScene().name</c> - already live in <see cref="GameplayBuildShim"/>. Use
-    /// that; this file is only the type search.
+    /// The other scene-level Unity idiom - <c>SceneManager.GetActiveScene().name</c> - lives in
+    /// <see cref="GameplayBuildShim"/>. The build-in-code idioms (<c>new GameObject</c>,
+    /// <c>AddComponent</c>) are gone since K7: reusable things are scenes. This file is only the type
+    /// search.
     /// </remarks>
     public static class SceneQuery
     {

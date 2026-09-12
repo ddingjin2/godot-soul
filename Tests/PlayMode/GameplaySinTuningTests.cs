@@ -149,6 +149,12 @@ namespace MyGame.Tests
             _host = new Node { Name = "SinTuningTestHost" };
             var controller = new SinResonanceController { Name = nameof(SinResonanceController) };
             _host.AddChild(controller);
+
+            // The shipped file first, exactly as the spawner hands it over. Required since K7b - the
+            // controller has no initialisers left - and this fixture never enters the tree, so the
+            // deferred check that would have caught it never runs here. Each test below re-tunes on
+            // top with the synthetic table it is measuring.
+            PlayerFixture.Configure(controller);
             return controller;
         }
 

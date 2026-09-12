@@ -1,0 +1,37 @@
+[gd_scene load_steps=2 format=3]
+
+; One option drawn as a caption plus a row of value buttons. Instanced twice by TitleScreen.tscn -
+; anti-aliasing and render scale - and renamed there to <localisation key>Row. Replaces
+; TitleMenuBootstrap.CreateSegmentedRow.
+;
+; WHERE THE WIDTHS WENT. The old row was 408 wide with a 180 caption and a segment width worked out
+; per row: (408 - 180 - values * 4) / values. Two containers do that for free. The caption keeps its
+; 180 minimum and does not expand; Segments expands into everything left, which is
+; 408 - 180 - 4 = 224, and its own separation splits that between the buttons - 53 each for the four
+; MSAA steps, 72 each for the three render scales. Both are exactly what the formula produced, so the
+; row looks the same and there is no arithmetic left to drift.
+;
+; Caption text is the option's localisation key; the instance in TitleScreen.tscn sets it and Godot's
+; auto-translation resolves it. The row's own name is that key too - never the translated caption,
+; which a change of locale would rewrite along with every lookup by name.
+;
+; UNITS: screen pixels. World.Ppu is a world-space conversion with no business in a menu.
+
+[node name="Row" type="HBoxContainer"]
+custom_minimum_size = Vector2(408, 48)
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Caption" type="Label" parent="."]
+custom_minimum_size = Vector2(180, 48)
+mouse_filter = 2
+; Bone200 #9A9488, text secondary - the caption names the option, the segments carry the answer.
+theme_override_colors/font_color = Color(0.6039216, 0.5803922, 0.53333336, 1)
+theme_override_font_sizes/font_size = 20
+text = ""
+vertical_alignment = 1
+
+[node name="Segments" type="HBoxContainer" parent="."]
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 4

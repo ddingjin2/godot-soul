@@ -3,21 +3,26 @@ using Godot;
 namespace MyGame.Core
 {
     /// <summary>
-    /// The three Unity idioms the runtime world-builders lean on that Godot has no direct member for:
-    /// <c>new GameObject(name)</c>, <c>AddComponent&lt;T&gt;()</c> and <c>SetActive(bool)</c>, plus the
-    /// active scene's name.
+    /// The Unity idioms the arena code still leans on that Godot has no direct member for: the active
+    /// scene's root and name, and <c>SetActive(bool)</c>.
     ///
     /// Unity's <c>new GameObject</c> dropped the object into the active scene's root with no parent
     /// named; the Godot equivalent is <see cref="SceneTree.CurrentScene"/>, so that is what
     /// <see cref="SceneRoot"/> resolves to. <see cref="Root"/> overrides it, which is how a headless
     /// test builds an arena into a node it owns instead of into whatever scene happens to be open.
     ///
-    /// Added by the Gameplay/arena port. The other Gameplay files build the same way, so use this
-    /// rather than growing a second copy.
+    /// <b>This was the enabler for building the world in code, and K7 took that half away.</b>
+    /// <c>NewObject</c>, <c>AddComponent</c> and <c>EnsureComponent</c> are gone: every reusable thing
+    /// is a saved scene the spawners instance, and the shell and the actor scenes author the components
+    /// the spawners used to add. What replaced <c>EnsureComponent</c> is
+    /// <see cref="RequireComponent{T}"/> - the same lookup with the <c>AddComponent</c> half turned into
+    /// an error, which is the missing-data policy applied to scene structure (PLAN_CLOSEOUT D1/K7).
+    /// The <c>AddComponent&lt;T&gt;</c> the suites build fixtures with moved to
+    /// <c>Tests/Framework/NodeBuild.cs</c>, where a test-only builder belongs.
     /// </summary>
     public static class GameplayBuildShim
     {
-        /// <summary>Where <see cref="NewObject{T}(string,Vector2)"/> parents new objects. Null means the open scene.</summary>
+        /// <summary>Where <see cref="SceneRoot"/> points instead of the open scene. Null means the open scene.</summary>
         public static Node Root { get; set; }
 
         private static SceneTree Tree => Engine.GetMainLoop() as SceneTree;
@@ -40,7 +45,9 @@ namespace MyGame.Core
         /// <summary>
         /// Unity's <c>SceneManager.GetActiveScene().name</c>. Godot's scene has a file path rather than a
         /// scene name, so the file's base name is what stands in - which is the same string the Unity
-        /// project used, because both came from <c>GameplayScene</c>/<c>Chapter0N_Colour</c>.
+        /// project used, because both came from <c>GameplayScene</c>/<c>Chapter0N_Colour</c>. A chapter
+        /// that inherits <c>Scenes/World/GameplayShell.tscn</c> still answers with its own file's name,
+        /// because <see cref="Node.SceneFilePath"/> is the file that was loaded, not the base.
         /// </summary>
         public static string ActiveSceneName
         {
@@ -58,43 +65,22 @@ namespace MyGame.Core
         }
 
         /// <summary>
-        /// Unity <c>new GameObject(name)</c> at a world position, parented into the open scene.
-        ///
-        /// The position is written <i>before</i> the node enters the tree on purpose: a body that is
-        /// added at the origin and moved afterwards sweeps from the origin to its destination on the
-        /// first physics step, hitting whatever stands in between. Same trap Unity's
-        /// <c>Instantiate(prefab, position, rotation)</c> existed to avoid.
+        /// Unity <c>GetComponent&lt;T&gt;()</c> for a component the actor's scene is supposed to author.
+        /// Was <c>GetComponent ?? AddComponent</c>; the add half was the last runtime assembly of an
+        /// actor, and since the actor scenes carry every one of these, it only ever ran for a
+        /// hand-built fixture. Null with an error naming the actor and the type is the answer now: a
+        /// scene that lost a node is a broken build, not a build with a node quietly put back.
         /// </summary>
-        public static T NewObject<T>(string name, Vector2 position) where T : Node2D, new()
+        /// <param name="owner">Who was asking, for the error line - usually the spawner's type name.</param>
+        public static T RequireComponent<T>(this Node actor, string owner) where T : Node
         {
-            var node = new T { Name = name, Position = position };
-            SceneRoot?.AddChild(node);
-            return node;
-        }
+            T found = actor.GetComponent<T>();
+            if (found == null)
+            {
+                GD.PushError($"{owner}: '{actor.Name}' has no {typeof(T).Name}; its scene under Scenes/Actors should author one. The actor is incomplete.");
+            }
 
-        /// <summary>Unity <c>new GameObject(name)</c> with no position of its own.</summary>
-        public static T NewObject<T>(string name) where T : Node, new()
-        {
-            var node = new T { Name = name };
-            SceneRoot?.AddChild(node);
-            return node;
-        }
-
-        /// <summary>
-        /// Unity <c>AddComponent&lt;T&gt;()</c>. A Unity component on a GameObject is a child node of the
-        /// actor root here, which is the shape <see cref="NodeExt.GetComponent{T}"/> reads back.
-        /// </summary>
-        public static T AddComponent<T>(this Node parent, string name = null) where T : Node, new()
-        {
-            var node = new T { Name = name ?? typeof(T).Name };
-            parent.AddChild(node);
-            return node;
-        }
-
-        /// <summary>Unity <c>GetComponent&lt;T&gt;() ?? AddComponent&lt;T&gt;()</c>, which is most of the spawners.</summary>
-        public static T EnsureComponent<T>(this Node parent, string name = null) where T : Node, new()
-        {
-            return parent.GetComponent<T>() ?? parent.AddComponent<T>(name);
+            return found;
         }
 
         /// <summary>

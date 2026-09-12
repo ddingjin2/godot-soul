@@ -8,13 +8,13 @@ namespace MyGame.Gameplay
     /// [[MoodDirection]] section 2. Before this it was thirty-odd literals inside
     /// <see cref="GameplayReadabilityDefaults"/>, which put the look of the game behind a code change.
     ///
-    /// Colours only. Sizes, offsets and sorting orders stay in code because they are readability
-    /// engineering rather than palette - see <see cref="GameplayReadabilityDefaults.Create"/>. That
-    /// split is also why this file needs no unit conversion: a colour is the same number in metres and
-    /// in pixels.
+    /// Colours only. Sizes and offsets are the designer's, in <see cref="GameplayReadabilityLayoutData"/>;
+    /// sorting orders are code, in <see cref="GameplayReadabilityDefaults.Create"/>. That split is also
+    /// why this file needs no unit conversion: a colour is the same number in metres and in pixels.
     ///
-    /// The shipped file is <c>Resources/Art/Readability.json</c>, generated from the code defaults, so
-    /// it begins identical to what it replaced. Do not hand-write a fresh one: regenerate, then edit.
+    /// The shipped file is <c>Resources/Art/Readability.json</c>, and it is the only copy of the palette
+    /// - there are no colours in code behind it. <c>DesignFileCompletenessTests</c> holds it to naming
+    /// every field here.
     /// </summary>
     public sealed partial class GameplayReadabilityThemeData : Resource
     {
@@ -26,6 +26,9 @@ namespace MyGame.Gameplay
         [Export] public Color platformRimColor;
         [Export] public Color arenaGateColor;
         [Export] public Color spiritPlatformColor;
+
+        /// <summary>The body's colour while it walks as a spirit, beside the platform it walks to. Was the last colour literal in a component, on <c>DeathStateController</c> (K7b).</summary>
+        [Export] public Color spiritTint;
 
         // Backdrop
         [Export] public Color moonColor;
@@ -58,12 +61,23 @@ namespace MyGame.Gameplay
         [Export] public Color playerHealthBarColor;
         [Export] public Color enemyHealthBarColor;
         [Export] public Color bossHealthBarColor;
+
+        /// <summary>
+        /// The world health bar's frame, and the bone the fill lifts toward at low health. Both were
+        /// <c>static readonly Color</c> on <see cref="GameplayWorldHealthBar"/>, with the frame's copy
+        /// authored a second time in <c>Scenes/World/WorldHealthBar.tscn</c> - which put the bar's look
+        /// behind a code change while the three fill colours beside them were already the artist's
+        /// (PLAN_CLOSEOUT B3).
+        /// </summary>
+        [Export] public Color healthBarFrameColor;
+        [Export] public Color healthBarLowHealthTint;
+
         [Export] public Color meleeRoleColor;
         [Export] public Color leapRoleColor;
         [Export] public Color castRoleColor;
         [Export] public Color bossRoleColor;
 
-        /// <summary>The authored palette, or null when the file is missing - which leaves the code defaults standing.</summary>
+        /// <summary>The authored palette, or null when the file is missing - which the loader has reported and <see cref="GameplayReadabilityDefaults.Create"/> passes on as null.</summary>
         public static GameplayReadabilityThemeData Load(
             string resourcePath = GameplayTuningCatalog.ArtResourceFolder + GameplayTuningCatalog.ReadabilityThemeFile)
         {
@@ -82,6 +96,7 @@ namespace MyGame.Gameplay
             defaults.PlatformRimColor = platformRimColor;
             defaults.ArenaGateColor = arenaGateColor;
             defaults.SpiritPlatformColor = spiritPlatformColor;
+            defaults.SpiritTint = spiritTint;
 
             defaults.MoonColor = moonColor;
             defaults.DistantArchColor = distantArchColor;
@@ -109,61 +124,12 @@ namespace MyGame.Gameplay
             defaults.PlayerHealthBarColor = playerHealthBarColor;
             defaults.EnemyHealthBarColor = enemyHealthBarColor;
             defaults.BossHealthBarColor = bossHealthBarColor;
+            defaults.HealthBarFrameColor = healthBarFrameColor;
+            defaults.HealthBarLowHealthTint = healthBarLowHealthTint;
             defaults.MeleeRoleColor = meleeRoleColor;
             defaults.LeapRoleColor = leapRoleColor;
             defaults.CastRoleColor = castRoleColor;
             defaults.BossRoleColor = bossRoleColor;
-        }
-
-        /// <summary>
-        /// Fills this theme from a set of defaults. The inverse of <see cref="ApplyTo"/>, used only by
-        /// the generator - and the reason a mismapped field cannot survive: a theme filled from the
-        /// base and applied back has to reproduce it exactly, which is what
-        /// <c>GameplayReadabilityThemeTests</c> checks.
-        /// </summary>
-        public void CopyFrom(GameplayReadabilityDefaults defaults)
-        {
-            if (defaults == null)
-                return;
-
-            backgroundColor = defaults.BackgroundColor;
-            groundColor = defaults.GroundColor;
-            platformColor = defaults.PlatformColor;
-            groundRimColor = defaults.GroundRimColor;
-            platformRimColor = defaults.PlatformRimColor;
-            arenaGateColor = defaults.ArenaGateColor;
-            spiritPlatformColor = defaults.SpiritPlatformColor;
-
-            moonColor = defaults.MoonColor;
-            distantArchColor = defaults.DistantArchColor;
-            distantArchMidColor = defaults.DistantArchMidColor;
-
-            playerColor = defaults.PlayerColor;
-            enemyColor = defaults.EnemyColor;
-            leaperColor = defaults.LeaperColor;
-            casterColor = defaults.CasterColor;
-            bossColor = defaults.BossColor;
-            swordColor = defaults.SwordColor;
-            projectileColor = defaults.ProjectileColor;
-
-            checkpointLabelColor = defaults.CheckpointLabelColor;
-            duelFloorLabelColor = defaults.DuelFloorLabelColor;
-            wrathAltarLabelColor = defaults.WrathAltarLabelColor;
-
-            playerAttackReadoutColor = defaults.PlayerAttackReadoutColor;
-            meleeDangerColor = defaults.MeleeDangerColor;
-            leapDangerColor = defaults.LeapDangerColor;
-            castDangerColor = defaults.CastDangerColor;
-            bossSlashDangerColor = defaults.BossSlashDangerColor;
-            bossSlamDangerColor = defaults.BossSlamDangerColor;
-
-            playerHealthBarColor = defaults.PlayerHealthBarColor;
-            enemyHealthBarColor = defaults.EnemyHealthBarColor;
-            bossHealthBarColor = defaults.BossHealthBarColor;
-            meleeRoleColor = defaults.MeleeRoleColor;
-            leapRoleColor = defaults.LeapRoleColor;
-            castRoleColor = defaults.CastRoleColor;
-            bossRoleColor = defaults.BossRoleColor;
         }
     }
 }

@@ -580,6 +580,43 @@ namespace MyGame.Tests
             return World.ToUnits(cam.GetViewportRect().Size.Y * 0.5f / zoom);
         }
 
+        /// <summary>
+        /// The shots are CutsceneTuning.json's now, and the file is the only copy: a missing shot takes
+        /// the director's "no such sequence" path, so a typo in a key is a shot that silently never
+        /// plays. The other thing a designer can break without a compile error is the neutral ending -
+        /// Skip writes neutral rather than evaluating the last frame, so a channel that ends anywhere
+        /// else strands the screen.
+        /// UNITS: letterbox rows are UI pixels and cross unscaled; fade and cameraSize are unitless.
+        /// </summary>
+        [Test]
+        public void CutsceneTuningJson_CarriesTheFourShots_AndEveryShotEndsOnNeutral()
+        {
+            CutsceneTuningData file = Res.LoadJson<CutsceneTuningData>("Design/" + CutsceneTuningData.FileName);
+            Assert.NotNull(file, "CutsceneTuning.json should exist and parse.");
+
+            foreach (string key in new[] { "GameplayEnter", BossIntroKey, "PlayerDeath", "Victory" })
+            {
+                CutsceneShot shot = file.Shot(key);
+                Assert.NotNull(shot, key + " must be authored; the director plays nothing it cannot find.");
+
+                AssertEndsOn(shot.fade, 0f, key + ".fade");
+                AssertEndsOn(shot.letterbox, 0f, key + ".letterbox");
+                AssertEndsOn(shot.cameraSize, 1f, key + ".cameraSize");
+            }
+
+            Assert.AreEqual(64f, file.OpeningLetterbox("GameplayEnter"), 0.001f,
+                "The bootstrap stages the entry bars at the shot's own opening height (CutsceneDirection.md 4).");
+        }
+
+        private static void AssertEndsOn(CutsceneKeyframe[] rows, float neutral, string channel)
+        {
+            if (rows == null || rows.Length == 0)
+                return;
+
+            Assert.AreEqual(neutral, rows[^1].value, 0.001f,
+                channel + " must end on neutral; Skip restores neutral, not the last keyframe.");
+        }
+
         private static CutsceneDirector FindDirector()
         {
             var director = SceneQuery.FindFirst<CutsceneDirector>();

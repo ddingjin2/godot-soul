@@ -28,15 +28,22 @@ namespace MyGame.Enemy
     /// Gravity comes from here rather than from the engine. Unity's enemies rode
     /// <c>Physics2D.gravity</c> at <c>gravityScale = 1</c>; project.godot sets
     /// <c>physics/2d/default_gravity</c> to zero because every actor in this port supplies its own, so
-    /// the same 9.81 m/s^2 is applied below in pixels and pointing at +Y, which is down in Godot.
+    /// it is applied below in pixels and pointing at +Y, which is down in Godot. The number itself is
+    /// authored - <c>WorldTuning.json.enemyGravity</c>, in metres, pushed in by <see cref="Configure"/>.
     /// </remarks>
     public abstract partial class EnemyStateMachine : CharacterBody2D, IStaggerable
     {
-        // State Transitions
-        [Export] protected float idleToPatrolTime = 3f;
-        [Export] protected float investigateDuration = 2f;
-        [Export] protected float recoveryDuration = 1f;
-        [Export] protected float disengageDistance = World.U(8f);
+        // State Transitions. Authored in WorldTuning.json (enemyIdleToPatrolTime,
+        // enemyInvestigateDuration, enemyRecoveryDuration, enemyDisengageDistance) and pushed in by
+        // Configure, which is the ONLY source: K5 took the initialisers out, because a copy of the
+        // shipped numbers here is the "code fallback" decision D1 forbids. An enemy that never had
+        // Configure called on it now leashes at zero distance and flips state on the frame it changes
+        // one - visibly broken rather than quietly running on numbers nobody authored. The three times
+        // are seconds; disengageDistance is PIXELS - the JSON authors 8 metres.
+        [Export] protected float idleToPatrolTime;
+        [Export] protected float investigateDuration;
+        [Export] protected float recoveryDuration;
+        [Export] protected float disengageDistance;
 
         public event Action<EnemyState> OnStateChanged;
         public event Action OnEnteredCombat;
@@ -56,8 +63,14 @@ namespace MyGame.Enemy
         /// </summary>
         protected bool _bodyFrozen;
 
-        /// <summary>Unity's <c>Physics2D.gravity</c> magnitude at <c>gravityScale = 1</c>, in pixels.</summary>
-        protected static readonly float Gravity = World.U(9.81f);
+        /// <summary>
+        /// Downward acceleration in <b>pixels</b> per second squared. Authored in metres as
+        /// <c>WorldTuning.json.enemyGravity</c> and pushed in by <see cref="Configure"/>. No initialiser:
+        /// the copy that used to be here was Unity's <c>Physics2D.gravity</c> magnitude written a second
+        /// time, and an enemy nobody configured is a wiring fault, not an enemy that falls at a different
+        /// rate (PLAN_CLOSEOUT D1/K5b).
+        /// </summary>
+        protected float gravity;
 
         /// <summary>
         /// Half-extents used for the footing probe when a body carries no collision shape at all - every
@@ -67,12 +80,63 @@ namespace MyGame.Enemy
 
         /// <summary>
         /// How far past the body's own edge the footing probe looks, and how far down it looks for a
-        /// floor. The reach is a little over a body width so the turn happens before the centre of mass
-        /// is over the drop; the depth is deliberately shallow, because a step down is footing and a
-        /// storey down is a ledge.
+        /// floor, in <b>pixels</b>. The reach is a little over a body width so the turn happens before
+        /// the centre of mass is over the drop; the depth is deliberately shallow, because a step down
+        /// is footing and a storey down is a ledge. Authored in metres as
+        /// <c>WorldTuning.json.enemyLedgeProbeForward</c> / <c>.enemyLedgeProbeDepth</c> and pushed in by
+        /// <see cref="Configure"/>, which is the only writer.
         /// </summary>
-        private static readonly float LedgeProbeAhead = World.U(0.35f);
-        private static readonly float LedgeProbeDepth = World.U(1.1f);
+        private float _ledgeProbeAhead;
+        private float _ledgeProbeDepth;
+
+        /// <summary>
+        /// How much longer a perfect parry's stun lasts than an ordinary one. Player-owned
+        /// (<c>PlayerCombat.json.perfectParryStunMultiplier</c>) and pushed down here by the spawner,
+        /// because <c>MyGame.Enemy</c> may not read the player's design file. Every archetype's
+        /// <c>Stun(bool perfect)</c> multiplies by this. <see cref="Configure"/> is the only writer.
+        /// </summary>
+        protected float perfectParryStunMultiplier;
+
+        /// <summary>
+        /// Set by <see cref="Configure"/> and read once, in <see cref="_Ready"/>. Every shipped enemy is
+        /// configured while it is still detached - <c>GameplayEnemySpawner.InstantiateEnemy</c> does it
+        /// before the actor is placed - so an enemy that reaches the tree without it has none of the
+        /// eight shared numbers: no gravity, no leash, no stun reward. That is a wiring fault and is
+        /// reported as one rather than run (PLAN_CLOSEOUT D1/K5b).
+        /// </summary>
+        private bool _configured;
+
+        /// <summary>
+        /// The shared behaviour numbers <c>WorldTuning.json</c> and <c>PlayerCombat.json</c> own, pushed
+        /// in by <c>GameplayEnemySpawner</c> while the body is still detached - the same shape
+        /// <c>Poise.Configure</c> uses, and for the same reason: this namespace sits below
+        /// <c>MyGame.Gameplay</c> and below <c>MyGame.Player</c>, so it cannot fetch them itself.
+        /// </summary>
+        /// <remarks>
+        /// Every distance is expected in <b>pixels</b> - <c>WorldTuningData.ScaleToPixels</c> has already
+        /// run on them. A caller handing over raw authored metres would leave every enemy floating and
+        /// blind, and nothing would go red.
+        /// </remarks>
+        public void Configure(
+            float gravityPixels,
+            float disengageDistancePixels,
+            float idleToPatrol,
+            float investigate,
+            float recovery,
+            float ledgeProbeAheadPixels,
+            float ledgeProbeDepthPixels,
+            float perfectParryMultiplier)
+        {
+            gravity = gravityPixels;
+            disengageDistance = disengageDistancePixels;
+            idleToPatrolTime = idleToPatrol;
+            investigateDuration = investigate;
+            recoveryDuration = recovery;
+            _ledgeProbeAhead = ledgeProbeAheadPixels;
+            _ledgeProbeDepth = ledgeProbeDepthPixels;
+            perfectParryStunMultiplier = perfectParryMultiplier;
+            _configured = true;
+        }
 
         public override void _Ready()
         {
@@ -85,6 +149,15 @@ namespace MyGame.Enemy
                 // Unity also had to re-create a null UnityEvent field here; a C# event needs no such
                 // defence, so the guard is gone and only the subscription remains.
                 _health.OnHealthDepleted += EnterDeadState;
+            }
+
+            // After the wiring, not before it: a misconfigured enemy still has to report a death and
+            // still has to come apart cleanly when the scene does.
+            if (!_configured)
+            {
+                GD.PushError($"EnemyStateMachine: '{Name}' entered the tree without Configure(); it has no gravity, leash or stun multiplier and does not run.");
+                SetProcess(false);
+                SetPhysicsProcess(false);
             }
         }
 
@@ -126,7 +199,7 @@ namespace MyGame.Enemy
 
             if (!IsOnFloor())
             {
-                Velocity = new Vector2(Velocity.X, Velocity.Y + (Gravity * (float)delta));
+                Velocity = new Vector2(Velocity.X, Velocity.Y + (gravity * (float)delta));
             }
 
             MoveAndSlide();
@@ -309,8 +382,13 @@ namespace MyGame.Enemy
 
         protected virtual void OnEnteredDeadState() { }
 
-        /// <summary>Detection radius, in Godot pixels.</summary>
-        protected virtual float GetDetectionRange() => World.U(5f);
+        /// <summary>
+        /// Detection radius, in Godot pixels. Abstract because the body that used to be here was a
+        /// 5 m literal no archetype could reach: the four hand-built ones override
+        /// <see cref="DetectPlayer"/> outright and the chapter boss overrides this (PLAN_CLOSEOUT K5b
+        /// item 4). Every implementation reads its own design file.
+        /// </summary>
+        protected abstract float GetDetectionRange();
 
         protected void EnterDeadState()
         {
@@ -366,10 +444,10 @@ namespace MyGame.Enemy
             // Unity read bounds.min.y for the underside of the body and stepped 0.05 up from it. Godot's
             // +Y is down, so the underside is bounds.End.Y and "just above it" subtracts.
             var origin = new Vector2(
-                dir > 0f ? bounds.End.X + LedgeProbeAhead : bounds.Position.X - LedgeProbeAhead,
+                dir > 0f ? bounds.End.X + _ledgeProbeAhead : bounds.Position.X - _ledgeProbeAhead,
                 bounds.End.Y - World.U(0.05f));
 
-            return Phys2D.Raycast(this, origin, Vector2.Down, LedgeProbeDepth, World.Layer.GroundProbe)
+            return Phys2D.Raycast(this, origin, Vector2.Down, _ledgeProbeDepth, World.Layer.GroundProbe)
                 ? dir
                 : 0f;
         }

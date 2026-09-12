@@ -158,13 +158,30 @@ Actors join Godot groups in `_Ready`: `AddToGroup(World.Group.Player)` / `...Ene
 
 ## Scenes and prefabs
 
-The Unity project builds essentially everything from code - its scenes are 314-line shells and only
-six prefabs exist. **That stays true here.** Do not author `.tscn` content that the Unity source
-built at runtime; port the builder (`GameplayEnvironmentBuilder`, `GameplayVisualFactory`,
-`GameplayEnemySpawner`, `GameplayPlayerSpawner`, `GameplayHud`) and let it build nodes in `_Ready`.
+> **Superseded, 2026-09-10.** The rule below was the right instruction *for the port* and it is why
+> the code looks the way it does - but it is not how this project is built from here on. The
+> user-approved Godot production rules (`AGENTS.md`, and the `godot-cli-control` skill) require
+> reusable things to be saved scenes and UI to be authored in `.tscn`. The migration that brought
+> this codebase into line landed in two phases (`docs/migrations/scene-data/PLAN.md`, then
+> `PLAN_CLOSEOUT.md`, complete 2026-09-12): every screen, actor, world piece and the chapter shell
+> is a scene now, the spawners instance and configure rather than build, and no runtime node
+> creation remains outside the exemptions those documents list. **New work follows the production
+> rules, not this section.** What follows is kept because it explains why the spawners and
+> builders are shaped the way they are.
 
-Only these `.tscn` files exist, each a near-empty shell with a root node and a script:
-`Scenes/TitleScene.tscn`, `Scenes/GameplayScene.tscn`, and one per chapter
+The Unity project builds essentially everything from code - its scenes are 314-line shells and only
+six prefabs exist. **That stayed true through the port.** The instruction at the time was: do not
+author `.tscn` content that the Unity source built at runtime; port the builder
+(`GameplayEnvironmentBuilder`, `GameplayVisualFactory`, `GameplayEnemySpawner`,
+`GameplayPlayerSpawner`, `GameplayHud`) and let it build nodes in `_Ready`.
+
+That kept the port honest - a faithful port of a code-built world is a code-built world - but it also
+made this project *less* asset-driven than its source in one place: Unity's HUD was an authored
+`Canvas` with uGUI prefabs, and it arrived here as 1,100 lines of `new Label()`. That is the gap the
+migration closes.
+
+At the end of the port only these `.tscn` files existed, each a near-empty shell with a root node and
+a script: `Scenes/TitleScene.tscn`, `Scenes/GameplayScene.tscn`, and one per chapter
 (`Chapter02_Orange` ... `Chapter08_White`).
 
 ## Data and tuning
@@ -172,7 +189,7 @@ Only these `.tscn` files exist, each a near-empty shell with a root node and a s
 `Resources/Design/*.json` came over unchanged and stays the source of truth, exactly as
 `CLAUDE.md` in the Unity project said. `Resources/Gameplay/*.asset` (Unity ScriptableObject YAML)
 is **not** ported - the JSON supersedes it. `Resources/Prefabs/*.prefab` is not ported either; the
-spawners rebuild those actors in code.
+actors are `Scenes/Actors/*.tscn` (since scene stage S8) and the spawners instance and configure them.
 
 Art (`Resources/Art`, `Resources/PixelActors`) came over as PNGs and Godot imports them directly.
 

@@ -1,0 +1,57 @@
+[gd_scene load_steps=2 format=3]
+
+; The gate portal's travel list. Inherits ModalPanel.tscn and adds the list and its close button.
+; Replaces GameplayHud.CreateGateTravelPanel.
+;
+; This is the one panel whose contents cannot be authored: how many gates are open follows the save,
+; so GameplayHud.BuildGateRows instantiates Scenes/UI/GateTravelRow.tscn once per gate into GateList
+; and binds text and Pressed. That is the case Rule 3 answers with "instance a pre-authored item
+; scene", and it is the only thing left of that method.
+;
+; WHY A CENTERCONTAINER AROUND A VBOX. The rows used to be placed by arithmetic - a 62px step and a
+; half-column offset computed per open, so that the list stayed centred whatever its length. A
+; CenterContainer sizes its child to that child's minimum and centres it, and a VBoxContainer's
+; minimum is the sum of its rows; separation 6 over a 56px row reproduces the 62px pitch exactly.
+; The arithmetic is gone and the layout is authored, which is the point.
+;
+; Subtitle is hidden: this panel's second line would have nothing to say, and an empty label that
+; still reserves its rectangle pushes nothing but it is one more thing to explain.
+;
+; UNITS: screen pixels.
+
+[ext_resource type="PackedScene" path="res://Scenes/UI/ModalPanel.tscn" id="1_base"]
+
+[node name="GateTravelPanel" instance=ExtResource("1_base")]
+
+[node name="Title" parent="." index="0"]
+text = "UI_GATE_TRAVEL"
+
+[node name="Subtitle" parent="." index="1"]
+visible = false
+
+[node name="GateListCenter" type="CenterContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+mouse_filter = 2
+
+[node name="GateList" type="VBoxContainer" parent="GateListCenter"]
+mouse_filter = 2
+; 6 over GateTravelRow's authored 56px height is the 62px pitch the placement code used to compute.
+theme_override_constants/separation = 6
+
+[node name="GateTravelCloseButton" type="Button" parent="."]
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -140.0
+offset_top = 292.0
+offset_right = 140.0
+offset_bottom = 348.0
+text = "UI_COMMON_CLOSE"

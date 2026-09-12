@@ -185,7 +185,7 @@ namespace MyGame.Tests
         private static string FeintJson()
         {
             return BossJson(
-                "{\"attackId\":\"feint_swing\",\"damage\":10,\"knockback\":0,\"telegraphTime\":0.2," +
+                "{\"attackId\":\"feint_swing\",\"damageType\":1,\"afterimageCountOverride\":-1,\"damage\":10,\"knockback\":0,\"telegraphTime\":0.2," +
                 "\"feintPauseTime\":0.35,\"activeTime\":0.25,\"recoveryTime\":0.2,\"range\":1.5," +
                 "\"forwardOffset\":0.5,\"phaseTwoWeight\":1}");
         }
@@ -193,11 +193,11 @@ namespace MyGame.Tests
         private static string ChainJson()
         {
             return BossJson(
-                "{\"attackId\":\"wave_a\",\"damage\":5,\"knockback\":0,\"telegraphTime\":0.15," +
+                "{\"attackId\":\"wave_a\",\"damageType\":1,\"afterimageCountOverride\":-1,\"damage\":5,\"knockback\":0,\"telegraphTime\":0.15," +
                 "\"activeTime\":0.15,\"recoveryTime\":0.15,\"range\":1.5,\"forwardOffset\":0.5," +
                 "\"phaseTwoWeight\":1,\"chainNextAttackId\":\"wave_b\",\"chainDelay\":0.15," +
                 "\"chainDelayPhaseTwoScale\":1}," +
-                "{\"attackId\":\"wave_b\",\"damage\":5,\"knockback\":0,\"telegraphTime\":0.15," +
+                "{\"attackId\":\"wave_b\",\"damageType\":1,\"afterimageCountOverride\":-1,\"damage\":5,\"knockback\":0,\"telegraphTime\":0.15," +
                 "\"activeTime\":0.15,\"recoveryTime\":0.15,\"range\":1.5,\"forwardOffset\":0.5," +
                 "\"phaseTwoWeight\":1}");
         }
@@ -205,7 +205,7 @@ namespace MyGame.Tests
         private static string PullJson()
         {
             return BossJson(
-                "{\"attackId\":\"tide_pull\",\"damage\":8,\"knockback\":6,\"telegraphTime\":0.15," +
+                "{\"attackId\":\"tide_pull\",\"damageType\":1,\"afterimageCountOverride\":-1,\"damage\":8,\"knockback\":6,\"telegraphTime\":0.15," +
                 "\"activeTime\":0.25,\"recoveryTime\":0.2,\"range\":1.5,\"forwardOffset\":0.5," +
                 "\"phaseTwoWeight\":1,\"pullsTarget\":true}");
         }
@@ -214,6 +214,10 @@ namespace MyGame.Tests
         {
             return "{\"maxHealth\":200,\"moveSpeed\":2,\"detectionRange\":8,\"attackRange\":1.5," +
                    "\"phaseTwoHealthThreshold\":0.5,\"phaseTwoSpeedMultiplier\":1,\"phaseTwoCooldownMultiplier\":1," +
+                   // Stun, poise, body and pulse were class defaults until K3; a boss with a zero body or a
+                   // zero stun is not the one these tests were written against, so the fixture says them.
+                   "\"maxPoise\":90,\"poiseHeavyMultiplier\":2,\"poiseRegenDelay\":3,\"poiseRegenRate\":30,\"stunDuration\":1,\"soulReward\":300," +
+                   "\"bodySize\":{\"x\":1.6,\"y\":2.3},\"telegraphPulseSpeed\":8,\"telegraphPulseAmplitude\":0.2," +
                    "\"bossName\":\"GrammarFixture\",\"chapterName\":\"Test Chapter\"," +
                    "\"attacks\":[" + attackRows + "]}";
         }
@@ -252,12 +256,22 @@ namespace MyGame.Tests
                 CollisionMask = 0,
             };
 
+            // Required since K5b: EnemyStateMachine has no initialisers for the eight shared
+            // numbers and refuses to run unconfigured. Before the tree, which is where the spawner
+            // does it.
+            EnemyFixture.ConfigureFromDesign(_boss);
+
             var collider = _boss.AddComponent<CollisionShape2D>("Collider");
             collider.Shape = new CapsuleShape2D { Radius = World.U(0.8f), Height = World.U(2.3f) };
             _boss.AddComponent<Health>();
 
             TestContext.Tree.Root.AddChild(_boss);
 
+            // Required since K5: the behaviour's arena, intro cap, punish floor and chain cap all read
+            // the encounter directly now. Chapter one's shipped file, the same one the spawner hands a
+            // boss whose arena names no encounter of its own - so the fixture fights in a real room
+            // rather than in constants the class used to carry.
+            _boss.SetEncounterData(BossEncounterData.Load("Design/WrathEncounter"));
             _boss.SetBossData(data);
             _boss.SkipIntro();
             return _boss;
@@ -290,8 +304,12 @@ namespace MyGame.Tests
             // add outright ("Parent node is busy setting up children"), so the controller would be left
             // holding an orphaned action controller and the parry guard would never see a parry.
             // Scripts/Player/PlayerController2D.cs:136.
-            _player.AddComponent<PlayerActionController>();
+            PlayerFixture.Configure(_player.AddComponent<PlayerActionController>());
             _player.AddComponent<PlayerController2D>();
+
+            // Required since K7b, for the same reason as EnemyFixture above: the player components
+            // carry no initialisers either, and the motor's own tuning is PlayerMovement.json's.
+            PlayerFixture.Configure(_player);
 
             TestContext.Tree.Root.AddChild(_player);
 

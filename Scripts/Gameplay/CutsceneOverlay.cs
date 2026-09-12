@@ -7,12 +7,20 @@ namespace MyGame.Gameplay
     /// Fade, letterbox and dialogue line on their own layer above the HUD.
     /// </summary>
     /// <remarks>
-    /// In Unity this deliberately held no logic at all: Timeline Animation Tracks drove the child alphas
-    /// and bar heights by path name, so every child name here was part of the contract with an authored
-    /// <c>.playable</c>. Timeline did not survive the port (see <see cref="CutsceneDirector"/>), so the
-    /// channels those tracks wrote are now three plain setters - <see cref="SetFade"/>,
-    /// <see cref="SetLetterbox"/> and <see cref="SetLine"/> - and the director's coded sequences call
-    /// them. The node names are kept anyway: they are how the layout reads.
+    /// In Unity this deliberately held no logic at all: the hierarchy was authored, and Timeline
+    /// Animation Tracks drove the child alphas and bar heights <i>by path name</i>, so every child name
+    /// here was part of the contract with an authored <c>.playable</c>. Timeline did not survive the port
+    /// (see <see cref="CutsceneDirector"/>), so the channels those tracks wrote are now three plain
+    /// setters - <see cref="SetFade"/>, <see cref="SetLetterbox"/> and <see cref="SetLine"/> - and the
+    /// director's coded sequences call them.
+    /// <para>
+    /// The port also rebuilt the hierarchy itself in code, which the original never did.
+    /// <c>Scenes/UI/CutsceneOverlay.tscn</c> restores the authored shape: the nodes, their anchors,
+    /// offsets, colours and mouse filters, the layer number and the process mode all live in the scene,
+    /// and what is left here is binding and the three animated channels - which is what a script is for.
+    /// The node names are still the contract; they are how the layout reads and how <see cref="Bind"/>
+    /// finds its children.
+    /// </para>
     /// <para>
     /// The letterbox heights and the line's rectangle are UI pixels, straight from the Unity canvas.
     /// They are not world distances and get no <c>World.U</c>.
@@ -22,9 +30,8 @@ namespace MyGame.Gameplay
     {
         public const string ObjectName = "CutsceneOverlay";
 
-        // MoodDirection.md: INK_950 for the blackout surfaces, BONE_100 for text.
-        private static readonly Color Ink950 = new(0x06 / 255f, 0x07 / 255f, 0x0A / 255f, 1f);
-        private static readonly Color Bone100 = new(0xC3 / 255f, 0xBD / 255f, 0xB1 / 255f, 1f);
+        /// <summary>The authored hierarchy. Its root node is already named <see cref="ObjectName"/>.</summary>
+        private const string ScenePath = "res://Scenes/UI/CutsceneOverlay.tscn";
 
         private ColorRect _fade;
         private Control _letterboxTop;
@@ -32,36 +39,37 @@ namespace MyGame.Gameplay
         private Label _line;
 
         /// <summary>
-        /// Built from a factory rather than <c>_Ready</c> so a headless test can construct one and drive
-        /// it without a scene - the same reason the Unity version had a Create.
+        /// Instantiates the packed scene rather than letting a caller <c>new</c> one, so a headless test
+        /// can stand an overlay up and drive it without a scene of its own - the same reason the Unity
+        /// version had a Create.
         /// </summary>
         public static CutsceneOverlay Create()
         {
-            var overlay = new CutsceneOverlay
-            {
-                Name = ObjectName,
-
-                // Above the HUD layer, which sits at the default 0. A cutscene fade that leaves the
-                // health readout on top of it is not a fade.
-                Layer = 100,
-            };
-
-            // The shot has to keep drawing through the pause menu and through the victory freeze.
-            overlay.ProcessMode = Node.ProcessModeEnum.Always;
+            // Layer 100 (above the HUD's default 0 - a fade with the health readout on top of it is not a
+            // fade) and ProcessMode Always (the shot keeps drawing through the pause menu and through the
+            // victory freeze) are both authored in the scene.
+            var overlay = GD.Load<PackedScene>(ScenePath).Instantiate<CutsceneOverlay>();
 
             // Unity's `new GameObject` dropped the canvas into the active scene for free, and the
             // bootstrap relies on that - it never parents the overlay itself.
             GameplayBuildShim.SceneRoot?.AddChild(overlay);
 
-            overlay.Build();
+            // AddChild ran _Ready and bound already; this is for the headless case where SceneRoot is null
+            // and nothing entered a tree. Binding twice is a re-resolve of the same four children.
+            overlay.Bind();
             return overlay;
         }
 
+        public override void _Ready()
+        {
+            Bind();
+        }
+
         /// <summary>
-        /// Puts the screen on black before anything animates it. <see cref="Build"/> leaves the fade at
-        /// alpha 0, so a sequence that is the first thing to write it renders the arena lit for the
-        /// frames before the first step runs and the fade-from-black reads as a flash. The entry
-        /// cutscene calls this from bootstrap, which still runs ahead of the first rendered frame.
+        /// Puts the screen on black before anything animates it. The scene rests the fade at alpha 0, so a
+        /// sequence that is the first thing to write it renders the arena lit for the frames before the
+        /// first step runs and the fade-from-black reads as a flash. The entry cutscene calls this from
+        /// bootstrap, which still runs ahead of the first rendered frame.
         /// </summary>
         public void SetBlackout(float letterboxHeight)
         {
@@ -104,62 +112,26 @@ namespace MyGame.Gameplay
             SetLetterbox(0f);
         }
 
-        private void Build()
+        /// <summary>
+        /// Resolves the four authored children. It creates nothing - the scene owns the hierarchy - and it
+        /// is idempotent, because <see cref="Create"/> calls it for the case where the overlay never
+        /// entered a tree and so never got a <c>_Ready</c>.
+        /// </summary>
+        private void Bind()
         {
-            _fade = new ColorRect { Name = "Fade", Color = Ink950 };
-            _fade.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+            _fade = GetNode<ColorRect>("Fade");
+            _letterboxTop = GetNode<Control>("LetterboxTop");
+            _letterboxBottom = GetNode<Control>("LetterboxBottom");
+            _line = GetNode<Label>("Line");
 
-            // Ignore everywhere, never Stop: the overlay must never swallow a click meant for the pause
-            // or victory buttons underneath it. This is what Unity said by leaving off the
-            // GraphicRaycaster.
-            _fade.MouseFilter = Control.MouseFilterEnum.Ignore;
-            AddChild(_fade);
-
-            _letterboxTop = CreateBar("LetterboxTop", top: true);
-            _letterboxBottom = CreateBar("LetterboxBottom", top: false);
-
-            _line = new Label
-            {
-                Name = "Line",
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Bottom,
-                MouseFilter = Control.MouseFilterEnum.Ignore,
-            };
-
-            // The HUD's loader, not a second Resources.Load of the same .otf: it is the Korean-capable
-            // face and it already falls back sensibly when the font is missing.
+            // The one property that stays a runtime binding. The scene could reference the .otf directly,
+            // but an ext_resource pointing at a font Godot has not imported yet is a hard scene-load
+            // failure - the whole overlay would fail to instantiate - whereas GameplayHud.LoadUiFont()
+            // degrades to ThemeDB.FallbackFont and the caption still draws. That fallback is the HUD
+            // loader's job and it should have exactly one owner, so the scene authors the caption's size
+            // and colour and this authors its face. Not a second Resources.Load of the same .otf: it is
+            // the Korean-capable face the rest of the UI already uses.
             _line.AddThemeFontOverride("font", MyGame.UI.GameplayHud.LoadUiFont());
-            _line.AddThemeFontSizeOverride("font_size", 24);
-            _line.AddThemeColorOverride("font_color", Bone100);
-
-            // Bottom-centre, 900x80, sitting 90px off the bottom edge - the Unity anchoredPosition and
-            // sizeDelta, unchanged.
-            _line.AnchorLeft = 0.5f;
-            _line.AnchorRight = 0.5f;
-            _line.AnchorTop = 1f;
-            _line.AnchorBottom = 1f;
-            _line.OffsetLeft = -450f;
-            _line.OffsetRight = 450f;
-            _line.OffsetTop = -170f;
-            _line.OffsetBottom = -90f;
-            AddChild(_line);
-
-            ResetToNeutral();
-        }
-
-        private Control CreateBar(string name, bool top)
-        {
-            var bar = new ColorRect { Name = name, Color = Ink950, MouseFilter = Control.MouseFilterEnum.Ignore };
-
-            // Full width against a stretched anchor pair; the height is the animated channel.
-            bar.AnchorLeft = 0f;
-            bar.AnchorRight = 1f;
-            bar.AnchorTop = top ? 0f : 1f;
-            bar.AnchorBottom = top ? 0f : 1f;
-            bar.OffsetLeft = 0f;
-            bar.OffsetRight = 0f;
-            AddChild(bar);
-            return bar;
         }
 
         private static void SetBarHeight(Control bar, float height, bool top)

@@ -1,0 +1,8 @@
+# Normalize EOL for everything Git considers text. Without this the C# sources,
+# .tscn files and .import files churn between LF and CRLF on Windows checkouts.
+* text=auto eol=lf
+
+# Godot writes these itself and Git must not touch their bytes.
+*.png binary
+*.otf binary
+*.ttf binary

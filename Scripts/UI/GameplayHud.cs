@@ -2,29 +2,58 @@ using System;
 using Godot;
 using MyGame.Combat;
 using MyGame.Core;
+using MyGame.Gameplay;
 using MyGame.Player;
 
 namespace MyGame.UI
 {
     /// <summary>
-    /// The gameplay HUD, built entirely in code. The Unity original was a <c>MonoBehaviour</c> on the
-    /// screen-space <c>Canvas</c>; here it is the <see cref="CanvasLayer"/> itself, and every uGUI
-    /// <c>Image</c> is a <see cref="ColorRect"/>, every <c>Text</c> a <see cref="Label"/>.
+    /// The gameplay HUD. The Unity original was a <c>MonoBehaviour</c> on the screen-space
+    /// <c>Canvas</c>; here it is the <see cref="CanvasLayer"/> itself, and every uGUI <c>Image</c> is a
+    /// <see cref="ColorRect"/>, every <c>Text</c> a <see cref="Label"/>.
+    ///
+    /// The screen is no longer assembled here. <c>Scenes/UI/GameplayHud.tscn</c> is the whole
+    /// hierarchy - the layer, its process mode, the plate, the three <c>Scenes/UI/HudBar.tscn</c>
+    /// gauges, the twelve readouts and the four panels, which inherit
+    /// <c>Scenes/UI/ModalPanel.tscn</c> - and every button's styling is
+    /// <c>Resources/UI/MenuTheme.tres</c>. What is left in this file is binding, the per-frame
+    /// readouts and the two timers, which is what a script is for.
+    ///
+    /// The one thing still built at runtime is the gate-travel list, because how many gates a save
+    /// has opened is not knowable until it is opened: <see cref="BuildGateRows"/> instantiates
+    /// <c>Scenes/UI/GateTravelRow.tscn</c> per row.
     ///
     /// All numbers in this file are screen pixels, exactly as they were in uGUI - <c>World.Ppu</c> is a
     /// world-space conversion and has no business here.
     /// </summary>
     public partial class GameplayHud : CanvasLayer
     {
-        // Mood palette tokens - Docs/MoodDirection.md section 2. Written as hex/255 so that
-        // round(v * 255) reproduces the documented hex exactly; a two-decimal literal does not
-        // always land on the right byte (0.68 * 255 rounds to 0xAD, not 0xAE).
-        private static readonly Color Bone100 = new Color(0.7647059f, 0.7411765f, 0.69411767f);   // #C3BDB1 text primary
-        private static readonly Color Bone200 = new Color(0.6039216f, 0.5803922f, 0.53333336f);   // #9A9488 text secondary
-        private static readonly Color Bone300 = new Color(0.43137255f, 0.40784314f, 0.36078432f); // #6E685C text dim
-        private static readonly Color Cold200 = new Color(0.5176471f, 0.57254905f, 0.627451f);    // #8492A0 souls / spirit
-        private static readonly Color Ember300 = new Color(0.65882355f, 0.29411766f, 0.2f);       // #A84B33 warning
-        private static readonly Color PanelInk = new Color(0.039215688f, 0.043137256f, 0.05490196f); // #0A0B0E panel fill
+        /// <summary>
+        /// The Theme type the mood palette is filed under in <c>Resources/UI/MenuTheme.tres</c>. No node
+        /// carries it: a Theme is what Godot has instead of a colour asset, and this is the HUD reading
+        /// the palette out of it rather than typing it a second time (PLAN_CLOSEOUT A8/B2, decision D5).
+        /// </summary>
+        private const string PaletteType = "Palette";
+
+        private static Theme _palette;
+
+        /// <summary>
+        /// One mood token, by its name in the Theme. A dictionary hit per read, on a Theme the loader
+        /// has already cached - cheap enough for the handful of tints a frame does, and the point is
+        /// that there is nowhere else the colour could have come from.
+        /// </summary>
+        private static Color Hue(string token)
+        {
+            _palette ??= LoadMenuTheme();
+            return _palette != null ? _palette.GetColor(token, PaletteType) : default;
+        }
+
+        // Mood palette tokens - Docs/MoodDirection.md section 2, authored in MenuTheme.tres.
+        private static Color Bone100 => Hue("bone_100");   // #C3BDB1 text primary
+        private static Color Bone200 => Hue("bone_200");   // #9A9488 text secondary
+        private static Color Bone300 => Hue("bone_300");   // #6E685C text dim
+        private static Color Cold200 => Hue("cold_200");   // #8492A0 souls / spirit
+        private static Color Ember300 => Hue("ember_300"); // #A84B33 warning
 
         /// <summary>The full-rect <see cref="Control"/> every widget hangs off - a CanvasLayer has no rect of its own.</summary>
         private Control _root;
@@ -53,14 +82,17 @@ namespace MyGame.UI
         // Ghost gauge and hit flash, on scaled time on purpose: at timeScale 0 the pause menu freezes
         // both, which is what stops a hit taken on the last frame before Escape from draining behind
         // the menu and being over by the time the player looks again.
-        private const float GhostHoldSeconds = 0.4f;
-        private const float GhostDrainSeconds = 0.5f;
-        private const float HitFlashSeconds = 0.15f;
+        // Seconds, from Resources/Design/UiTuning.json, read once in Bind. Zero until then and zero if
+        // the file is missing, which is an error rather than a second set of numbers (D1) - a missing
+        // file shows as no hold and an instant drain, not as the shipped feel.
+        private float _ghostHoldSeconds;
+        private float _ghostDrainSeconds;
+        private float _hitFlashSeconds;
         private float _ghostRatio;
         private float _ghostHoldUntil;
         private float _hitFlashUntil;
         private Control _victoryPanel;
-        private const string DefaultRestartLabel = "다시하기";
+        private const string DefaultRestartLabelKey = "UI_VICTORY_RESTART";
 
         private Label _victorySubtitle;
         private Button _restartButton;
@@ -73,7 +105,6 @@ namespace MyGame.UI
         private Control _gateTravelPanel;
         private Control _gateTravelList;
         private Button _gateTravelCloseButton;
-        private Font _gateTravelFont;
         private Control _levelUpPanel;
         private Button[] _levelUpButtons;
         private Label _levelUpSoulsText;
@@ -117,218 +148,159 @@ namespace MyGame.UI
             return korean != null ? korean : ThemeDB.FallbackFont;
         }
 
+        /// <summary>
+        /// The authored button styling, shared with the title screen. Everything a menu button looks
+        /// like - the five state plates, the font sizes and the font colour per state - lives in
+        /// <c>Resources/UI/MenuTheme.tres</c>; this hands it out and is the only styling call left.
+        /// </summary>
+        /// <remarks>
+        /// The font is the one thing the resource does not carry, and is written here instead. An
+        /// <c>ext_resource</c> pointing at a font Godot has not imported yet is a hard load failure,
+        /// which on a cold clone would take both UI screens down with it; <see cref="LoadUiFont"/>
+        /// degrades to <c>ThemeDB.FallbackFont</c> and the menus still draw. <c>CutsceneOverlay.Bind</c>
+        /// makes the same trade for the same reason. A Theme falls back to <c>default_font</c> for any
+        /// type that names no font of its own, so this reaches every variation in the resource too.
+        ///
+        /// <c>Res.Load</c> hands back the cached instance, so the assignment lands on the same resource
+        /// the <c>.tscn</c> files reference through their own <c>ext_resource</c>.
+        /// </remarks>
+        internal static Theme LoadMenuTheme()
+        {
+            var theme = Res.Load<Theme>("UI/MenuTheme", ".tres");
+            if (theme != null && theme.DefaultFont == null)
+                theme.DefaultFont = LoadUiFont();
+            return theme;
+        }
+
+        /// <summary>The authored gate-travel row. Instanced once per gate the save has opened.</summary>
+        private const string GateRowScenePath = "res://Scenes/UI/GateTravelRow.tscn";
+
         public override void _Ready()
         {
-            // The warning line expires on unscaled time and the menus have to keep answering while the
-            // world is stopped, so the HUD runs through a pause. The ghost gauge stays on scaled time and
-            // freezes anyway - see TickHealthGauge.
-            ProcessMode = ProcessModeEnum.Always;
+            // ProcessMode is authored on the scene's root as Always, and it is load-bearing: the warning
+            // line expires on unscaled time and the menus have to keep answering while the world is
+            // stopped. The other half of that pair is that the ghost gauge and the hit flash stay on
+            // scaled time and freeze at TimeScale 0 anyway - see TickHealthGauge.
+            Bind();
         }
 
         /// <summary>
-        /// Builds the whole HUD. <paramref name="canvas"/> is the overlay layer to build into; it
-        /// defaults to this node, which is the CanvasLayer the Unity <c>Canvas</c> became.
+        /// Resolves the authored hierarchy. It builds nothing: <c>Scenes/UI/GameplayHud.tscn</c> owns
+        /// every node, anchor, colour and font size, and this only picks up the references the readouts
+        /// write to. Idempotent, because <see cref="CreateUi"/> calls it for the headless case where the
+        /// HUD never entered a tree and so never got a <c>_Ready</c>.
+        /// </summary>
+        /// <remarks>
+        /// The node names are the contract, and they are how the layout reads: HudRoot, the three
+        /// gauges, the eleven readouts, and one child per panel. Two tests reach in by name -
+        /// GameplayHealItemTests for FlaskText and GameplayVictoryPanelTests for the victory panel's
+        /// Subtitle and RestartButton - so a rename here is a rename there.
+        /// </remarks>
+        private void Bind()
+        {
+            if (_root != null)
+                return;
+
+            _root = GetNodeOrNull<Control>("HudRoot");
+            if (_root == null)
+                return;
+
+            // Writes the Korean face into the shared Theme the scenes reference through their own
+            // ext_resource - it is the same cached instance, and the resource deliberately names no font
+            // of its own. Has to happen before the first draw or every label falls back to Godot's face.
+            LoadMenuTheme();
+
+            // The two timers' seconds, from the designer's file. The bootstrap has already refused to
+            // build an arena on an incomplete catalog, so null here means a HUD stood up outside one.
+            UiTuningData ui = GameplayTuningCatalog.Load()?.UiTuning;
+            if (ui == null)
+            {
+                GD.PushError("GameplayHud: Resources/Design/UiTuning.json is missing; the ghost gauge and the hit flash have no timings.");
+            }
+            else
+            {
+                _ghostHoldSeconds = ui.ghostHoldSeconds;
+                _ghostDrainSeconds = ui.ghostDrainSeconds;
+                _hitFlashSeconds = ui.hitFlashSeconds;
+            }
+
+            var healthGauge = _root.GetNode<Control>("HealthGauge");
+            _healthFill = healthGauge.GetNode<ColorRect>("Fill");
+            _ghostFill = healthGauge.GetNode<ColorRect>("GhostFill");
+            _staminaFill = _root.GetNode<ColorRect>("StaminaGauge/Fill");
+            _poiseGauge = _root.GetNode<Control>("PoiseGauge");
+            _poiseFill = _poiseGauge.GetNode<ColorRect>("Fill");
+
+            _healthText = _root.GetNode<Label>("HealthText");
+            _humanityText = _root.GetNode<Label>("HumanityText");
+            _resonanceText = _root.GetNode<Label>("ResonanceText");
+            _activeSinText = _root.GetNode<Label>("ActiveSinText");
+            _deathCountText = _root.GetNode<Label>("DeathCountText");
+            _spiritStateText = _root.GetNode<Label>("SpiritStateText");
+            _staminaText = _root.GetNode<Label>("StaminaText");
+            _poiseText = _root.GetNode<Label>("PoiseText");
+            _soulsText = _root.GetNode<Label>("SoulsText");
+            _flaskText = _root.GetNode<Label>("FlaskText");
+            _actionText = _root.GetNode<Label>("ActionText");
+            _warningText = _root.GetNode<Label>("WarningText");
+
+            _victoryPanel = _root.GetNode<Control>("VictoryPanel");
+            // Subtitle, not VictorySubtitle: the four panels inherit ModalPanel.tscn, and Godot does not
+            // let an inherited node be renamed. One name per role across all four panels.
+            _victorySubtitle = _victoryPanel.GetNode<Label>("Subtitle");
+            _restartButton = _victoryPanel.GetNode<Button>("RestartButton");
+            _titleButton = _victoryPanel.GetNode<Button>("TitleButton");
+
+            _pausePanel = _root.GetNode<Control>("PausePanel");
+            _pauseStatusText = _pausePanel.GetNode<Label>("Subtitle");
+            _resumeButton = _pausePanel.GetNode<Button>("ResumeButton");
+            _saveButton = _pausePanel.GetNode<Button>("SaveButton");
+            _pauseTitleButton = _pausePanel.GetNode<Button>("PauseTitleButton");
+
+            _gateTravelPanel = _root.GetNode<Control>("GateTravelPanel");
+            // The VBox inside the CenterContainer: the rows are added to the box and centred by the
+            // container, which is what replaced the per-open column arithmetic.
+            _gateTravelList = _gateTravelPanel.GetNode<Control>("GateListCenter/GateList");
+            _gateTravelCloseButton = _gateTravelPanel.GetNode<Button>("GateTravelCloseButton");
+
+            _levelUpPanel = _root.GetNode<Control>("LevelUpPanel");
+            _levelUpSoulsText = _levelUpPanel.GetNode<Label>("Subtitle");
+            _levelUpButtons = new Button[LevelUpStats.Length];
+            for (var i = 0; i < LevelUpStats.Length; i++)
+            {
+                // Fresh local per iteration: the loop variable would be read at click time and every row
+                // would buy Resolve.
+                PlayerStat stat = LevelUpStats[i];
+                Button row = _levelUpPanel.GetNode<Button>($"LevelUp{stat}Button");
+                _levelUpButtons[i] = row;
+
+                // Added once and never removed: unlike the gate rows these buttons outlive an open.
+                row.Pressed += () => PurchaseLevel(stat);
+            }
+
+            _levelUpCloseButton = _levelUpPanel.GetNode<Button>("LevelUpCloseButton");
+            _levelUpCloseButton.Pressed += CloseLevelUp;
+        }
+
+        /// <summary>
+        /// Binds the HUD to its authored hierarchy. It used to build that hierarchy, and the callers
+        /// still call it in the same place for the same reason - the HUD has to be usable before
+        /// <see cref="Initialize"/> runs - so the entry point is kept even though the body is now one
+        /// call. <paramref name="canvas"/> named the layer to build into and is ignored: the scene is
+        /// the layer.
         /// </summary>
         public void CreateUi(CanvasLayer canvas = null)
         {
-            Font uiFont = LoadUiFont();
-
-            _root = new Control { Name = "HudRoot" };
-            _root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-            // Ignore, not Stop: the plate behind the readouts must not eat clicks meant for the world or
-            // for a panel. Children are hit-tested on their own, so the panels still block.
-            _root.MouseFilter = Control.MouseFilterEnum.Ignore;
-            (canvas ?? this).AddChild(_root);
-
-            CreateBackground(_root);
-
-            // Built before the text rows on purpose: a Control draws its children in tree order, so
-            // anything made here ends up behind every row below and the numbers stay legible on top of
-            // their gauge.
-            _healthFill = CreateBar(_root, "HealthGauge", Ember300, new Vector2(20, -40));
-            _staminaFill = CreateBar(_root, "StaminaGauge", Cold200, new Vector2(20, -220));
-            _poiseFill = CreateBar(_root, "PoiseGauge", Bone300, new Vector2(20, -250));
-            _poiseGauge = _poiseFill.GetParent<Control>();
-
-            // Health alone gets the ghost. Stamina and poise refill in under a second, so a trailing
-            // strip on those two would be lit most of the fight and read as noise rather than as damage.
-            // Built after the live fill and then moved to child 0, so it draws behind it.
-            _ghostFill = CreateFill(_healthFill.GetParent<Control>(), "GhostFill", Bone100, 0.3f);
-            _ghostFill.GetParent().MoveChild(_ghostFill, 0);
-
-            _healthText = CreateText(_root, "HealthText", uiFont, Bone100, 22, new Vector2(20, -40), HorizontalAlignment.Left);
-            _humanityText = CreateText(_root, "HumanityText", uiFont, Bone200, 22, new Vector2(20, -70), HorizontalAlignment.Left);
-            _resonanceText = CreateText(_root, "ResonanceText", uiFont, Bone200, 22, new Vector2(20, -100), HorizontalAlignment.Left);
-            _activeSinText = CreateText(_root, "ActiveSinText", uiFont, Bone100, 22, new Vector2(20, -130), HorizontalAlignment.Left);
-            _deathCountText = CreateText(_root, "DeathCountText", uiFont, Bone300, 20, new Vector2(20, -160), HorizontalAlignment.Left);
-            _spiritStateText = CreateText(_root, "SpiritStateText", uiFont, Cold200, 20, new Vector2(20, -190), HorizontalAlignment.Left);
-            _staminaText = CreateText(_root, "StaminaText", uiFont, Bone200, 20, new Vector2(20, -220), HorizontalAlignment.Left);
-            _poiseText = CreateText(_root, "PoiseText", uiFont, Bone200, 20, new Vector2(20, -250), HorizontalAlignment.Left);
-            _soulsText = CreateText(_root, "SoulsText", uiFont, Cold200, 22, new Vector2(20, -280), HorizontalAlignment.Left);
-            _flaskText = CreateText(_root, "FlaskText", uiFont, Bone200, 22, new Vector2(20, -310), HorizontalAlignment.Left);
-            _actionText = CreateText(_root, "ActionText", uiFont, Bone300, 18, new Vector2(20, -340), HorizontalAlignment.Left);
-            // x = 0, not half the viewport width: the centred branch of CreateText anchors this rect to
-            // the middle of the screen already, so a half-screen offset on top pushed the warning to the
-            // right edge.
-            _warningText = CreateText(_root, "WarningText", uiFont, Ember300, 28, new Vector2(0, -40), HorizontalAlignment.Center);
-            CreateVictoryPanel(_root, uiFont);
-
-            // Before the pause panel on purpose. Children draw in tree order, so whatever is built last
-            // covers everything before it - and the level-up panel is the one panel here that does not
-            // stop the world, so Escape has to be able to put the pause menu on top of it.
-            CreateLevelUpPanel(_root, uiFont);
-
-            CreatePausePanel(_root, uiFont);
-            CreateGateTravelPanel(_root, uiFont);
+            Bind();
         }
 
         /// <summary>
-        /// uGUI placed a rect with anchorMin/anchorMax + pivot + anchoredPosition + sizeDelta; Godot
-        /// places one with four anchors and four offsets. This is that conversion, in one place. Unity's
-        /// +Y-up screen axis flips to Godot's +Y-down here, which is why every <c>anchor.Y</c> and every
-        /// <c>position.Y</c> is negated.
+        /// Recolours one readout. The scene authors each label's resting colour as a theme override;
+        /// these are the four lines that change colour with what they say - the active sin, a staggered
+        /// poise, an empty flask, and the warning line - which is state, not styling.
         /// </summary>
-        internal static void PlaceRect(Control control, Vector2 anchor, Vector2 pivot, Vector2 position, Vector2 size)
-        {
-            control.AnchorLeft = control.AnchorRight = anchor.X;
-            control.AnchorTop = control.AnchorBottom = 1f - anchor.Y;
-
-            float left = position.X - pivot.X * size.X;
-            float top = -position.Y - (1f - pivot.Y) * size.Y;
-            control.OffsetLeft = left;
-            control.OffsetTop = top;
-            control.OffsetRight = left + size.X;
-            control.OffsetBottom = top + size.Y;
-        }
-
-        private static readonly Vector2 TopLeft = new Vector2(0f, 1f);
-        private static readonly Vector2 Centre = new Vector2(0.5f, 0.5f);
-
-        private static void CreateBackground(Control parent)
-        {
-            var bg = new ColorRect
-            {
-                Name = "HUDBackground",
-                Color = new Color(0f, 0f, 0f, 0.45f),
-                MouseFilter = Control.MouseFilterEnum.Ignore,
-            };
-            parent.AddChild(bg);
-            // Sits behind the text column (rows at x 20, y -40 down to -340) with a 10px margin. The old
-            // (150, -110) put the plate's left edge to the right of every row it was meant to back.
-            PlaceRect(bg, TopLeft, TopLeft, new Vector2(10, -30), new Vector2(280, 350));
-        }
-
-        private void CreateVictoryPanel(Control parent, Font font)
-        {
-            _victoryPanel = CreatePanel(parent, "VictoryPanel", 0.94f);
-
-            Label title = CreateVictoryText(_victoryPanel, "VictoryTitle", font, "VICTORY", 58, new Vector2(0f, 105f));
-            title.LabelSettings.FontColor = new Color(0.72156864f, 0.64705884f, 0.47843137f); // #B8A57A
-            _victorySubtitle = CreateVictoryText(_victoryPanel, "VictorySubtitle", font, "Wrath has fallen", 24, new Vector2(0f, 46f));
-
-            _restartButton = CreateVictoryButton(_victoryPanel, font, "RestartButton", DefaultRestartLabel, new Vector2(0f, -35f));
-            _titleButton = CreateVictoryButton(_victoryPanel, font, "TitleButton", "타이틀로", new Vector2(0f, -105f));
-            _victoryPanel.Visible = false;
-        }
-
-        /// <summary>A full-screen ink plate. The four modal panels are the same shape, so they share this.</summary>
-        private static Control CreatePanel(Control parent, string name, float alpha)
-        {
-            var panel = new ColorRect
-            {
-                Name = name,
-                Color = new Color(PanelInk.R, PanelInk.G, PanelInk.B, alpha),
-                // Stop, unlike the HUD plate: a modal panel is supposed to swallow clicks aimed at
-                // whatever is behind it.
-                MouseFilter = Control.MouseFilterEnum.Stop,
-            };
-            parent.AddChild(panel);
-            panel.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-            return panel;
-        }
-
-        private static Label CreateVictoryText(Control parent, string name, Font font, string content, int fontSize, Vector2 position)
-        {
-            var label = new Label
-            {
-                Name = name,
-                Text = content,
-                LabelSettings = Face(font, fontSize, Bone100),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                MouseFilter = Control.MouseFilterEnum.Ignore,
-            };
-            parent.AddChild(label);
-            PlaceRect(label, Centre, Centre, position, new Vector2(560f, 70f));
-            return label;
-        }
-
-        private static Button CreateVictoryButton(Control parent, Font font, string name, string label, Vector2 position)
-        {
-            var button = new Button { Name = name, Text = label };
-            parent.AddChild(button);
-            StyleMenuButton(button, font, 24);
-            PlaceRect(button, Centre, Centre, position, new Vector2(280f, 56f));
-            return button;
-        }
-
-        /// <summary>
-        /// The plate a menu button is drawn on, in every state it has.
-        ///
-        /// uGUI's <c>ColorBlock</c> multiplied the target graphic, so a block could only ever darken it:
-        /// the graphic was the brightest state (#2E3038) and the block stepped down from it - see
-        /// Docs/MoodDirection.md section 4. Godot has no multiply; each state gets its own StyleBoxFlat
-        /// with the product already worked out, which is the same picture with none of the arithmetic at
-        /// runtime. Godot's focus box is what uGUI called <c>selectedColor</c>, and it draws over the
-        /// others, so it carries the full-brightness plate.
-        /// </summary>
-        private static void StyleMenuButton(Button button, Font font, int fontSize)
-        {
-            var plate = new Color(0.18039216f, 0.1882353f, 0.21960784f, 0.94f); // #2E3038
-            button.AddThemeStyleboxOverride("normal", Plate(Mul(plate, 0.5686275f)));      // #919191 multiply
-            button.AddThemeStyleboxOverride("hover", Plate(plate));                        // white multiply
-            button.AddThemeStyleboxOverride("focus", Plate(plate));
-            button.AddThemeStyleboxOverride("pressed", Plate(Mul(plate, 0.32156864f)));    // #525252
-            button.AddThemeStyleboxOverride("disabled", Plate(Mul(plate, 0.36078432f, 0.6f))); // #5C5C5C a0.60
-
-            if (font != null)
-                button.AddThemeFontOverride("font", font);
-            button.AddThemeFontSizeOverride("font_size", fontSize);
-            button.AddThemeColorOverride("font_color", Bone100);
-            button.AddThemeColorOverride("font_hover_color", Bone100);
-            button.AddThemeColorOverride("font_focus_color", Bone100);
-            button.AddThemeColorOverride("font_pressed_color", Bone100);
-            button.AddThemeColorOverride("font_disabled_color", new Color(Bone300.R, Bone300.G, Bone300.B, 0.6f));
-        }
-
-        internal static StyleBoxFlat Plate(Color color) => new StyleBoxFlat { BgColor = color };
-
-        /// <summary>RGB-only multiply, the way uGUI's ColorBlock treated an opaque block entry.</summary>
-        internal static Color Mul(Color c, float m, float alphaScale = 1f) =>
-            new Color(c.R * m, c.G * m, c.B * m, c.A * alphaScale);
-
-        internal static LabelSettings Face(Font font, int fontSize, Color color) =>
-            new LabelSettings { Font = font, FontSize = fontSize, FontColor = color };
-
-        /// <summary>
-        /// Built up front and hidden, like the victory panel, so opening the pause menu is a visibility
-        /// flip rather than a burst of allocation on the frame the player presses Escape.
-        /// Reuses the victory panel's text and button builders - the two panels are the same shape.
-        /// </summary>
-        private void CreatePausePanel(Control parent, Font font)
-        {
-            _pausePanel = CreatePanel(parent, "PausePanel", 0.88f);
-
-            Label title = CreateVictoryText(_pausePanel, "PauseTitle", font, "일시정지", 48, new Vector2(0f, 140f));
-            title.LabelSettings.FontColor = Bone100;
-            _pauseStatusText = CreateVictoryText(_pausePanel, "PauseStatus", font, string.Empty, 20, new Vector2(0f, 90f));
-            _pauseStatusText.LabelSettings.FontColor = Cold200;
-
-            _resumeButton = CreateVictoryButton(_pausePanel, font, "ResumeButton", "계속하기", new Vector2(0f, 20f));
-            _saveButton = CreateVictoryButton(_pausePanel, font, "SaveButton", "저장", new Vector2(0f, -50f));
-            _pauseTitleButton = CreateVictoryButton(_pausePanel, font, "PauseTitleButton", "타이틀로", new Vector2(0f, -120f));
-            _pausePanel.Visible = false;
-        }
+        private static void Tint(Label label, Color color) =>
+            label.AddThemeColorOverride("font_color", color);
 
         /// <summary>
         /// Godot's <c>Pressed</c> signal has no RemoveAllListeners, so every panel that rebinds its
@@ -368,28 +340,6 @@ namespace MyGame.UI
 
             if (visible)
                 _resumeButton.GrabFocus();
-        }
-
-        /// <summary>
-        /// The gate portal's panel. Its rows are the only ones in the HUD that cannot be built up front -
-        /// how many gates are open changes with the save - so the frame and the close button are built
-        /// here and the list is filled in <see cref="SetGateTravelVisible"/>.
-        /// </summary>
-        private void CreateGateTravelPanel(Control parent, Font font)
-        {
-            _gateTravelFont = font;
-
-            _gateTravelPanel = CreatePanel(parent, "GateTravelPanel", 0.92f);
-
-            Label title = CreateVictoryText(_gateTravelPanel, "GateTravelTitle", font, "관문 이동", 44, new Vector2(0f, 300f));
-            title.LabelSettings.FontColor = Bone100;
-
-            _gateTravelList = new Control { Name = "GateList", MouseFilter = Control.MouseFilterEnum.Ignore };
-            _gateTravelPanel.AddChild(_gateTravelList);
-            _gateTravelList.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-
-            _gateTravelCloseButton = CreateVictoryButton(_gateTravelPanel, font, "GateTravelCloseButton", "닫기", new Vector2(0f, -320f));
-            _gateTravelPanel.Visible = false;
         }
 
         private Action _gateCloseHandler;
@@ -434,13 +384,16 @@ namespace MyGame.UI
         /// in the Enemy namespace, which UI is not allowed to reference; a missing or short title array
         /// falls back to the scene name rather than leaving a blank button.
         /// </summary>
+        /// <remarks>
+        /// All that is left here is instantiate and bind. The row's rect is authored in
+        /// <c>GateTravelRow.tscn</c> and where it sits in the column is the panel's VBoxContainer inside
+        /// a CenterContainer - the 62px step and the half-column offset this used to compute per open are
+        /// a 56px row and a separation of 6.
+        /// </remarks>
         private void BuildGateRows(string[] gates, string[] titles, string currentScene, Action<string> pickAction)
         {
             if (gates == null)
                 return;
-
-            const float step = 62f;
-            float top = (gates.Length - 1) * 0.5f * step;
 
             for (var i = 0; i < gates.Length; i++)
             {
@@ -449,12 +402,10 @@ namespace MyGame.UI
                     ? titles[i]
                     : gate;
 
-                Button row = CreateVictoryButton(
-                    _gateTravelList,
-                    _gateTravelFont,
-                    $"Gate{i}Button",
-                    $"{i + 1}. {title}",
-                    new Vector2(0f, top - i * step));
+                var row = GD.Load<PackedScene>(GateRowScenePath).Instantiate<Button>();
+                row.Name = $"Gate{i}Button";
+                row.Text = $"{i + 1}. {title}";
+                _gateTravelList.AddChild(row);
 
                 if (gate == currentScene)
                 {
@@ -470,51 +421,6 @@ namespace MyGame.UI
                     row.Pressed += () => pickAction(target);
                 }
             }
-        }
-
-        /// <summary>
-        /// The checkpoint's soul sink. Built up front and hidden like the pause panel rather than filled
-        /// on open like the gate list, because the row count is fixed: there are four stats and there
-        /// always will be. Only the labels change.
-        /// </summary>
-        private void CreateLevelUpPanel(Control parent, Font font)
-        {
-            _levelUpPanel = CreatePanel(parent, "LevelUpPanel", 0.92f);
-
-            Label title = CreateVictoryText(_levelUpPanel, "LevelUpTitle", font, "레벨 업", 44, new Vector2(0f, 300f));
-            title.LabelSettings.FontColor = Bone100;
-
-            _levelUpSoulsText = CreateVictoryText(_levelUpPanel, "LevelUpSouls", font, string.Empty, 24, new Vector2(0f, 236f));
-            _levelUpSoulsText.LabelSettings.FontColor = Cold200;
-
-            _levelUpButtons = new Button[LevelUpStats.Length];
-
-            const float step = 70f;
-            float top = (LevelUpStats.Length - 1) * 0.5f * step;
-
-            for (var i = 0; i < LevelUpStats.Length; i++)
-            {
-                // Fresh local per iteration, for the reason spelled out in BuildGateRows: the loop
-                // variable would be read at click time and every row would buy Resolve.
-                PlayerStat stat = LevelUpStats[i];
-
-                Button row = CreateVictoryButton(
-                    _levelUpPanel, font, $"LevelUp{stat}Button", string.Empty, new Vector2(0f, top - i * step));
-
-                // Wider and smaller-lettered than a menu button: a row carries four columns of text
-                // (stat, level, what a level gives, price) where 계속하기 carries one word.
-                PlaceRect(row, Centre, Centre, new Vector2(0f, top - i * step), new Vector2(520f, 56f));
-                row.AddThemeFontSizeOverride("font_size", 20);
-
-                _levelUpButtons[i] = row;
-
-                // Added once and never removed: unlike the gate rows these buttons outlive an open.
-                row.Pressed += () => PurchaseLevel(stat);
-            }
-
-            _levelUpCloseButton = CreateVictoryButton(_levelUpPanel, font, "LevelUpCloseButton", "닫기", new Vector2(0f, -320f));
-            _levelUpCloseButton.Pressed += CloseLevelUp;
-            _levelUpPanel.Visible = false;
         }
 
         /// <summary>
@@ -660,7 +566,7 @@ namespace MyGame.UI
         public void ShowPauseSaved()
         {
             if (_pauseStatusText != null)
-                _pauseStatusText.Text = "저장됨";
+                _pauseStatusText.Text = Tr("UI_PAUSE_SAVED");
         }
 
         /// <summary>
@@ -678,8 +584,8 @@ namespace MyGame.UI
         {
             if (_warningText == null) return;
 
-            _warningText.Text = "저장됨";
-            _warningText.LabelSettings.FontColor = Bone200;
+            _warningText.Text = Tr("UI_PAUSE_SAVED");
+            Tint(_warningText, Bone200);
             _warningExpiryUnscaled = GameClock.UnscaledTime + 2f;
         }
 
@@ -699,7 +605,7 @@ namespace MyGame.UI
 
             // Restored rather than left alone when no label is given: a panel re-shown after a rematch
             // would otherwise still read 다음 관문 over a button that restarts.
-            _restartButton.Text = !string.IsNullOrEmpty(primaryLabel) ? primaryLabel : DefaultRestartLabel;
+            _restartButton.Text = !string.IsNullOrEmpty(primaryLabel) ? primaryLabel : Tr(DefaultRestartLabelKey);
 
             if (_victorySubtitle != null && !string.IsNullOrEmpty(subtitle))
                 _victorySubtitle.Text = subtitle;
@@ -708,48 +614,22 @@ namespace MyGame.UI
             Rebind(_titleButton, ref _victoryTitleHandler, titleAction);
 
             _victoryPanel.Visible = true;
-            _restartButton.GrabFocus();
+
+            // The victory shot's completion can arrive from CutsceneDirector._ExitTree while the scene is
+            // being torn down. Since K7 the director is authored at the front of the shell, so it leaves
+            // the tree after the HUD, and a button that has already left cannot take focus (engine error,
+            // not an exception). Nothing else in ShowVictory needs the tree.
+            if (_restartButton.IsInsideTree())
+                _restartButton.GrabFocus();
         }
 
         /// <summary>
-        /// A dark strip with a fill child, sized to sit under one text row. The fill is driven by its
-        /// right anchor rather than by a ProgressBar, because the bar is two stacked layers (the live
-        /// fill and the ghost behind it) sharing one strip, which a ProgressBar cannot express.
-        /// Returns the fill - <see cref="SetFill"/> is what moves it.
+        /// Moves one gauge's fill. The fill is driven by its right anchor rather than by a ProgressBar,
+        /// because a bar here is two stacked layers - the live fill and the ghost behind it - sharing one
+        /// strip, which a ProgressBar cannot express. The strip, both layers, the 240x26 rect and each
+        /// bar's colour are authored in <c>Scenes/UI/HudBar.tscn</c> and its three instances.
+        /// Returns the ratio it applied, so a caller that also has to react to it need not divide twice.
         /// </summary>
-        private static ColorRect CreateBar(Control parent, string name, Color fillColor, Vector2 position)
-        {
-            var strip = new ColorRect
-            {
-                Name = name,
-                Color = new Color(PanelInk.R, PanelInk.G, PanelInk.B, 0.85f),
-                MouseFilter = Control.MouseFilterEnum.Ignore,
-            };
-            parent.AddChild(strip);
-            // 240 wide keeps the strip inside the 280px HUD plate; 26 tall covers the glyph band of a
-            // 22pt row without spilling into the row below it (rows are 30px apart).
-            PlaceRect(strip, TopLeft, TopLeft, position, new Vector2(240, 26));
-
-            // Half-transparent over the ink strip: an opaque bone or slate fill wins the contrast fight
-            // against the number printed on top of it, which is the one thing that must stay readable.
-            return CreateFill(strip, "Fill", fillColor, 0.55f);
-        }
-
-        /// <summary>One left-anchored layer of a bar - the live fill, or the ghost behind it.</summary>
-        private static ColorRect CreateFill(Control strip, string name, Color color, float alpha)
-        {
-            var fill = new ColorRect
-            {
-                Name = name,
-                Color = new Color(color.R, color.G, color.B, alpha),
-                MouseFilter = Control.MouseFilterEnum.Ignore,
-            };
-            strip.AddChild(fill);
-            fill.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-            return fill;
-        }
-
-        /// <summary>Returns the ratio it applied, so a caller that also has to react to it need not divide twice.</summary>
         private static float SetFill(ColorRect fill, float current, float max)
         {
             float ratio = max > 0f ? Mathf.Clamp(current / max, 0f, 1f) : 0f;
@@ -760,23 +640,6 @@ namespace MyGame.UI
             fill.AnchorRight = ratio;
             fill.OffsetRight = 0f;
             return ratio;
-        }
-
-        private static Label CreateText(Control parent, string name, Font font, Color color, int fontSize, Vector2 position, HorizontalAlignment alignment)
-        {
-            bool centred = alignment == HorizontalAlignment.Center;
-            var label = new Label
-            {
-                Name = name,
-                LabelSettings = Face(font, fontSize, color),
-                HorizontalAlignment = alignment,
-                VerticalAlignment = VerticalAlignment.Top,
-                MouseFilter = Control.MouseFilterEnum.Ignore,
-            };
-            parent.AddChild(label);
-            Vector2 anchor = centred ? new Vector2(0.5f, 1f) : TopLeft;
-            PlaceRect(label, anchor, anchor, position, new Vector2(centred ? 400 : 260, 30));
-            return label;
         }
 
         public void Initialize(Health health, HumanityController humanity, SinResonanceController sinResonance, DeathStateController deathController, StaminaSystem stamina)
@@ -873,8 +736,8 @@ namespace MyGame.UI
             {
                 // Damage: leave the ghost where it was and start both timers. TickHealthGauge does the
                 // rest, so a hit that lands during a hitstop still holds for its full 0.4s afterwards.
-                _ghostHoldUntil = GameClock.Time + GhostHoldSeconds;
-                _hitFlashUntil = GameClock.Time + HitFlashSeconds;
+                _ghostHoldUntil = GameClock.Time + _ghostHoldSeconds;
+                _hitFlashUntil = GameClock.Time + _hitFlashSeconds;
             }
             else if (ratio > _ghostRatio)
             {
@@ -897,10 +760,10 @@ namespace MyGame.UI
             float ratio = _healthFill.AnchorRight;
             if (_ghostRatio > ratio && GameClock.Time >= _ghostHoldUntil)
             {
-                // Constant rate rather than a lerp toward the target: a whole bar takes GhostDrainSeconds
+                // Constant rate rather than a lerp toward the target: a whole bar takes ghostDrainSeconds
                 // and a scratch is proportionally quicker, which is what makes the size of a hit readable.
                 // A lerp spends the same wall-clock time on both and never quite lands on the target.
-                _ghostRatio = Mathf.Max(ratio, _ghostRatio - delta / GhostDrainSeconds);
+                _ghostRatio = Mathf.Max(ratio, _ghostRatio - delta / _ghostDrainSeconds);
                 SetFill(_ghostFill, _ghostRatio, 1f);
             }
             else if (_ghostRatio < ratio)
@@ -912,8 +775,8 @@ namespace MyGame.UI
             // Bone over ember for the flash frame. ColorRect.Color early-outs on an unchanged value, so
             // writing it every frame costs no redraw.
             _healthFill.Color = GameClock.Time < _hitFlashUntil
-                ? new Color(Bone100.R, Bone100.G, Bone100.B, 0.85f)
-                : new Color(Ember300.R, Ember300.G, Ember300.B, 0.55f);
+                ? Hue("bone_100_hit_flash")
+                : Hue("ember_300_health_fill");
         }
 
         private void UpdateHumanity(float current)
@@ -925,7 +788,10 @@ namespace MyGame.UI
         private void UpdateResonance()
         {
             if (_sinResonance != null && _resonanceText != null)
-                _resonanceText.Text = $"Resonance: {Mathf.FloorToInt(_sinResonance.CurrentResonance)} / 100";
+                // The denominator was the literal 100. It agreed with SinTuning.json's maxResonance and
+                // would have stopped agreeing the moment a designer retuned it; MaxResonance is the value
+                // ApplyTuning actually took from that file.
+                _resonanceText.Text = $"Resonance: {Mathf.FloorToInt(_sinResonance.CurrentResonance)} / {_sinResonance.MaxResonance}";
         }
 
         private void UpdateActiveSin(SinState sin)
@@ -935,12 +801,12 @@ namespace MyGame.UI
             if (sin == SinState.None)
             {
                 _activeSinText.Text = "Active: None";
-                _activeSinText.LabelSettings.FontColor = Bone300;
+                Tint(_activeSinText, Bone300);
             }
             else
             {
                 _activeSinText.Text = $"Active: {sin}";
-                _activeSinText.LabelSettings.FontColor = GetSinColor(sin);
+                Tint(_activeSinText, GetSinColor(sin));
             }
         }
 
@@ -958,7 +824,7 @@ namespace MyGame.UI
             if (inSpirit)
             {
                 _spiritStateText.Text = "SPIRIT FORM";
-                _spiritStateText.LabelSettings.FontColor = Cold200;
+                Tint(_spiritStateText, Cold200);
             }
             else
             {
@@ -996,7 +862,7 @@ namespace MyGame.UI
                 _poiseText.Text = staggered
                     ? "Poise: STAGGERED"
                     : $"Poise: {Mathf.FloorToInt(_poise.CurrentPoise)}/{_poise.MaxPoise}";
-                _poiseText.LabelSettings.FontColor = staggered ? Ember300 : Bone200;
+                Tint(_poiseText, staggered ? Ember300 : Bone200);
             }
 
             SetFill(_poiseFill, _poise.CurrentPoise, _poise.MaxPoise);
@@ -1004,8 +870,8 @@ namespace MyGame.UI
                 // Brighter as well as red while staggered: the strip is the peripheral read, and the
                 // stagger is the one poise state the player has to catch without looking at the numbers.
                 _poiseFill.Color = staggered
-                    ? new Color(Ember300.R, Ember300.G, Ember300.B, 0.75f)
-                    : new Color(Bone300.R, Bone300.G, Bone300.B, 0.55f);
+                    ? Hue("ember_300_poise_staggered")
+                    : Hue("bone_300_poise_fill");
         }
 
         private void UpdateSouls(int current)
@@ -1035,7 +901,7 @@ namespace MyGame.UI
 
             // Dim when empty rather than hidden. A missing readout reads as a bug; a dim one reads as
             // nothing left, which is the thing the player has to notice before walking into the boss.
-            _flaskText.LabelSettings.FontColor = _player.HealCharges > 0 ? Bone200 : Bone300;
+            Tint(_flaskText, _player.HealCharges > 0 ? Bone200 : Bone300);
         }
 
         private void UpdateActionState()
@@ -1058,19 +924,13 @@ namespace MyGame.UI
         {
             return sin switch
             {
-                SinState.Wrath => new Color(0.54901963f, 0.20392157f, 0.15686275f), // #8C3428
-                SinState.Sloth => new Color(0.24705882f, 0.29019609f, 0.3882353f),  // #3F4A63
-                SinState.Pride => new Color(0.47843137f, 0.41568628f, 0.23529412f), // #7A6A3C
-
-                // The four the table filled in on 2026-08-10. Desaturated the same way the first three
-                // are, and leaning on the chapter each sin is named for (CombatTypes: Gluttony is the
-                // orange chapter, Greed yellow, Envy green) - except Lust, which takes rose rather than
-                // its chapter's blue, because blue is already Sloth and two sins that read the same
-                // colour is worse than one that does not match its chapter.
-                SinState.Gluttony => new Color(0.54901963f, 0.35294119f, 0.15686275f), // #8C5A28
-                SinState.Greed => new Color(0.54901963f, 0.47843137f, 0.15686275f),    // #8C7A28
-                SinState.Envy => new Color(0.24705882f, 0.3882353f, 0.27843137f),      // #3F6347
-                SinState.Lust => new Color(0.47843137f, 0.24705882f, 0.36078432f),     // #7A3F5C
+                SinState.Wrath => Hue("sin_wrath"),
+                SinState.Sloth => Hue("sin_sloth"),
+                SinState.Pride => Hue("sin_pride"),
+                SinState.Gluttony => Hue("sin_gluttony"),
+                SinState.Greed => Hue("sin_greed"),
+                SinState.Envy => Hue("sin_envy"),
+                SinState.Lust => Hue("sin_lust"),
                 _ => Bone300
             };
         }
@@ -1087,7 +947,7 @@ namespace MyGame.UI
         {
             if (_warningText == null) return;
             _warningText.Text = "HUMANITY FADING";
-            _warningText.LabelSettings.FontColor = Ember300;
+            Tint(_warningText, Ember300);
             _warningExpiryUnscaled = GameClock.UnscaledTime + 2f;
         }
 
@@ -1095,7 +955,7 @@ namespace MyGame.UI
         {
             if (_warningText == null) return;
             _warningText.Text = "YOU DIED";
-            _warningText.LabelSettings.FontColor = Ember300;
+            Tint(_warningText, Ember300);
             // YOU DIED holds until the respawn clears it, so drop any humanity timer still pending.
             _warningExpiryUnscaled = -1f;
         }

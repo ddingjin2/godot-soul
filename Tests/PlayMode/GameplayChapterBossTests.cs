@@ -231,7 +231,7 @@ namespace MyGame.Tests
                 World.V(new Vector2(5f, 1f)),
                 GameplayReadabilityDefaults.Create(),
                 data,
-                null);
+                BossEncounterData.Load("Design/WrathEncounter"));
 
             Assert.IsInstanceOf<IBossEncounter>(_boss, "The spawned boss has to be bindable as an encounter.");
 
@@ -559,8 +559,11 @@ namespace MyGame.Tests
             json ??= "{\"maxHealth\":200,\"moveSpeed\":2,\"detectionRange\":8,\"attackRange\":1.5," +
                      "\"phaseTwoHealthThreshold\":0.5,\"phaseTwoSpeedMultiplier\":1.2,\"phaseTwoCooldownMultiplier\":0.75," +
                      "\"maxPoise\":90,\"poiseHeavyMultiplier\":2,\"poiseRegenDelay\":3,\"poiseRegenRate\":30,\"soulReward\":275," +
+                     // Stun, poise, body and pulse were class defaults until K3; a boss with a zero body or a
+                     // zero stun is not the one these tests were written against, so the fixture says them.
+                     "\"stunDuration\":1,\"bodySize\":{\"x\":1.6,\"y\":2.3},\"telegraphPulseSpeed\":8,\"telegraphPulseAmplitude\":0.2," +
                      "\"bossName\":\"TestChapterBoss\",\"chapterName\":\"Test Chapter\"," +
-                     "\"attacks\":[{\"attackId\":\"test_swing\",\"damage\":12,\"knockback\":0," +
+                     "\"attacks\":[{\"attackId\":\"test_swing\",\"damageType\":1,\"afterimageCountOverride\":-1,\"damage\":12,\"knockback\":0," +
                      "\"telegraphTime\":0.25,\"activeTime\":0.25,\"recoveryTime\":0.25,\"range\":1.5,\"forwardOffset\":0.5," +
                      "\"phaseTwoWeight\":1}]}";
 
@@ -585,8 +588,11 @@ namespace MyGame.Tests
             return "{\"maxHealth\":200,\"moveSpeed\":2,\"detectionRange\":8,\"attackRange\":1.5," +
                    "\"phaseTwoHealthThreshold\":0.5,\"phaseTwoSpeedMultiplier\":1.2,\"phaseTwoCooldownMultiplier\":0.75," +
                    "\"maxPoise\":90,\"poiseHeavyMultiplier\":2,\"poiseRegenDelay\":3,\"poiseRegenRate\":30,\"soulReward\":275," +
+                   // Stun, poise, body and pulse were class defaults until K3; a boss with a zero body or a
+                   // zero stun is not the one these tests were written against, so the fixture says them.
+                   "\"stunDuration\":1,\"bodySize\":{\"x\":1.6,\"y\":2.3},\"telegraphPulseSpeed\":8,\"telegraphPulseAmplitude\":0.2," +
                    "\"bossName\":\"TestHazardBoss\",\"chapterName\":\"Test Chapter\"," +
-                   "\"attacks\":[{\"attackId\":\"test_lunge\",\"damage\":12,\"knockback\":0," +
+                   "\"attacks\":[{\"attackId\":\"test_lunge\",\"damageType\":1,\"afterimageCountOverride\":-1,\"damage\":12,\"knockback\":0," +
                    "\"telegraphTime\":0.25,\"activeTime\":0.25,\"recoveryTime\":0.25,\"range\":1.5,\"forwardOffset\":0.5," +
                    "\"phaseTwoWeight\":1,\"leavesHazard\":true,\"hazardPhaseTwoOnly\":" + (phaseTwoOnly ? "true" : "false") +
                    ",\"hazardDamage\":5,\"hazardRadius\":1.5,\"hazardTickInterval\":0.2,\"hazardDuration\":1.2," +
@@ -611,10 +617,17 @@ namespace MyGame.Tests
 
             // Unity added a Kinematic Rigidbody2D here. The ported boss IS the body, and its "kinematic"
             // is EnemyStateMachine's own gravity + MoveAndSlide - see the class remarks.
+            // Required since K5b: EnemyStateMachine has no initialisers for the eight shared
+            // numbers and refuses to run unconfigured. Before the tree, which is where the spawner
+            // does it.
+            EnemyFixture.ConfigureFromDesign(_boss);
+
             _boss.AddComponent<Health>();
 
             FixtureRoot.AddChild(_boss);
 
+            // Required since K5 - see GameplayBossAttackGrammarTests for why chapter one's file.
+            _boss.SetEncounterData(BossEncounterData.Load("Design/WrathEncounter"));
             _boss.SetBossData(data);
             return _boss;
         }
@@ -651,6 +664,12 @@ namespace MyGame.Tests
             // PlayerController2D wires its motor off the body in _Ready; without one the fixture works
             // but for a different reason than the shipped player does.
             _player.AddComponent<PlayerController2D>();
+
+            // Built here rather than left to PlayerController2D._Ready, which adds one deferred and
+            // hands it no tuning - and required since K7b, where an unconfigured component reports
+            // itself and stops. Both are the shape Scenes/Actors/Player.tscn already ships.
+            PlayerFixture.Configure(_player.AddComponent<PlayerActionController>());
+            PlayerFixture.Configure(_player);
 
             FixtureRoot.AddChild(_player);
 

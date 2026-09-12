@@ -170,6 +170,25 @@ namespace MyGame.Tests
         }
 
         /// <summary>
+        /// The weights live in DifficultyTuning.json, and a file nothing reads is worse than a literal -
+        /// it looks like tuning. So this reads the file directly and checks the settings answer with
+        /// its numbers, not with a fallback that happens to match.
+        /// </summary>
+        [Test]
+        public void DifficultyTuningJson_LoadsAndDrivesTheMultipliers()
+        {
+            DifficultyTuningData file = Res.LoadJson<DifficultyTuningData>("Design/" + DifficultyTuningData.FileName);
+            Assert.NotNull(file, "DifficultyTuning.json should exist and parse.");
+
+            DifficultySettings.Set(Difficulty.Hard, 2);
+            Assert.AreEqual(file.hardPlayerDamageTaken, DifficultySettings.PlayerDamageTakenMultiplier, 0.0001f,
+                "Hard's damage weight should be the file's, not a literal.");
+            Assert.AreEqual(file.hardEnemyHealth * (1f + 2f * file.newGamePlusEnemyHealthPerCycle),
+                DifficultySettings.EnemyHealthMultiplier, 0.0001f,
+                "New Game+ stacks the file's per-cycle bonus on top of Hard's health weight.");
+        }
+
+        /// <summary>
         /// The travel panel names chapters, not scenes. The resolution is a chain of string references -
         /// scene name to SceneLayout to bossDataFile to chapterName - and every link fails the same soft
         /// way: the row falls back to the scene name and the panel silently reads like a debug menu.
@@ -220,7 +239,7 @@ namespace MyGame.Tests
             _target.AddComponent<DamageReceiver>().Initialize(health);
 
             if (withSins)
-                _target.AddComponent<SinResonanceController>();
+                PlayerFixture.Configure(_target.AddComponent<SinResonanceController>());
 
             return health;
         }

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Godot;
 using MyGame.Core;
@@ -17,9 +16,10 @@ namespace MyGame.Gameplay
     /// <c>PlayableDirector</c> evaluate it. Godot has no Timeline, no <c>PlayableDirector</c> and no
     /// <c>.playable</c> importer, and the four shipped files were never converted. Rebuilding a
     /// track/clip/binding engine on top of <c>AnimationPlayer</c> to run four sequences totalling eight
-    /// seconds would be a new system, not a port - so the four are transcribed below as keyframe tables
-    /// read straight out of the Unity YAML, and <c>BindTracks</c> is now
-    /// <see cref="CutsceneBinder"/> answering "which node plays this role".
+    /// seconds would be a new system, not a port - so the four are keyframe tables read straight out of
+    /// the Unity YAML, authored now in <c>Resources/Design/CutsceneTuning.json</c>
+    /// (<see cref="CutsceneTuningData"/>), and <c>BindTracks</c> is now <see cref="CutsceneBinder"/>
+    /// answering "which node plays this role".
     /// <para>
     /// What survives unchanged: the keys, the durations, the keyframe times and values, the public
     /// surface (<see cref="Play"/>, <see cref="Skip"/>, <see cref="IsPlaying"/>,
@@ -82,42 +82,14 @@ namespace MyGame.Gameplay
         public bool HoldsInputLock => _isPlaying && _inputWasEnabled;
 
         // ------------------------------------------------------------------------------------------
-        // The four shots.
-        //
-        // Every number below was read out of the matching Assets/_Project/Resources/Cutscenes/*.playable
-        // in the Unity source: track name -> which channel, animated property -> which setter, and the
-        // keyframe (time, value) pairs verbatim. Tracks that ran at the same time are separate curves
-        // awaited together, which is what a Timeline track *was*.
-        //
-        //   GameplayEnter (1.8s) - Overlay track only. Fade off black, then the bars open.
-        //   BossIntro     (2.6s) - Overlay + CameraRig. Bars close, camera pushes in and holds, both back out.
-        //   PlayerDeath   (1.2s) - Overlay + CameraRig. Half fade and thin bars, small push, all back out.
-        //   Victory       (2.0s) - Overlay + CameraRig. Full bars, slow push held, both back out.
-        //
-        // The camera curves animated "orthographic size" on the Main Camera under the rig; 6.8 is the
-        // shipped GameplaySceneDefaults.CameraOrthographicSize, which is why every one of them starts and
-        // ends there. Smaller is closer.
+        // The four shots live in CutsceneTuning.json, one keyframe table per Timeline track, read out of
+        // the matching Assets/_Project/Resources/Cutscenes/*.playable in the Unity source. Tracks that
+        // ran at the same time are separate curves awaited together, which is what a Timeline track
+        // *was*. The camera track animated "orthographic size" on the Main Camera; here it is a fraction
+        // of the size the shot found the camera at, so a chapter that frames its room wider than the
+        // shipped 6.8 gets the same push rather than a snap to the shipped number.
         // ------------------------------------------------------------------------------------------
-        private static readonly Dictionary<string, Func<CutsceneDirector, Task>> Sequences =
-            new(StringComparer.OrdinalIgnoreCase)
-            {
-                ["GameplayEnter"] = d => Task.WhenAll(
-                    d.Curve(d.Overlay.SetFade, (0f, 1f), (1.2f, 0f), (1.8f, 0f)),
-                    d.Curve(d.Overlay.SetLetterbox, (0f, 64f), (1.2f, 64f), (1.6f, 0f), (1.8f, 0f))),
-
-                ["BossIntro"] = d => Task.WhenAll(
-                    d.Curve(d.Overlay.SetLetterbox, (0f, 0f), (0.25f, 96f), (2.3f, 96f), (2.6f, 0f)),
-                    d.Curve(d.SetOrthographicSize, (0f, 6.8f), (0.5f, 5.984f), (1.3f, 5.984f), (2.3f, 6.8f), (2.6f, 6.8f))),
-
-                ["PlayerDeath"] = d => Task.WhenAll(
-                    d.Curve(d.Overlay.SetFade, (0f, 0f), (0.45f, 0.55f), (0.8f, 0.55f), (1.2f, 0f)),
-                    d.Curve(d.Overlay.SetLetterbox, (0f, 0f), (0.45f, 48f), (0.8f, 48f), (1.2f, 0f)),
-                    d.Curve(d.SetOrthographicSize, (0f, 6.8f), (0.45f, 6.8f), (0.8f, 6.392f), (1.2f, 6.8f))),
-
-                ["Victory"] = d => Task.WhenAll(
-                    d.Curve(d.Overlay.SetLetterbox, (0f, 0f), (0.3f, 96f), (1.7f, 96f), (2f, 0f)),
-                    d.Curve(d.SetOrthographicSize, (0f, 6.8f), (0.3f, 6.8f), (1.3f, 6.12f), (1.7f, 6.12f), (2f, 6.8f))),
-            };
+        private static CutsceneTuningData Tuning => CutsceneTuningData.Shared;
 
         /// <summary>
         /// A null overlay would take the sequence table down with it, so the tables address the overlay
@@ -126,18 +98,33 @@ namespace MyGame.Gameplay
         /// </summary>
         private CutsceneOverlay Overlay => _overlay ??= CutsceneOverlay.Create();
 
-        public static CutsceneDirector Create(CutsceneOverlay overlay)
+        /// <summary>
+        /// The director <c>Scenes/World/GameplayShell.tscn</c> authors, with the overlay the bootstrap
+        /// just built bound onto it. Was <c>Create</c>, which made the node here; the shell owns the
+        /// node and its <c>process_mode</c> since K7, and this is the binding half that is left.
+        /// </summary>
+        /// <remarks>
+        /// Unity added a PlayableDirector and a SignalReceiver here. Both are gone with Timeline: there
+        /// is no graph to run, and the Signal Tracks that routed through the receiver to reach
+        /// <see cref="CameraShake"/> / <c>HitStopManager</c> were all at t=0.00, which is now the call
+        /// site in <see cref="GameplayCutsceneTriggers"/>.
+        /// <para>
+        /// The director readies before the bootstrap does, so <see cref="Instance"/> is already set when
+        /// this is called. Nothing plays a shot in between, which is what keeps <see cref="Overlay"/>'s
+        /// lazy fallback from building a throwaway overlay ahead of this line.
+        /// </para>
+        /// </remarks>
+        public static CutsceneDirector Bind(CutsceneOverlay overlay)
         {
-            // Unity added a PlayableDirector and a SignalReceiver here. Both are gone with Timeline:
-            // there is no graph to run, and the Signal Tracks that routed through the receiver to reach
-            // CameraShake / HitStopManager were all at t=0.00, which is now the call site in
-            // GameplayCutsceneTriggers.
-            var director = GameplayBuildShim.NewObject<CutsceneDirector>(ObjectName);
-            director._overlay = overlay;
+            CutsceneDirector director = Instance ?? SceneQuery.FindFirst<CutsceneDirector>();
 
-            // The victory shot runs on top of a zero timescale and the pause menu can open over any of
-            // them, so this node has to keep ticking through both.
-            director.ProcessMode = ProcessModeEnum.Always;
+            if (director == null)
+            {
+                GD.PushError($"CutsceneDirector: the scene authors no '{ObjectName}'; Scenes/World/GameplayShell.tscn carries one. No cutscene can play.");
+                return null;
+            }
+
+            director._overlay = overlay;
             return director;
         }
 
@@ -164,7 +151,8 @@ namespace MyGame.Gameplay
                 return;
             }
 
-            if (key == null || !Sequences.TryGetValue(key, out Func<CutsceneDirector, Task> sequence))
+            CutsceneShot shot = Tuning?.Shot(key);
+            if (shot == null)
             {
                 // A missing shot is a missing shot, not a stuck game: clear the overlay, hand the caller
                 // its continuation back and carry on. The reset is not optional - a caller that staged
@@ -188,7 +176,7 @@ namespace MyGame.Gameplay
             _isPlaying = true;
             Lock(lockInput);
 
-            _ = Run(sequence, ++_generation);
+            _ = Run(shot, ++_generation);
         }
 
         public void Skip()
@@ -198,7 +186,8 @@ namespace MyGame.Gameplay
 
             // Unity jumped the director to its duration and evaluated, which left every channel on its
             // last keyframe. Every one of the four shots ends on neutral - fade 0, bars 0, the camera
-            // back at 6.8 - so Restore, which writes exactly that, *is* the evaluation at t=duration.
+            // back at its resting size - so Restore, which writes exactly that, *is* the evaluation at
+            // t=duration. CutsceneTuningJson_EveryShotEndsOnNeutral keeps the file to that.
             Restore();
         }
 
@@ -227,9 +216,12 @@ namespace MyGame.Gameplay
         // Steps
         // ------------------------------------------------------------------------------------------
 
-        private async Task Run(Func<CutsceneDirector, Task> sequence, int generation)
+        private async Task Run(CutsceneShot shot, int generation)
         {
-            await sequence(this);
+            await Task.WhenAll(
+                Curve(Overlay.SetFade, shot.fade),
+                Curve(Overlay.SetLetterbox, shot.letterbox),
+                Curve(SetCameraSize, shot.cameraSize));
 
             // The sequence may have outlived this node, or a skip may already have restored it.
             if (IsInstanceValid(this) && _generation == generation)
@@ -247,15 +239,15 @@ namespace MyGame.Gameplay
         /// <c>DirectorUpdateMode.UnscaledGameTime</c>. Interpolation is linear; the authored tangents
         /// were flat-ish and the difference does not read at these durations.
         /// </remarks>
-        private async Task Curve(Action<float> apply, params (float Time, float Value)[] keys)
+        private async Task Curve(Action<float> apply, CutsceneKeyframe[] keys)
         {
-            if (keys.Length == 0)
+            if (keys == null || keys.Length == 0)
                 return;
 
             int generation = _generation;
-            apply(keys[0].Value);
+            apply(keys[0].value);
 
-            float end = keys[^1].Time;
+            float end = keys[^1].time;
             for (float elapsed = 0f; elapsed < end; elapsed += GameClock.UnscaledDeltaTime)
             {
                 if (!await NextFrame(generation))
@@ -264,25 +256,25 @@ namespace MyGame.Gameplay
                 apply(Sample(keys, elapsed));
             }
 
-            apply(keys[^1].Value);
+            apply(keys[^1].value);
         }
 
-        private static float Sample((float Time, float Value)[] keys, float at)
+        private static float Sample(CutsceneKeyframe[] keys, float at)
         {
-            if (at <= keys[0].Time)
-                return keys[0].Value;
+            if (at <= keys[0].time)
+                return keys[0].value;
 
             for (int i = 1; i < keys.Length; i++)
             {
-                if (at > keys[i].Time)
+                if (at > keys[i].time)
                     continue;
 
-                float span = keys[i].Time - keys[i - 1].Time;
-                float t = span > 0f ? (at - keys[i - 1].Time) / span : 1f;
-                return Mathf.Lerp(keys[i - 1].Value, keys[i].Value, t);
+                float span = keys[i].time - keys[i - 1].time;
+                float t = span > 0f ? (at - keys[i - 1].time) / span : 1f;
+                return Mathf.Lerp(keys[i - 1].value, keys[i].value, t);
             }
 
-            return keys[^1].Value;
+            return keys[^1].value;
         }
 
         /// <summary>
@@ -312,17 +304,17 @@ namespace MyGame.Gameplay
 
         /// <summary>
         /// The camera channel. Unity animated <c>Camera.orthographicSize</c> - the visible half-height in
-        /// world units - on the Main Camera under the rig. Godot's Camera2D has no such property, so the
-        /// same number becomes a <c>Zoom</c>, converted exactly as PORTING_GUIDE specifies.
+        /// world units - on the Main Camera under the rig. Godot's Camera2D has no such property and the
+        /// file authors a fraction of the resting size, so this is the zoom <see cref="Lock"/> found,
+        /// divided: half the size is twice the zoom. No <c>World.Ppu</c> - a ratio has no unit.
         /// </summary>
-        private void SetOrthographicSize(float unityOrthographicSize)
+        private void SetCameraSize(float fractionOfRest)
         {
             Camera2D camera = FindCamera();
-            if (camera == null || unityOrthographicSize <= 0f)
+            if (camera == null || fractionOfRest <= 0f)
                 return;
 
-            float halfHeightPx = unityOrthographicSize * World.Ppu;
-            camera.Zoom = Vector2.One * (GetViewport().GetVisibleRect().Size.Y * 0.5f / halfHeightPx);
+            camera.Zoom = _cameraZoomBeforeShot / fractionOfRest;
         }
 
         /// <summary>The camera under the rig, or whatever camera is current when there is no rig.</summary>

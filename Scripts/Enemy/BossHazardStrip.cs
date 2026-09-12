@@ -32,6 +32,9 @@ namespace MyGame.Enemy
     /// </remarks>
     public sealed partial class BossHazardStrip : Node2D
     {
+        /// <summary>The one place a BossHazardStrip is described. Instanced by RainbowChapterBossBehaviour.</summary>
+        public const string ScenePath = "res://Scenes/Effects/BossHazardStrip.tscn";
+
         private Node2D _owner;
         private float _damage = 6f;
         private float _radius = World.U(1.2f);

@@ -1,0 +1,22 @@
+; Decoration: a sprite and nothing else, exactly as in Unity - no collider, no body. The backdrop, the
+; moon, the distant arches, the ground rim, the step rims and the arena gates are all this scene.
+; Replaces the node GameplayEnvironmentBuilder.CreateSceneryPiece built with GameplayBuildShim.NewObject.
+;
+; A one-node scene looks like a file for no structure, and the builder's header used to say so. Decision
+; D8 rejected that: the argument applies to any prefab small enough, and rule 2 is about where a
+; reusable thing LIVES, not how many nodes it has. A piece of scenery is instanced six times from one
+; place, which makes it a prefab whatever its node count.
+;
+; NO TEXTURE, and there cannot be one: GameplayVisualFactory.CreateSquareSprite generates the image at
+; runtime, so there is no baked Resources/Art file for an ext_resource to point at. Same reason
+; Scenes/World/SolidBox.tscn authors none.
+;
+; WHAT IS BOUND PER INSTANCE, all of it designer-owned: the name and the position (SceneLayout_*.json
+; via GameplaySceneDefaults, position written BEFORE the instance enters the tree), the texture, the
+; size and the pivot (GameplayVisualFactory.Dress), and the colour and sorting order
+; (Resources/Art/Readability.json via GameplayReadabilityDefaults). Nothing is left to author.
+;
+; UNITS: 1 Unity metre = 100 px (World.Ppu), +Y down.
+[gd_scene format=3]
+
+[node name="SceneryPiece" type="Sprite2D"]

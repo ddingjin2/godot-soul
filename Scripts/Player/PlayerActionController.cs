@@ -20,55 +20,54 @@ namespace MyGame.Player
             Cooldown
         }
 
-        // Dodge. Spatial defaults are pre-scaled to pixels; PlayerCombatData.Load scales the authored file.
-        [Export] private float dodgeSpeed = World.U(15f);
-        [Export] private float dodgeDuration = 0.2f;
-        [Export] private float dodgeCooldown = 0.8f;
-        [Export] private float dodgeInvulnerabilityTime = 0.15f;
+        // Dodge. Spatial numbers are pixels; PlayerCombatData.Load scales the authored metres on the
+        // way in. Nothing here carries an initialiser since K7b - ApplyTuning writes all twenty-eight
+        // from PlayerCombat.json, and a controller that never got the call reports itself and stops.
+        [Export] private float dodgeSpeed;
+        [Export] private float dodgeDuration;
+        [Export] private float dodgeCooldown;
+        [Export] private float dodgeInvulnerabilityTime;
 
         // Attack
-        [Export] private float attackDuration = 0.3f;
-        [Export] private float attackCooldown = 0.5f;
-        [Export] private float attackActiveWindow = 0.1f;
-        [Export] private float attackDamage = 20f;
-        [Export] private float attackKnockback = World.U(4f);
-        [Export] private float attackCancelWindow = 0.08f;
+        [Export] private float attackDuration;
+        [Export] private float attackCooldown;
+        [Export] private float attackActiveWindow;
+        [Export] private float attackDamage;
+        [Export] private float attackKnockback;
+        [Export] private float attackCancelWindow;
 
         // Heavy attack
-        [Export] private float heavyAttackDuration = 0.45f;
-        [Export] private float heavyAttackCooldown = 0.85f;
-        [Export] private float heavyAttackActiveWindow = 0.16f;
-        [Export] private float heavyAttackDamageMultiplier = 1.8f;
-        [Export] private float heavyAttackKnockbackMultiplier = 1.4f;
+        [Export] private float heavyAttackDuration;
+        [Export] private float heavyAttackCooldown;
+        [Export] private float heavyAttackActiveWindow;
+        [Export] private float heavyAttackDamageMultiplier;
+        [Export] private float heavyAttackKnockbackMultiplier;
 
         // Parry
-        [Export] private float parryWindow = 0.2f;
-        [Export] private float perfectParryWindow = 0.08f;
-        [Export] private float parryCooldown = 0.5f;
-        [Export] private float parryStunDuration = 0.8f;
-        [Export] private float perfectParryStunMultiplier = 1.6f;
+        [Export] private float parryWindow;
+        [Export] private float perfectParryWindow;
+        [Export] private float parryCooldown;
+        [Export] private float parryStunDuration;
+        [Export] private float perfectParryStunMultiplier;
 
         // Stamina costs
-        [Export] private float attackStaminaCost = 20f;
-        [Export] private float heavyAttackStaminaCost = 35f;
-        [Export] private float dodgeStaminaCost = 25f;
-        [Export] private float parryStaminaCost = 15f;
+        [Export] private float attackStaminaCost;
+        [Export] private float heavyAttackStaminaCost;
+        [Export] private float dodgeStaminaCost;
+        [Export] private float parryStaminaCost;
 
-        // Heal
-        [Export] private float healAmount = 40f;
-        [Export] private int maxHealCharges = 3;
+        // Heal. These three come from PlayerResources.json through ApplyResourceTuning, not from the
+        // combat file above.
+        [Export] private float healAmount;
+        [Export] private int maxHealCharges;
+        [Export] private float healWindup;
 
-        // Kept level with PlayerResources.json. The JSON overrides this on every real spawn, but the
-        // exported fallback is what a synthetic player gets and what a reader sees first, and a 0.6
-        // sitting next to an authored 0.9 reads as the shipped number to whoever looks next.
-        [Export] private float healWindup = 0.9f;
-
-        [Export] private float staggerDuration = 0.5f;
-        [Export] private float inputBufferTime = 0.15f;
+        [Export] private float staggerDuration;
+        [Export] private float inputBufferTime;
 
         // Combo
-        [Export] private int maxComboSteps = 3;
-        [Export] private float comboStepDamageMultiplier = 1.15f;
+        [Export] private int maxComboSteps;
+        [Export] private float comboStepDamageMultiplier;
 
         public event Action OnAttackPerformed;
         public event Action OnParrySuccess;
@@ -103,6 +102,8 @@ namespace MyGame.Player
         private StaminaSystem _stamina;
         private Health _health;
         private DamageHitbox2D _damageHitbox;
+        private bool _combatConfigured;
+        private bool _resourcesConfigured;
         private Vector2 _moveInput;
         private float _dodgeBuffer;
         private float _attackBuffer;
@@ -144,6 +145,11 @@ namespace MyGame.Player
             _damageHitbox = damageHitbox;
         }
 
+        /// <summary>
+        /// <c>_healCharges</c> is filled from the ceiling, which is zero until
+        /// <see cref="ApplyResourceTuning"/> has run - and that call refills too, so this line only ever
+        /// repeats what the spawner already wrote.
+        /// </summary>
         public override void _Ready()
         {
             _motor ??= this.GetComponentInParent<PlayerMotor2D>();
@@ -151,6 +157,14 @@ namespace MyGame.Player
             _health ??= this.GetComponentInParent<Health>();
 
             _healCharges = maxHealCharges;
+            CallDeferred(nameof(CheckConfigured));
+        }
+
+        /// <summary>Two files, two calls, one report: this controller is only configured when both have run.</summary>
+        private void CheckConfigured()
+        {
+            TuningGuard.Check(this, _combatConfigured && _resourcesConfigured,
+                _combatConfigured ? "ApplyResourceTuning" : (_resourcesConfigured ? "ApplyTuning" : "ApplyTuning and ApplyResourceTuning"));
         }
 
         public void SetDamageHitbox(DamageHitbox2D hitbox)
@@ -194,6 +208,7 @@ namespace MyGame.Player
                 return;
             }
 
+            _combatConfigured = true;
             dodgeSpeed = tuning.dodgeSpeed;
             dodgeDuration = tuning.dodgeDuration;
             dodgeCooldown = tuning.dodgeCooldown;
@@ -235,6 +250,7 @@ namespace MyGame.Player
                 return;
             }
 
+            _resourcesConfigured = true;
             healAmount = tuning.healAmount;
             maxHealCharges = tuning.maxHealCharges;
             healWindup = tuning.healWindup;

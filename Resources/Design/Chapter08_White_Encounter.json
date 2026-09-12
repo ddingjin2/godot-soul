@@ -9,5 +9,6 @@
     "phaseTwoSlamWeight": 0.3,
     "phaseTwoRushWeight": 0.3,
     "rageSpeedMultiplier": 1.2,
-    "victoryPresentationDelay": 2.2
+    "victoryPresentationDelay": 2.2,
+    "maxChainSteps": 4
 }

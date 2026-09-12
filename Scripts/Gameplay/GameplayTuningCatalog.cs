@@ -10,8 +10,8 @@ namespace MyGame.Gameplay
     /// Runtime view over the tuning numbers that designers own.
     /// The source of truth is plain JSON under <see cref="DesignResourceFolder"/>, so tuning can be
     /// edited and reviewed without opening an editor; this type only turns that JSON into the typed
-    /// objects the gameplay code expects. A missing file yields null so callers keep falling back to
-    /// <see cref="GameplayTuningDefaults"/>.
+    /// objects the gameplay code expects. A missing file is reported by <c>Res.LoadJson</c> and
+    /// yields null; <see cref="IsComplete"/> is what the bootstrap checks before it builds.
     ///
     /// UNITS: nothing is converted here. Every entry is loaded through its own type's <c>Load</c>,
     /// which is where that type's metres-to-pixels conversion lives, so the catalog cannot double-scale
@@ -44,6 +44,8 @@ namespace MyGame.Gameplay
         private WorldTuningData worldTuning;
         private GameplaySceneLayoutData sceneLayout;
         private GameplayReadabilityThemeData readabilityTheme;
+        private GameplayReadabilityLayoutData readabilityLayout;
+        private UiTuningData uiTuning;
 
         private MeleeGruntData meleeGrunt;
         private LeapingAttackerData leapingAttacker;
@@ -55,16 +57,18 @@ namespace MyGame.Gameplay
         public PlayerCombatData PlayerCombat => playerCombat;
         public PlayerResourceData PlayerResources => playerResources;
 
-        /// <summary>
-        /// What souls buy. Null when the design file is missing, like every other entry here;
-        /// <c>ProgressionTuningData.Load</c> is the path that falls back to defaults instead,
-        /// because <c>PlayerProgression</c> has save-backed levels it must still be able to apply.
-        /// </summary>
+        /// <summary>What souls buy. Null when the design file is missing, like every other entry here.</summary>
         public ProgressionTuningData Progression => progression;
         public SinTuningData SinTuning => sinTuning;
         public WorldTuningData WorldTuning => worldTuning;
         public GameplaySceneLayoutData SceneLayout => sceneLayout;
         public GameplayReadabilityThemeData ReadabilityTheme => readabilityTheme;
+
+        /// <summary>The designer's half of the read - sizes and offsets - from the design folder, beside the artist's palette above.</summary>
+        public GameplayReadabilityLayoutData ReadabilityLayout => readabilityLayout;
+
+        /// <summary>The HUD's animation timings, in seconds. The colour half of the same move is the Theme, not this.</summary>
+        public UiTuningData UiTuning => uiTuning;
 
         /// <summary>
         /// A chapter boss's authored stats and attacks, by design file name. Not a stored field like
@@ -108,7 +112,7 @@ namespace MyGame.Gameplay
                 return cached;
 
             GameplaySceneLayoutData layout =
-                GameplaySceneLayoutData.Load(DesignResourceFolder + SceneLayoutFile + "_" + sceneName) ?? sceneLayout;
+                GameplaySceneLayoutData.Load(DesignResourceFolder + SceneLayoutFile + "_" + sceneName, required: false) ?? sceneLayout;
 
             _sceneLayouts[sceneName] = layout;
             return layout;
@@ -132,11 +136,25 @@ namespace MyGame.Gameplay
         public const string SinTuningFile = "SinTuning";
         public const string WorldTuningFile = "WorldTuning";
         public const string SceneLayoutFile = "SceneLayout";
+        public const string ReadabilityLayoutFile = GameplayReadabilityLayoutData.FileName;
+        public const string UiTuningFile = UiTuningData.FileName;
         public const string MeleeGruntFile = "MeleeGrunt";
         public const string LeapingAttackerFile = "LeapingAttacker";
         public const string RangedCasterFile = "RangedCaster";
         public const string WrathMiniBossFile = "WrathMiniBoss";
         public const string WrathEncounterFile = "WrathEncounter";
+
+        /// <summary>
+        /// True when every file on the fixed table loaded. The bootstrap refuses to build an arena on
+        /// anything less: a missing design file is a broken build, not a game with different numbers,
+        /// and the loader has already said which file it was.
+        /// </summary>
+        public bool IsComplete =>
+            playerMovement != null && playerCombat != null && playerResources != null && progression != null
+            && sinTuning != null && worldTuning != null && sceneLayout != null
+            && readabilityTheme != null && readabilityLayout != null && uiTuning != null
+            && meleeGrunt != null && leapingAttacker != null && rangedCaster != null
+            && wrathMiniBoss != null && wrathEncounter != null;
 
         private static GameplayTuningCatalog _cached;
 
@@ -151,14 +169,14 @@ namespace MyGame.Gameplay
                 playerCombat = PlayerCombatData.Load(),
                 playerResources = PlayerResourceData.Load(),
 
-                // Deliberately not ProgressionTuningData.Load(): that one substitutes defaults for a
-                // missing file, and this property's contract is null. See the Progression remarks.
-                progression = MyGame.Core.Res.LoadJson<ProgressionTuningData>(DesignResourceFolder + ProgressionTuningFile),
+                progression = ProgressionTuningData.Load(),
 
                 sinTuning = SinTuningData.Load(DesignResourceFolder + SinTuningFile),
                 worldTuning = WorldTuningData.Load(DesignResourceFolder + WorldTuningFile),
                 sceneLayout = GameplaySceneLayoutData.Load(DesignResourceFolder + SceneLayoutFile),
                 readabilityTheme = GameplayReadabilityThemeData.Load(ArtResourceFolder + ReadabilityThemeFile),
+                readabilityLayout = GameplayReadabilityLayoutData.Load(DesignResourceFolder + ReadabilityLayoutFile),
+                uiTuning = UiTuningData.Load(DesignResourceFolder + UiTuningFile),
                 meleeGrunt = MeleeGruntData.Load(DesignResourceFolder + MeleeGruntFile),
                 leapingAttacker = LeapingAttackerData.Load(DesignResourceFolder + LeapingAttackerFile),
                 rangedCaster = RangedCasterData.Load(DesignResourceFolder + RangedCasterFile),

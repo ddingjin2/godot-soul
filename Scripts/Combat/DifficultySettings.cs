@@ -27,9 +27,9 @@ namespace MyGame.Combat
     /// spawner) is somewhere an exported node reference cannot reach. <see cref="Apply"/> is called from
     /// the gameplay bootstrap, so a scene run straight from the editor with no save runs Normal.
     ///
-    /// ponytail: numbers live here rather than in a designer JSON. They are three pairs that only mean
-    /// anything against each other; move them to Resources/Design when a designer asks to tune them
-    /// without a build.
+    /// The numbers themselves are <see cref="DifficultyTuningData"/>'s, read from
+    /// <c>Resources/Design/DifficultyTuning.json</c>; this class only picks the pair the current
+    /// difficulty asks for.
     /// </remarks>
     public static class DifficultySettings
     {
@@ -41,8 +41,8 @@ namespace MyGame.Combat
         /// <summary>How much of an incoming hit the player actually takes.</summary>
         public static float PlayerDamageTakenMultiplier => Current switch
         {
-            Difficulty.Easy => 0.7f,
-            Difficulty.Hard => 1.4f,
+            Difficulty.Easy => DifficultyTuningData.Shared.easyPlayerDamageTaken,
+            Difficulty.Hard => DifficultyTuningData.Shared.hardPlayerDamageTaken,
             _ => 1f
         };
 
@@ -54,14 +54,15 @@ namespace MyGame.Combat
         {
             get
             {
+                DifficultyTuningData tuning = DifficultyTuningData.Shared;
                 float difficulty = Current switch
                 {
-                    Difficulty.Easy => 0.85f,
-                    Difficulty.Hard => 1.25f,
+                    Difficulty.Easy => tuning.easyEnemyHealth,
+                    Difficulty.Hard => tuning.hardEnemyHealth,
                     _ => 1f
                 };
 
-                return difficulty * (1f + 0.25f * Mathf.Max(0, NewGamePlus));
+                return difficulty * (1f + tuning.newGamePlusEnemyHealthPerCycle * Mathf.Max(0, NewGamePlus));
             }
         }
 
@@ -100,11 +101,11 @@ namespace MyGame.Combat
             NewGamePlus = Mathf.Max(0, newGamePlus);
         }
 
-        public static string DisplayName(Difficulty difficulty) => difficulty switch
+        public static string DisplayName(Difficulty difficulty) => TranslationServer.Translate(difficulty switch
         {
-            Difficulty.Easy => "쉬움",
-            Difficulty.Hard => "어려움",
-            _ => "보통"
-        };
+            Difficulty.Easy => "UI_OPTION_DIFFICULTY_EASY",
+            Difficulty.Hard => "UI_OPTION_DIFFICULTY_HARD",
+            _ => "UI_OPTION_DIFFICULTY_NORMAL"
+        });
     }
 }

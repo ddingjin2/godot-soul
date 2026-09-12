@@ -1,6 +1,14 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://Scripts/UI/TitleMenuBootstrap.cs" id="1"]
+; The scene the game boots into (project.godot run/main_scene) and the one the victory panel's
+; "return to title" loads. It inherits Scenes/UI/TitleScreen.tscn and adds nothing of its own: the
+; screen is authored there so TitleGraphicsOptionsTests can instantiate it on its own, since
+; changing scenes inside a test would free the runner - the runner *is* the current scene.
+;
+; Until Stage 4 this file was the shell that carried TitleMenuBootstrap.cs while the script built the
+; whole screen in _Ready. The script now sits on TitleScreen.tscn's root, which this inherits, so
+; the boot path and the root's name are unchanged.
 
-[node name="TitleRoot" type="Node"]
-script = ExtResource("1")
+[ext_resource type="PackedScene" path="res://Scenes/UI/TitleScreen.tscn" id="1_screen"]
+
+[node name="TitleRoot" instance=ExtResource("1_screen")]

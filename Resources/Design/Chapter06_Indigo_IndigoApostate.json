@@ -18,16 +18,26 @@
     "afterimageSpread": 2.4,
     "afterimageLifetime": 1.1,
 
+    "approachHopInterval": 0.0,
+    "approachHopImpulse": 5.0,
+    "chantInterval": 0.0,
+    "chantDuration": 2.5,
+    "chantHealPerSecond": 12.0,
+
     "maxPoise": 85.0,
     "poiseHeavyMultiplier": 2.0,
     "poiseRegenDelay": 3.2,
     "poiseRegenRate": 26.0,
+    "stunDuration": 1.0,
     "soulReward": 886,
 
     "primaryColor": { "r": 0.25, "g": 0.18, "b": 0.78, "a": 1.0 },
     "secondaryColor": { "r": 0.12, "g": 0.06, "b": 0.42, "a": 1.0 },
     "bodySize": { "x": 1.4, "y": 2.3 },
+    "telegraphPulseSpeed": 8.0,
+    "telegraphPulseAmplitude": 0.2,
 
+    "stanceRotationInterval": 0.0,
     "attacks": [
         {
             "attackId": "shadow_reach",
@@ -42,7 +52,19 @@
             "telegraphColor": { "r": 0.45, "g": 0.35, "b": 0.95, "a": 1.0 },
             "damageType": 1,
             "phaseTwoWeight": 0.35,
-            "forwardOffset": 0.9
+            "forwardOffset": 0.9,
+            "stanceId": "",
+            "chainNextAttackId": "",
+            "chainDelay": 0.35,
+            "chainDelayPhaseTwoScale": 1.0,
+            "afterimageCountOverride": -1,
+            "hazardPhaseTwoOnly": true,
+            "hazardDamage": 6.0,
+            "hazardRadius": 1.2,
+            "hazardTickInterval": 0.5,
+            "hazardDuration": 3.0,
+            "hazardForwardOffset": 1.5,
+            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 }
         },
         {
             "attackId": "absent_slam",
@@ -56,7 +78,19 @@
             "telegraphColor": { "r": 0.3, "g": 0.2, "b": 0.85, "a": 1.0 },
             "damageType": 2,
             "phaseTwoWeight": 0.3,
-            "forwardOffset": 0.5
+            "forwardOffset": 0.5,
+            "stanceId": "",
+            "chainNextAttackId": "",
+            "chainDelay": 0.35,
+            "chainDelayPhaseTwoScale": 1.0,
+            "afterimageCountOverride": -1,
+            "hazardPhaseTwoOnly": true,
+            "hazardDamage": 6.0,
+            "hazardRadius": 1.2,
+            "hazardTickInterval": 0.5,
+            "hazardDuration": 3.0,
+            "hazardForwardOffset": 1.5,
+            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 }
         },
         {
             "attackId": "late_grasp",
@@ -74,7 +108,16 @@
             "forwardOffset": 1.0,
             "chainNextAttackId": "shadow_reach",
             "chainDelay": 0.4,
-            "chainDelayPhaseTwoScale": 1.5
+            "chainDelayPhaseTwoScale": 1.5,
+            "stanceId": "",
+            "afterimageCountOverride": -1,
+            "hazardPhaseTwoOnly": true,
+            "hazardDamage": 6.0,
+            "hazardRadius": 1.2,
+            "hazardTickInterval": 0.5,
+            "hazardDuration": 3.0,
+            "hazardForwardOffset": 1.5,
+            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 }
         }
     ]
 }

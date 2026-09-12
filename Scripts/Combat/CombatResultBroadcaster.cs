@@ -13,10 +13,10 @@ namespace MyGame.Combat
     /// </summary>
     public partial class CombatResultBroadcaster : Node
     {
-        // Hit Stop
-        [Export] private float lightHitStopDuration = 0.08f;
-        [Export] private float heavyHitStopDuration = 0.12f;
-        [Export] private float parryHitStopDuration = 0.08f;
+        // Hit Stop. Seconds, authored in CombatTuning.json; nothing spatial, nothing scaled.
+        [Export] private float lightHitStopDuration = CombatTuningData.Shared.hitStopDurationLight;
+        [Export] private float heavyHitStopDuration = CombatTuningData.Shared.hitStopDurationHeavy;
+        [Export] private float parryHitStopDuration = CombatTuningData.Shared.hitStopDurationParry;
 
         // Optional Overrides
         [Export] private CombatFeedback feedback;

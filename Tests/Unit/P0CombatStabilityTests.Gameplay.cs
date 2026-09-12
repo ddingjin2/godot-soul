@@ -26,47 +26,42 @@ namespace MyGame.Tests
     /// </summary>
     public partial class P0CombatStabilityTests
     {
+        /// <summary>
+        /// "Both actors can take a hit and report the result" - read off the shipped scenes rather than
+        /// off the spawners' private helpers.
+        /// </summary>
+        /// <remarks>
+        /// PORT CHANGE (K7): this used to build a bare <see cref="Node2D"/> and invoke
+        /// <c>EnsureDamageReceiver</c> / <c>EnsureCombatResultBridge</c> by name through reflection, so
+        /// what it actually proved was that the spawner would <i>add</i> the two components. The spawners
+        /// stopped adding anything when the actor scenes started authoring it - the player was the last
+        /// holdout and gained its four nodes in K7 - so the add branch no longer exists to assert. The
+        /// property under test is unchanged; the evidence moved from a fixture to the shipping files.
+        /// Same kind of replacement as K4's <c>CheckpointRunPlatform</c>.
+        /// </remarks>
         [Test]
         public void GameplayActorsAttachDamageReceivers()
         {
-            var player = new Node2D { Name = "PlayerRoot" };
-            var playerHealth = new Health { Name = nameof(Health) };
-            player.AddChild(playerHealth);
-            Spawn(player);
-            playerHealth.SetHealth(100f);
+            AssertActorSceneCarriesDamageRig("res://Scenes/Actors/Player.tscn");
+            AssertActorSceneCarriesDamageRig("res://Scenes/Actors/EnemyBase.tscn");
+        }
 
-            // Still reflection, still by name: these are private statics and a rename has to break the
-            // test rather than the build. The Unity signature took a GameObject; it takes the actor Node
-            // here, because a Unity component is a child node in this port.
-            Type playerSpawner = ResolveType("MyGame.Gameplay.GameplayPlayerSpawner");
-            Assert.NotNull(playerSpawner, "GameplayPlayerSpawner should exist.");
-            MethodInfo ensurePlayerReceiver = playerSpawner.GetMethod("EnsureDamageReceiver", BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.NotNull(ensurePlayerReceiver, "GameplayPlayerSpawner should expose private EnsureDamageReceiver helper.");
-            ensurePlayerReceiver.Invoke(null, new object[] { player, playerHealth });
-            Assert.NotNull(player.GetComponent<DamageReceiver>(), "Gameplay player root should receive a DamageReceiver.");
+        private void AssertActorSceneCarriesDamageRig(string scenePath)
+        {
+            var scene = GD.Load<PackedScene>(scenePath);
+            Assert.NotNull(scene, scenePath + " should load; it is the actor the spawner instances.");
 
-            MethodInfo ensurePlayerBridge = playerSpawner.GetMethod("EnsureCombatResultBridge", BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.NotNull(ensurePlayerBridge, "GameplayPlayerSpawner should expose private EnsureCombatResultBridge helper.");
-            ensurePlayerBridge.Invoke(null, new object[] { player });
-            Assert.NotNull(player.GetComponent<CombatResultBroadcaster>(), "Gameplay player bridge should attach the combat result broadcaster.");
+            // Detached on purpose: the question is what the file authors, and an actor added to the tree
+            // would run a dozen _Ready methods that expect a spawner to have bound them first.
+            var actor = scene.Instantiate<Node2D>();
+            _spawned.Add(actor);
 
-            var enemy = new Node2D { Name = "EnemyRoot" };
-            var enemyHealth = new Health { Name = nameof(Health) };
-            enemy.AddChild(enemyHealth);
-            Spawn(enemy);
-            enemyHealth.SetHealth(100f);
-
-            Type enemySpawner = ResolveType("MyGame.Gameplay.GameplayEnemySpawner");
-            Assert.NotNull(enemySpawner, "GameplayEnemySpawner should exist.");
-            MethodInfo ensureEnemyReceiver = enemySpawner.GetMethod("EnsureDamageReceiver", BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.NotNull(ensureEnemyReceiver, "GameplayEnemySpawner should expose private EnsureDamageReceiver helper.");
-            ensureEnemyReceiver.Invoke(null, new object[] { enemy, enemyHealth });
-            Assert.NotNull(enemy.GetComponent<DamageReceiver>(), "Gameplay enemy root should receive a DamageReceiver.");
-
-            MethodInfo ensureEnemyBridge = enemySpawner.GetMethod("EnsureCombatResultBridge", BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.NotNull(ensureEnemyBridge, "GameplayEnemySpawner should expose private EnsureCombatResultBridge helper.");
-            ensureEnemyBridge.Invoke(null, new object[] { enemy });
-            Assert.NotNull(enemy.GetComponent<CombatResultBroadcaster>(), "Gameplay enemy bridge should attach the combat result broadcaster.");
+            Assert.NotNull(actor.GetComponent<DamageReceiver>(),
+                scenePath + " should author a DamageReceiver: nothing adds one at runtime any more, so an " +
+                "actor without it takes no damage at all.");
+            Assert.NotNull(actor.GetComponent<CombatResultBroadcaster>(),
+                scenePath + " should author a CombatResultBroadcaster: it is what turns a landed hit into " +
+                "the shake, the hit stop and the feedback flash.");
         }
 
         [Test]
@@ -134,6 +129,8 @@ namespace MyGame.Tests
                 playerBody.AddChild(humanity);
                 var sin = new SinResonanceController { Name = nameof(SinResonanceController) };
                 playerBody.AddChild(sin);
+                PlayerFixture.Configure(humanity);
+                PlayerFixture.Configure(sin);
                 var input = new PlayerInputReceiver { Name = nameof(PlayerInputReceiver) };
                 playerBody.AddChild(input);
                 sin.Initialize(humanity);
@@ -149,11 +146,17 @@ namespace MyGame.Tests
                     null);
 
                 var boss = new WrathMiniBoss { Name = "VictoryBoss" };
+                boss.SetTuningData(WrathMiniBossData.Load());
+
+                // Both bound before Spawn: the boss's _Ready refuses to run without either, the way the
+                // spawner hands them over while the body is still detached.
+                boss.SetEncounterData(BossEncounterData.Load("Design/WrathEncounter"));
+                ConfigureFromDesign(boss);
                 AddBoxShape(boss);
                 var bossHealth = new Health { Name = nameof(Health) };
                 boss.AddChild(bossHealth);
                 Spawn(boss);
-                bossHealth.SetHealth(100f);
+                PlayerFixture.Configure(bossHealth, 100f);
 
                 GameplayHud hud = GameplayHudSpawner.Spawn(
                     playerContext,
@@ -248,9 +251,9 @@ namespace MyGame.Tests
         [Test]
         public void GameplayEnemyTelegraphsAreReadableForParry()
         {
-            MeleeGruntData melee = GameplayTuningDefaults.CreateMeleeGrunt(Colors.Red);
-            LeapingAttackerData leaper = GameplayTuningDefaults.CreateLeapingAttacker();
-            WrathMiniBossData boss = GameplayTuningDefaults.CreateWrathMiniBoss(Colors.Red);
+            MeleeGruntData melee = MeleeGruntData.Load();
+            LeapingAttackerData leaper = LeapingAttackerData.Load();
+            WrathMiniBossData boss = WrathMiniBossData.Load();
 
             // Seconds, not distances - no PPU scaling on any of these four.
             Assert.GreaterOrEqual(melee.telegraphTime, 0.8f, "Melee grunt telegraph should be slow enough to parry.");
@@ -301,25 +304,32 @@ namespace MyGame.Tests
         /// <summary>
         /// The Unity test compared the frame <c>GameplayWorldHealthBar.Build</c> paints against the one
         /// every actor prefab already carried, because Build reuses an existing <c>HealthBar/Frame</c>
-        /// instead of recolouring it. With prefabs gone, Build is always the one that creates the frame -
-        /// so what survives is that it does create it, and paints it with this file's own frame colour.
+        /// instead of recolouring it. That reuse is the whole shipping path now: every actor scene
+        /// authors the bar, and K7 deleted the instance-if-missing branch, so Build only ever finds one.
+        /// The property under test is unchanged - the frame ends up wearing this file's frame colour -
+        /// and the fixture hands Build the authored bar instead of a bare node.
         /// </summary>
         [Test]
         public void WorldHealthBarBuildsAndPaintsItsFrame()
         {
             var bar = new GameplayWorldHealthBar { Name = "HealthBarFrameProbe" };
+
+            // What Player.tscn and EnemyBase.tscn author under this component. Parented before the
+            // component enters the tree, which is the order the actor scenes give it.
+            var authored = GD.Load<PackedScene>("res://Scenes/World/WorldHealthBar.tscn").Instantiate<Node2D>();
+            bar.AddChild(authored);
             Spawn(bar);
             InvokeNonPublic(bar, "Build");
 
             Node2D barRoot = bar.GetNodeOrNull<Node2D>("HealthBar");
-            Assert.NotNull(barRoot, "GameplayWorldHealthBar.Build should create a HealthBar child.");
+            Assert.NotNull(barRoot, "GameplayWorldHealthBar.Build should keep the authored HealthBar child.");
 
             Sprite2D builtFrame = barRoot.GetNodeOrNull<Sprite2D>("Frame");
-            Assert.NotNull(builtFrame, "GameplayWorldHealthBar.Build should create a HealthBar/Frame child.");
+            Assert.NotNull(builtFrame, "Scenes/World/WorldHealthBar.tscn should author a Frame child.");
 
             FieldInfo frameColor = typeof(GameplayWorldHealthBar)
                 .GetField("FrameColor", BindingFlags.NonPublic | BindingFlags.Static);
-            Assert.NotNull(frameColor, "GameplayWorldHealthBar should keep its FrameColor constant.");
+            Assert.NotNull(frameColor, "GameplayWorldHealthBar should still expose FrameColor, now read from the palette.");
             Assert.IsTrue(
                 builtFrame.Modulate.IsEqualApprox((Color)frameColor.GetValue(null)),
                 $"The frame Build creates ({builtFrame.Modulate}) should be painted with GameplayWorldHealthBar.FrameColor; Build reuses an existing HealthBar/Frame instead of recolouring it.");
@@ -362,21 +372,25 @@ namespace MyGame.Tests
             Assert.NotNull(typeof(RainbowChapterBossBehaviour).GetProperty("IsAttackRunning"), "Rainbow boss should expose IsAttackRunning.");
         }
 
+        /// <summary>
+        /// Used to look for a platform named <c>CheckpointRunPlatform</c>. That name only ever existed in
+        /// the code copy of the layout that K4 deleted; <c>SceneLayout.json</c> has
+        /// <c>overridePlatforms: true</c> and never shipped one, so the test was checking a fixture the
+        /// game did not use. What ships is a named list, and the instanced platforms are found by those
+        /// names (see the scene audit), so that is the contract kept here.
+        /// </summary>
         [Test]
-        public void GameplaySceneIncludesCheckpointRunSection()
+        public void GameplaySceneNamesEveryPlatformItShips()
         {
             GameplaySceneDefaults scene = GameplaySceneDefaults.Create();
-            bool found = false;
+            Assert.NotNull(scene, "SceneLayout.json should load; without it there is no arena.");
+            Assert.Greater(scene.Platforms.Length, 0, "SceneLayout.json should ship at least one platform.");
 
             foreach (GameplaySceneDefaults.PlatformDefinition platform in scene.Platforms)
             {
-                if (platform.Name == "CheckpointRunPlatform")
-                {
-                    found = true;
-                }
+                Assert.IsFalse(string.IsNullOrEmpty(platform.Name),
+                    "Every shipped platform needs a name; the instanced node takes it and other tests find platforms by it.");
             }
-
-            Assert.IsTrue(found, "Gameplay test room should include a checkpoint run platform.");
         }
 
         [Test]
@@ -531,6 +545,8 @@ namespace MyGame.Tests
             // body here (EnemyStateMachine is a CharacterBody2D), so the actor is a MeleeGrunt with the
             // health component as a child node. PPU on every position below; none of them is vertical.
             var enemy = new MeleeGrunt { Name = "ContextEnemy", Position = new Vector2(World.U(2f), 0f) };
+            enemy.SetTuningData(MeleeGruntData.Load());
+            ConfigureFromDesign(enemy);
             var enemyHealth = new Health { Name = nameof(Health) };
             enemy.AddChild(enemyHealth);
             Spawn(enemy);
@@ -538,19 +554,21 @@ namespace MyGame.Tests
             enemyHealth.SetHealth(20f);
 
             var boss = new WrathMiniBoss { Name = "ContextBoss", Position = new Vector2(World.U(4f), 0f) };
+            boss.SetTuningData(WrathMiniBossData.Load());
+            boss.SetEncounterData(BossEncounterData.Load("Design/WrathEncounter"));
+            ConfigureFromDesign(boss);
             var bossHealth = new Health { Name = nameof(Health) };
             boss.AddChild(bossHealth);
             Spawn(boss);
-            bossHealth.SetHealth(100f);
+            PlayerFixture.Configure(bossHealth, 100f);
 
             // Y FLIP: Unity's (3, 1) is a metre *up*, which is -Y here. This port's EnemyProjectile moves
             // its own transform instead of riding a rigidbody, so there is no linearVelocity to author -
             // the probe reports zero velocity for a non-body and nothing here reads it.
-            var projectile = new EnemyProjectile
-            {
-                Name = "ContextProjectile",
-                Position = new Vector2(World.U(3f), -World.U(1f)),
-            };
+            EnemyProjectile projectile = GD.Load<PackedScene>(EnemyProjectile.ScenePath)
+                .Instantiate<EnemyProjectile>();
+            projectile.Name = "ContextProjectile";
+            projectile.Position = new Vector2(World.U(3f), -World.U(1f));
             Spawn(projectile);
 
             var checkpoint = new Checkpoint { Name = "ContextCheckpoint", Position = new Vector2(World.U(0.25f), 0f) };

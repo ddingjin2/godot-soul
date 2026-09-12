@@ -1,0 +1,94 @@
+[gd_scene load_steps=2 format=3]
+
+; The checkpoint's soul sink. Inherits ModalPanel.tscn and adds four stat rows and a close button.
+; Replaces GameplayHud.CreateLevelUpPanel.
+;
+; THE FOUR ROWS ARE AUTHORED, NOT A LIST. There are four PlayerStat values and there always will be,
+; so this is not the gate list's problem: the rows exist here, in PlayerStat's declaration order
+; (Vitality, Endurance, Strength, Resolve), and RefreshLevelUp only writes their text and their
+; disabled flag. The names LevelUpVitalityButton..LevelUpResolveButton are what the script's
+; $"LevelUp{stat}Button" lookup expects.
+;
+; A row is wider and smaller-lettered than a menu button - 520 rather than 280, 20pt rather than the
+; theme's 24 - because it carries four columns of text (stat, level, what a level gives, price)
+; where 계속하기 carries one word. Both are overrides on top of MenuTheme, which still supplies the
+; five state plates and the disabled text colour that make an unaffordable row readable as such.
+;
+; Subtitle is the karma line - what CreateLevelUpPanel called LevelUpSouls - and keeps the base's
+; Cold200 and 24pt, because a resource count is exactly what that colour is for.
+;
+; This panel does not stop the world, which is why GameplayHud.tscn puts it under the pause panel in
+; tree order: Escape has to be able to open the pause menu on top of it.
+;
+; UNITS: screen pixels.
+
+[ext_resource type="PackedScene" path="res://Scenes/UI/ModalPanel.tscn" id="1_base"]
+
+[node name="LevelUpPanel" instance=ExtResource("1_base")]
+
+[node name="Title" parent="." index="0"]
+text = "UI_LEVEL_UP"
+
+[node name="LevelUpVitalityButton" type="Button" parent="."]
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -260.0
+offset_top = -133.0
+offset_right = 260.0
+offset_bottom = -77.0
+theme_override_font_sizes/font_size = 20
+text = ""
+
+[node name="LevelUpEnduranceButton" type="Button" parent="."]
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -260.0
+offset_top = -63.0
+offset_right = 260.0
+offset_bottom = -7.0
+theme_override_font_sizes/font_size = 20
+text = ""
+
+[node name="LevelUpStrengthButton" type="Button" parent="."]
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -260.0
+offset_top = 7.0
+offset_right = 260.0
+offset_bottom = 63.0
+theme_override_font_sizes/font_size = 20
+text = ""
+
+[node name="LevelUpResolveButton" type="Button" parent="."]
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -260.0
+offset_top = 77.0
+offset_right = 260.0
+offset_bottom = 133.0
+theme_override_font_sizes/font_size = 20
+text = ""
+
+[node name="LevelUpCloseButton" type="Button" parent="."]
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -140.0
+offset_top = 292.0
+offset_right = 140.0
+offset_bottom = 348.0
+text = "UI_COMMON_CLOSE"

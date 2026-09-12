@@ -16,18 +16,28 @@
 
     "stanceRotationInterval": 6.0,
 
+    "afterimageCount": 0,
     "afterimageSpread": 2.4,
     "afterimageLifetime": 1.0,
+
+    "approachHopInterval": 0.0,
+    "approachHopImpulse": 5.0,
+    "chantInterval": 0.0,
+    "chantDuration": 2.5,
+    "chantHealPerSecond": 12.0,
 
     "maxPoise": 110.0,
     "poiseHeavyMultiplier": 2.0,
     "poiseRegenDelay": 3.0,
     "poiseRegenRate": 32.0,
+    "stunDuration": 1.0,
     "soulReward": 1241,
 
     "primaryColor": { "r": 0.65, "g": 0.2, "b": 0.9, "a": 1.0 },
     "secondaryColor": { "r": 0.35, "g": 0.05, "b": 0.55, "a": 1.0 },
     "bodySize": { "x": 1.7, "y": 2.6 },
+    "telegraphPulseSpeed": 8.0,
+    "telegraphPulseAmplitude": 0.2,
 
     "attacks": [
         {
@@ -43,7 +53,18 @@
             "telegraphColor": { "r": 0.9, "g": 0.08, "b": 0.06, "a": 1.0 },
             "damageType": 2,
             "phaseTwoWeight": 1.0,
-            "forwardOffset": 0.7
+            "forwardOffset": 0.7,
+            "chainNextAttackId": "",
+            "chainDelay": 0.35,
+            "chainDelayPhaseTwoScale": 1.0,
+            "afterimageCountOverride": -1,
+            "hazardPhaseTwoOnly": true,
+            "hazardDamage": 6.0,
+            "hazardRadius": 1.2,
+            "hazardTickInterval": 0.5,
+            "hazardDuration": 3.0,
+            "hazardForwardOffset": 1.5,
+            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 }
         },
         {
             "attackId": "orange_pursuit",
@@ -66,7 +87,11 @@
             "hazardTickInterval": 0.5,
             "hazardDuration": 3.0,
             "hazardForwardOffset": 2.0,
-            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 }
+            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 },
+            "chainNextAttackId": "",
+            "chainDelay": 0.35,
+            "chainDelayPhaseTwoScale": 1.0,
+            "afterimageCountOverride": -1
         },
         {
             "attackId": "yellow_bait",
@@ -82,7 +107,18 @@
             "telegraphColor": { "r": 1.0, "g": 0.82, "b": 0.12, "a": 1.0 },
             "damageType": 1,
             "phaseTwoWeight": 1.0,
-            "forwardOffset": 0.8
+            "forwardOffset": 0.8,
+            "chainNextAttackId": "",
+            "chainDelay": 0.35,
+            "chainDelayPhaseTwoScale": 1.0,
+            "afterimageCountOverride": -1,
+            "hazardPhaseTwoOnly": true,
+            "hazardDamage": 6.0,
+            "hazardRadius": 1.2,
+            "hazardTickInterval": 0.5,
+            "hazardDuration": 3.0,
+            "hazardForwardOffset": 1.5,
+            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 }
         },
         {
             "attackId": "green_claim",
@@ -105,7 +141,11 @@
             "hazardTickInterval": 0.6,
             "hazardDuration": 4.0,
             "hazardForwardOffset": -1.4,
-            "hazardColor": { "r": 0.25, "g": 0.8, "b": 0.3, "a": 0.5 }
+            "hazardColor": { "r": 0.25, "g": 0.8, "b": 0.3, "a": 0.5 },
+            "chainNextAttackId": "",
+            "chainDelay": 0.35,
+            "chainDelayPhaseTwoScale": 1.0,
+            "afterimageCountOverride": -1
         },
         {
             "attackId": "blue_tide",
@@ -124,7 +164,15 @@
             "pullsTarget": true,
             "chainNextAttackId": "blue_undertow",
             "chainDelay": 0.35,
-            "chainDelayPhaseTwoScale": 2.0
+            "chainDelayPhaseTwoScale": 2.0,
+            "afterimageCountOverride": -1,
+            "hazardPhaseTwoOnly": true,
+            "hazardDamage": 6.0,
+            "hazardRadius": 1.2,
+            "hazardTickInterval": 0.5,
+            "hazardDuration": 3.0,
+            "hazardForwardOffset": 1.5,
+            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 }
         },
         {
             "attackId": "blue_undertow",
@@ -140,7 +188,18 @@
             "damageType": 2,
             "phaseTwoWeight": 0.6,
             "forwardOffset": 0.8,
-            "pullsTarget": true
+            "pullsTarget": true,
+            "chainNextAttackId": "",
+            "chainDelay": 0.35,
+            "chainDelayPhaseTwoScale": 1.0,
+            "afterimageCountOverride": -1,
+            "hazardPhaseTwoOnly": true,
+            "hazardDamage": 6.0,
+            "hazardRadius": 1.2,
+            "hazardTickInterval": 0.5,
+            "hazardDuration": 3.0,
+            "hazardForwardOffset": 1.5,
+            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 }
         },
         {
             "attackId": "indigo_absence",
@@ -157,7 +216,17 @@
             "telegraphColor": { "r": 0.25, "g": 0.18, "b": 0.78, "a": 1.0 },
             "damageType": 1,
             "phaseTwoWeight": 1.0,
-            "forwardOffset": 0.9
+            "forwardOffset": 0.9,
+            "chainNextAttackId": "",
+            "chainDelay": 0.35,
+            "chainDelayPhaseTwoScale": 1.0,
+            "hazardPhaseTwoOnly": true,
+            "hazardDamage": 6.0,
+            "hazardRadius": 1.2,
+            "hazardTickInterval": 0.5,
+            "hazardDuration": 3.0,
+            "hazardForwardOffset": 1.5,
+            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 }
         },
         {
             "attackId": "violet_judgment",
@@ -176,7 +245,15 @@
             "forwardOffset": 0.7,
             "chainNextAttackId": "violet_verdict",
             "chainDelay": 0.45,
-            "chainDelayPhaseTwoScale": 1.8
+            "chainDelayPhaseTwoScale": 1.8,
+            "afterimageCountOverride": -1,
+            "hazardPhaseTwoOnly": true,
+            "hazardDamage": 6.0,
+            "hazardRadius": 1.2,
+            "hazardTickInterval": 0.5,
+            "hazardDuration": 3.0,
+            "hazardForwardOffset": 1.5,
+            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 }
         },
         {
             "attackId": "violet_verdict",
@@ -191,7 +268,18 @@
             "telegraphColor": { "r": 0.8, "g": 0.35, "b": 1.0, "a": 1.0 },
             "damageType": 2,
             "phaseTwoWeight": 0.8,
-            "forwardOffset": 0.9
+            "forwardOffset": 0.9,
+            "chainNextAttackId": "",
+            "chainDelay": 0.35,
+            "chainDelayPhaseTwoScale": 1.0,
+            "afterimageCountOverride": -1,
+            "hazardPhaseTwoOnly": true,
+            "hazardDamage": 6.0,
+            "hazardRadius": 1.2,
+            "hazardTickInterval": 0.5,
+            "hazardDuration": 3.0,
+            "hazardForwardOffset": 1.5,
+            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 }
         }
     ]
 }

@@ -17,16 +17,27 @@
     "approachHopInterval": 0.9,
     "approachHopImpulse": 5.5,
 
+    "chantInterval": 0.0,
+    "chantDuration": 2.5,
+    "chantHealPerSecond": 12.0,
+    "afterimageCount": 0,
+    "afterimageSpread": 2.2,
+    "afterimageLifetime": 0.9,
+
     "maxPoise": 85.0,
     "poiseHeavyMultiplier": 2.0,
     "poiseRegenDelay": 3.0,
     "poiseRegenRate": 30.0,
+    "stunDuration": 1.0,
     "soulReward": 603,
 
     "primaryColor": { "r": 1.0, "g": 0.42, "b": 0.06, "a": 1.0 },
     "secondaryColor": { "r": 0.78, "g": 0.16, "b": 0.03, "a": 1.0 },
     "bodySize": { "x": 1.3, "y": 2.0 },
+    "telegraphPulseSpeed": 8.0,
+    "telegraphPulseAmplitude": 0.2,
 
+    "stanceRotationInterval": 0.0,
     "attacks": [
         {
             "attackId": "ember_jab",
@@ -48,7 +59,12 @@
             "hazardTickInterval": 0.5,
             "hazardDuration": 3.0,
             "hazardForwardOffset": 1.5,
-            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 }
+            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 },
+            "stanceId": "",
+            "chainNextAttackId": "",
+            "chainDelay": 0.35,
+            "chainDelayPhaseTwoScale": 1.0,
+            "afterimageCountOverride": -1
         },
         {
             "attackId": "rolling_lunge",
@@ -70,7 +86,12 @@
             "hazardTickInterval": 0.5,
             "hazardDuration": 3.2,
             "hazardForwardOffset": 2.0,
-            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 }
+            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 },
+            "stanceId": "",
+            "chainNextAttackId": "",
+            "chainDelay": 0.35,
+            "chainDelayPhaseTwoScale": 1.0,
+            "afterimageCountOverride": -1
         },
         {
             "attackId": "hunger_sweep",
@@ -92,7 +113,12 @@
             "hazardTickInterval": 0.5,
             "hazardDuration": 3.0,
             "hazardForwardOffset": 1.5,
-            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 }
+            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 },
+            "stanceId": "",
+            "chainNextAttackId": "",
+            "chainDelay": 0.35,
+            "chainDelayPhaseTwoScale": 1.0,
+            "afterimageCountOverride": -1
         }
     ]
 }

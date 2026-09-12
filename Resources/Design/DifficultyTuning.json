@@ -1,0 +1,7 @@
+{
+    "easyPlayerDamageTaken": 0.7,
+    "hardPlayerDamageTaken": 1.4,
+    "easyEnemyHealth": 0.85,
+    "hardEnemyHealth": 1.25,
+    "newGamePlusEnemyHealthPerCycle": 0.25
+}

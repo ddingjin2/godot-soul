@@ -140,10 +140,10 @@ namespace MyGame.Tests
         }
 
         /// <summary>
-        /// The pickup grace moved out of <see cref="GameplayTuningDefaults"/> and into
+        /// The pickup grace moved out of the old <c>GameplayTuningDefaults</c> table and into
         /// PlayerResources.json, and <c>GameplayPlayerSpawner</c> is the only thing carrying it to the
-        /// stain. Drop that argument and the stain quietly arms on the fallback constant instead: the
-        /// game still runs, the designer's number just stops existing. Nothing else would notice.
+        /// stain. Drop that argument and the stain arms on zero instead: the game still runs, the
+        /// designer's number just stops existing. Nothing else would notice.
         /// </summary>
         [Test]
         public async Task DroppedStain_ArmsOnTheAuthoredPickupDelay()
@@ -173,7 +173,7 @@ namespace MyGame.Tests
 
             // A time, not a distance - unscaled by the port.
             Assert.AreEqual(resources.soulStainPickupDelay, (float)delayField.GetValue(stain), 0.0001f,
-                "The stain should arm on the authored delay, not on the GameplayTuningDefaults fallback.");
+                "The stain should arm on the authored delay; there is no constant left for it to fall back to.");
         }
 
         [Test]

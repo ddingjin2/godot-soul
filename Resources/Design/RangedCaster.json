@@ -29,5 +29,22 @@
     "minDistance": 4.0,
     "repositionDistance": 2.0,
     "castTelegraphTime": 0.800000011920929,
-    "strafeSpeed": 1.5
+    "strafeSpeed": 1.5,
+    "patrolDistance": 3.0,
+    "patrolIdleTime": 0.5,
+    "repositionCooldownMin": 1.2000000476837158,
+    "repositionCooldownMax": 2.0,
+    "repositionDuration": 0.5,
+    "strafeFlipChance": 0.009999999776482582,
+    "projectileLifetime": 5.0,
+    "projectileArcHeight": 0.5,
+    "telegraphPulseSpeed": 6.0,
+    "telegraphPulseAmplitude": 0.10000000149011612,
+    "telegraphBlend": 0.800000011920929,
+    "telegraphColor": {
+        "r": 0.5,
+        "g": 0.30000001192092898,
+        "b": 1.0,
+        "a": 1.0
+    }
 }

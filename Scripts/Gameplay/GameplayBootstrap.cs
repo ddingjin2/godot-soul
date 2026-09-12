@@ -7,9 +7,12 @@ using MyGame.UI;
 namespace MyGame.Gameplay
 {
     /// <summary>
-    /// The script on the gameplay scene's root node. Everything the arena is - the camera, the ground,
-    /// the player, the enemies, the HUD, the cutscene layer - is built here, because the Unity project
-    /// built its scenes from code and this port keeps that.
+    /// The script on the gameplay scene's root node - <c>Scenes/World/GameplayShell.tscn</c>, which all
+    /// eight chapters inherit. The shell authors the system nodes this used to build (the camera rig and
+    /// its camera, the shake, the hit stop manager, the cutscene director with its triggers, and the
+    /// enemy respawner); what is still built here is the arena itself - the ground, the player, the
+    /// enemies, the HUD, the cutscene overlay - because the Unity project built its scenes from code and
+    /// this port keeps that until scene S9 moves the layout data too.
     /// </summary>
     public partial class GameplayBootstrap : Node
     {
@@ -20,13 +23,10 @@ namespace MyGame.Gameplay
 
         private const string EnterCutsceneKey = "GameplayEnter";
 
-        // CutsceneDirection.md 4: bars are already at this height on the first rendered frame.
-        private const float EnterLetterboxHeight = 64f;
-
-        // The same section's rig beat: one unit of settle, landing with the fade. Read off the rig rather
-        // than off GameplaySceneDefaults, so whatever FrameCombatRoom decided stays the resting position.
-        private const float EnterSettleHeight = 1f;
-        private const float EnterSettleDuration = 1.2f;
+        // CutsceneDirection.md 4: bars are already at the shot's opening height on the first rendered
+        // frame, and the rig settles one authored unit down onto its rest, landing with the fade. Both
+        // numbers are CutsceneTuning.json's; the rest position is read off the rig rather than off
+        // GameplaySceneDefaults, so whatever FrameCombatRoom decided stays the resting position.
 
         private GameplayPlayerContext _player;
         private PlayerProgression _progression;
@@ -38,6 +38,15 @@ namespace MyGame.Gameplay
             // anything renders. Without this call the options screen writes settings nothing reads.
             GraphicsOptions.LoadAndApply();
 
+            // Every design file, or no arena. Res.LoadJson has already named the missing one; this is
+            // the line that turns "a file is missing" from a game with different numbers into a boot
+            // that stops, which is the whole of the missing-data policy (PLAN_CLOSEOUT D1).
+            if (!DesignFilesPresent())
+            {
+                GD.PushError("GameplayBootstrap: a design file under Resources/Design is missing (see the error above); the arena is not built.");
+                return;
+            }
+
             _player = ValidateScene();
             BindLevelUpToTheSlot();
 
@@ -46,6 +55,14 @@ namespace MyGame.Gameplay
             // bootstrap does it, and the node parents itself to the tree root so it survives the jump.
             GameplayDebugSceneJump.Install(this);
 #endif
+        }
+
+        private static bool DesignFilesPresent()
+        {
+            return GameplayTuningCatalog.Load().IsComplete
+                && CombatTuningData.Shared != null
+                && DifficultyTuningData.Shared != null
+                && CutsceneTuningData.Shared != null;
         }
 
         public override void _ExitTree()
@@ -102,8 +119,8 @@ namespace MyGame.Gameplay
             GameplaySceneDefaults scene = GameplaySceneDefaults.CreateForScene(GameplayBuildShim.ActiveSceneName, null);
             GameplayReadabilityDefaults readability = GameplayReadabilityDefaults.Create();
 
-            Camera2D cam = GameplaySystemBootstrapper.EnsureCamera(readability.BackgroundColor);
-            GameplaySystemBootstrapper.EnsureHitStopManager(HitStopManagerObjectName);
+            Camera2D cam = GameplaySystemBootstrapper.FindCamera(readability.BackgroundColor);
+            GameplaySystemBootstrapper.FindHitStopManager(HitStopManagerObjectName);
 
             // Before anything spawns: difficulty scales enemy health, and the enemies are built below.
             // Only from a slot the game is actually resuming - a New Game has already told the settings
@@ -116,8 +133,10 @@ namespace MyGame.Gameplay
             GameplayEnemyContext enemies = GameplayEnemySpawner.Spawn(scene, readability, player);
             GameplayHud hud = GameplayHudSpawner.Spawn(player, enemies);
 
-            var respawner = new GameplayEnemyRespawner { Name = EnemyRespawnerObjectName };
-            AddChild(respawner);
+            // Authored on the shell since K7, like the camera stack and the cutscene layer above it.
+            var respawner = GetNodeOrNull<GameplayEnemyRespawner>(EnemyRespawnerObjectName);
+            if (respawner == null)
+                GD.PushError($"GameplayBootstrap: the scene authors no '{EnemyRespawnerObjectName}'; Scenes/World/GameplayShell.tscn carries one. Nothing will respawn.");
 
             // No-op until zones are placed in the scene, which keeps the single spawn point as it is.
             CheckpointZone.InitializeAll(player, respawner);
@@ -150,16 +169,18 @@ namespace MyGame.Gameplay
         }
 
         /// <summary>
-        /// Stands the cutscene layer up, tells it what the roles map to, subscribes the triggers that
-        /// fire from gameplay events, and plays the entry cutscene. Hands the triggers back so a respawn
-        /// can re-point them at the boss it spawns.
+        /// Binds the cutscene layer the shell authors, tells it what the roles map to, subscribes the
+        /// triggers that fire from gameplay events, and plays the entry cutscene. Hands the triggers back
+        /// so a respawn can re-point them at the boss it spawns.
         /// </summary>
         private static GameplayCutsceneTriggers SetUpCutscenes(Camera2D cam, GameplayPlayerContext player, GameplayEnemyContext enemies)
         {
             CutsceneOverlay overlay = CutsceneOverlay.Create();
-            CutsceneDirector director = CutsceneDirector.Create(overlay);
+            CutsceneDirector director = CutsceneDirector.Bind(overlay);
+            if (director == null)
+                return null;
 
-            Node2D rig = GameplaySystemBootstrapper.EnsureCameraRig(cam);
+            Node2D rig = GameplaySystemBootstrapper.FindCameraRig(cam);
             if (rig != null)
                 director.Binder.Register(CutsceneRole.CameraRig, rig);
 
@@ -169,15 +190,19 @@ namespace MyGame.Gameplay
 
             // CutsceneRole.Boss is registered by Initialize below rather than here: the respawner rebinds
             // through the same call, and one owner of that binding is what keeps the two from drifting.
-            var triggers = new GameplayCutsceneTriggers { Name = nameof(GameplayCutsceneTriggers) };
-            director.AddChild(triggers);
-            triggers.Initialize(director, player.DeathController, enemies.Boss);
+            // The director's authored child on the shell, found by the name the bootstrap used to give it.
+            var triggers = director.GetNodeOrNull<GameplayCutsceneTriggers>(nameof(GameplayCutsceneTriggers));
+            if (triggers == null)
+                GD.PushError($"GameplayBootstrap: '{CutsceneDirector.ObjectName}' has no {nameof(GameplayCutsceneTriggers)} child; Scenes/World/GameplayShell.tscn authors one. No gameplay event will fire a shot.");
+            else
+                triggers.Initialize(director, player.DeathController, enemies.Boss);
 
             // The fade goes up here rather than on a clip: Build leaves it at alpha 0, and a director
             // that is the first writer renders the arena lit for the frames before it evaluates. _Ready
             // still runs ahead of the first rendered frame, so this is the last place the blackout can be
             // raised without the flash. If the shot is missing, Play clears it.
-            overlay.SetBlackout(EnterLetterboxHeight);
+            CutsceneTuningData cutscenes = CutsceneTuningData.Shared;
+            overlay.SetBlackout(cutscenes.OpeningLetterbox(EnterCutsceneKey));
             director.Play(EnterCutsceneKey);
 
             // Play disables camera follow, and CutsceneRigMove treats follow coming back on as the rig
@@ -188,9 +213,10 @@ namespace MyGame.Gameplay
             {
                 Vector2 settled = rig.GlobalPosition;
 
-                // Vector2.Up is (0, -1) in Godot, so this still lifts the rig by one authored unit.
-                rig.GlobalPosition = settled + Vector2.Up * World.U(EnterSettleHeight);
-                CutsceneRigMove.Play(rig, settled, EnterSettleDuration);
+                // Vector2.Up is (0, -1) in Godot, so this still lifts the rig by the authored unit. Already
+                // pixels: CutsceneTuningData.Load did the World.U pass.
+                rig.GlobalPosition = settled + Vector2.Up * cutscenes.enterSettleHeight;
+                CutsceneRigMove.Play(rig, settled, cutscenes.enterSettleDuration);
             }
 
             return triggers;

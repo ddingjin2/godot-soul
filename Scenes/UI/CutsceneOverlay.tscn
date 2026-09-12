@@ -1,0 +1,75 @@
+[gd_scene load_steps=2 format=3]
+
+; The authored cutscene layer. In Unity this hierarchy was a prefab whose child *names* were the
+; contract with the Timeline Animation Tracks, which addressed them by path; the port rebuilt it in
+; CutsceneOverlay.Build() and this scene puts it back where it belongs. Every static property lives
+; here - layer, process mode, anchors, offsets, colours, mouse filters, the caption's size and
+; colour. The three animated channels (fade alpha, bar height, caption text) are written at runtime
+; by CutsceneDirector through the setters on the script, and the nodes rest here at neutral: fade
+; and caption transparent, both bars zero-height.
+;
+; Colours are MoodDirection.md's INK_950 (#06070A) for the blackout surfaces and BONE_100 (#C3BDB1)
+; for the caption. The caption's rectangle - 900x80, 90px off the bottom edge - is UI pixels taken
+; straight from the Unity canvas; it is not a world distance and gets no World.U.
+;
+; The caption's *font* is bound at runtime, not referenced here - see the comment on Bind() in
+; CutsceneOverlay.cs.
+
+[ext_resource type="Script" path="res://Scripts/Gameplay/CutsceneOverlay.cs" id="1_script"]
+
+[node name="CutsceneOverlay" type="CanvasLayer"]
+process_mode = 3
+layer = 100
+script = ExtResource("1_script")
+
+[node name="Fade" type="ColorRect" parent="."]
+modulate = Color(1, 1, 1, 0)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+mouse_filter = 2
+color = Color(0.023529412, 0.02745098, 0.039215688, 1)
+
+[node name="LetterboxTop" type="ColorRect" parent="."]
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+mouse_filter = 2
+color = Color(0.023529412, 0.02745098, 0.039215688, 1)
+
+[node name="LetterboxBottom" type="ColorRect" parent="."]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+mouse_filter = 2
+color = Color(0.023529412, 0.02745098, 0.039215688, 1)
+
+[node name="Line" type="Label" parent="."]
+modulate = Color(1, 1, 1, 0)
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -450.0
+offset_top = -170.0
+offset_right = 450.0
+offset_bottom = -90.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+theme_override_font_sizes/font_size = 24
+text = ""
+horizontal_alignment = 1
+vertical_alignment = 2

@@ -14,11 +14,11 @@ namespace MyGame.Enemy
         [Export] private RangedCasterData tuningData;
 
         /// <summary>
-        /// The projectile template. Unity handed this class an inactive prefab GameObject; here it is a
-        /// detached node the pool duplicates per shot, which is the same "built in code, never in a
-        /// scene file" arrangement the Unity spawner used.
+        /// The projectile scene the pool instances per shot - Unity's prefab reference, which is what it
+        /// always should have been. Null is legal and means <see cref="EnemyProjectile.ScenePath"/>: a
+        /// caster nobody wired fires the same shot as one the spawner built.
         /// </summary>
-        [Export] private Node2D projectilePrefab;
+        [Export] private PackedScene projectilePrefab;
 
         [Export] private Node2D telegraphIndicator;
 
@@ -29,19 +29,28 @@ namespace MyGame.Enemy
 
         public bool IsStunned => _isStunned;
         public bool IsDead => _health.IsDead;
-        public float DetectionRange => tuningData != null ? tuningData.detectionRange : World.U(5f);
-        public float AttackRange => tuningData != null ? tuningData.attackRange : World.U(1.5f);
+        public float DetectionRange => tuningData.detectionRange;
+        public float AttackRange => tuningData.attackRange;
 
         public void SetTuningData(RangedCasterData data) => tuningData = data;
 
-        public void SetProjectilePrefab(Node2D prefab) => projectilePrefab = prefab;
+        /// <param name="prefab">The shot's scene. Null falls back to <see cref="EnemyProjectile.ScenePath"/>.</param>
+        /// <param name="tint">Readability's projectile colour, or null to keep the scene's own.</param>
+        /// <param name="sortingOrder">Readability's projectile sorting order, or null to keep the scene's own.</param>
+        public void SetProjectilePrefab(PackedScene prefab, Color? tint = null, int? sortingOrder = null)
+        {
+            projectilePrefab = prefab;
+            _projectileTint = tint;
+            _projectileSortingOrder = sortingOrder;
+        }
 
         /// <summary>
-        /// Frozen telegraph base: the pre-mood caster body colour. Blending from here instead of
+        /// Telegraph base: the pre-mood caster body colour. Blending from here instead of
         /// tuningData.enemyColor keeps the telegraph at #E50FFF after the body is muted.
         /// See Docs/MoodDirection.md "The lerp trap".
+        /// Authored as <c>RangedCaster.json.telegraphColor</c>.
         /// </summary>
-        private static readonly Color TelegraphBase = new Color(0.5f, 0.3f, 1f);
+        private Color TelegraphBase => tuningData.telegraphColor;
 
         private Health _health;
         private bool _isStunned;
@@ -61,63 +70,47 @@ namespace MyGame.Enemy
         private float _repositionCooldown = 1.5f;
         private bool _isRepositioning;
         private EnemyProjectilePool _projectilePool;
-        private static readonly float PatrolHalfWidth = World.U(3f);
+        private Color? _projectileTint;
+        private int? _projectileSortingOrder;
+        /// <summary>Already pixels - <c>RangedCasterData.ScaleToPixels</c> converted the authored metres at load.</summary>
+        private float PatrolHalfWidth => tuningData.patrolDistance;
 
         public override void _Ready()
         {
             base._Ready();
 
+            if (tuningData == null)
+            {
+                GD.PushError($"{GetType().Name} '{Name}' entered the tree without tuning data; call SetTuningData first.");
+                SetProcess(false);
+                SetPhysicsProcess(false);
+                return;
+            }
+
             _health = this.FindComponent<Health>();
             _startPos = GlobalPosition;
             _patrolTarget = _startPos + (Vector2.Right * PatrolHalfWidth);
 
-            if (tuningData != null)
+            _health.SetHealth(tuningData.maxHealth);
+            if (_sr != null)
             {
-                _health.SetHealth(tuningData.maxHealth);
-                if (_sr != null)
-                {
-                    _sr.Modulate = tuningData.enemyColor;
-                }
+                _sr.Modulate = tuningData.enemyColor;
             }
 
-            if (projectilePrefab == null)
-            {
-                projectilePrefab = CreateDefaultProjectile();
-            }
+            // One source for the shot, not two. This used to build a second, divergent EnemyProjectile
+            // tree in code whose sprite had neither texture nor size; loading the shipped scene means a
+            // caster nobody wired fires exactly what the spawner's casters fire.
+            projectilePrefab ??= GD.Load<PackedScene>(EnemyProjectile.ScenePath);
 
-            // Unity's Start.
-            if (this.FindComponent<EnemyGroupCombat>() == null)
+            // Unity's Start. Both nodes are authored on Scenes/Actors/EnemyBase.tscn, which every
+            // archetype scene inherits, so this used to be an add no shipped caster ever reached
+            // (PLAN_CLOSEOUT D1/K7).
+            if (this.FindComponent<EnemyGroupCombat>() == null || this.FindComponent<CombatFeedback>() == null)
             {
-                AddChild(new EnemyGroupCombat { Name = "EnemyGroupCombat" });
+                GD.PushError($"{GetType().Name} '{Name}' has no EnemyGroupCombat or no CombatFeedback; Scenes/Actors/EnemyBase.tscn authors both and nothing adds them at runtime. It does not run.");
+                SetProcess(false);
+                SetPhysicsProcess(false);
             }
-
-            if (this.FindComponent<CombatFeedback>() == null)
-            {
-                AddChild(new CombatFeedback { Name = "CombatFeedback" });
-            }
-        }
-
-        /// <summary>
-        /// The fallback shot, for a caster nobody handed a template. The contact area is built by
-        /// <see cref="EnemyProjectile"/> itself, so all this owes it is a body and a colour.
-        /// </summary>
-        /// <remarks>
-        /// Never added to the scene tree, which is what Unity's <c>SetActive(false)</c> bought. Left
-        /// active there, the template sat in the scene as a live trigger collider that damaged the player
-        /// on contact and then destroyed itself - taking every future shot from this caster with it. A
-        /// detached node cannot do that: nothing ticks it and no query can find it.
-        /// </remarks>
-        private Node2D CreateDefaultProjectile()
-        {
-            var projectile = new EnemyProjectile { Name = "DefaultProjectile" };
-            var sprite = new Sprite2D
-            {
-                Name = "Sprite",
-                Modulate = new Color(0.8f, 0.4f, 1f),
-                ZIndex = 1,
-            };
-            projectile.AddChild(sprite);
-            return projectile;
         }
 
         public override void _Process(double delta)
@@ -167,8 +160,8 @@ namespace MyGame.Enemy
             _attackCooldownTimer -= dt;
 
             float dist = _player != null ? GlobalPosition.DistanceTo(_player.GlobalPosition) : float.MaxValue;
-            float minDist = tuningData?.minDistance ?? World.U(5f);
-            float repositionDist = tuningData?.repositionDistance ?? World.U(3f);
+            float minDist = tuningData.minDistance;
+            float repositionDist = tuningData.repositionDistance;
 
             if (_currentState == EnemyState.Combat || _currentState == EnemyState.Investigate)
             {
@@ -191,7 +184,7 @@ namespace MyGame.Enemy
                     // one-unit shell 6 < d <= 7 and a caster the player walked up to strafed in silence
                     // forever - the exact inverse of what a ranged enemy reads as. attackRange was
                     // exposed the whole time and never read.
-                    MoveTowards(_player.GlobalPosition, tuningData != null ? tuningData.moveSpeed : World.U(1.5f));
+                    MoveTowards(_player.GlobalPosition, tuningData.moveSpeed);
                 }
                 else if (_isStrafing)
                 {
@@ -216,6 +209,13 @@ namespace MyGame.Enemy
             }
         }
 
+        /// <summary>
+        /// This archetype's reach, <c>RangedCaster.json.detectionRange</c>. Never reached through the base
+        /// <c>DetectPlayer</c> - the override below is what runs - but the base declares it abstract so
+        /// that no archetype can inherit a detection radius written in code (PLAN_CLOSEOUT K5b item 4).
+        /// </summary>
+        protected override float GetDetectionRange() => tuningData.detectionRange;
+
         protected override void DetectPlayer()
         {
             if (_player != null)
@@ -223,7 +223,7 @@ namespace MyGame.Enemy
                 return;
             }
 
-            float range = tuningData != null ? tuningData.detectionRange : World.U(5f);
+            float range = tuningData.detectionRange;
             GodotObject hit = Phys2D.OverlapCircle(this, GlobalPosition, range, World.Layer.Player);
             if (hit != null && Phys2D.FindActorInGroup(hit, World.Group.Player) is Node2D player)
             {
@@ -240,7 +240,7 @@ namespace MyGame.Enemy
                 return;
             }
 
-            float speed = tuningData != null ? tuningData.moveSpeed : World.U(1.5f);
+            float speed = tuningData.moveSpeed;
             float dir = Mathf.Sign(_patrolTarget.X - GlobalPosition.X);
             dir = ClampToGroundAhead(ClampHomewardDirection(dir));
             Velocity = new Vector2(dir * speed, Velocity.Y);
@@ -268,7 +268,7 @@ namespace MyGame.Enemy
         {
             _facingDir *= -1;
             _patrolTarget = _startPos + (Vector2.Right * PatrolHalfWidth * _facingDir);
-            _idleTimer = 0.5f;
+            _idleTimer = tuningData.patrolIdleTime;
         }
 
         /// <summary>
@@ -304,7 +304,7 @@ namespace MyGame.Enemy
         private void StartCast()
         {
             _isCasting = true;
-            _castTelegraphTimer = tuningData != null ? tuningData.castTelegraphTime : 1f;
+            _castTelegraphTimer = tuningData.castTelegraphTime;
             _telegraphPulse = 0f;
             Velocity = Vector2.Zero;
             _isStrafing = false;
@@ -320,9 +320,9 @@ namespace MyGame.Enemy
                 telegraphIndicator.Visible = true;
             }
 
-            if (_sr != null && tuningData != null)
+            if (_sr != null)
             {
-                _sr.Modulate = TelegraphBase.Lerp(Colors.Magenta, 0.8f);
+                _sr.Modulate = TelegraphBase.Lerp(Colors.Magenta, tuningData.telegraphBlend);
             }
         }
 
@@ -340,9 +340,9 @@ namespace MyGame.Enemy
             {
                 var dt = (float)delta;
                 _castTelegraphTimer -= dt;
-                _telegraphPulse += dt * 6f;
+                _telegraphPulse += dt * tuningData.telegraphPulseSpeed;
 
-                float pulse = 1f + (Mathf.Sin(_telegraphPulse) * 0.1f);
+                float pulse = 1f + (Mathf.Sin(_telegraphPulse) * tuningData.telegraphPulseAmplitude);
                 Scale = new Vector2(pulse, pulse);
 
                 if (_castTelegraphTimer <= 0f)
@@ -357,7 +357,7 @@ namespace MyGame.Enemy
         private void FireProjectile()
         {
             _isCasting = false;
-            _attackCooldownTimer = tuningData != null ? tuningData.attackCooldown : 2f;
+            _attackCooldownTimer = tuningData.attackCooldown;
             StopTelegraphVisuals();
             Scale = Vector2.One;
 
@@ -367,14 +367,21 @@ namespace MyGame.Enemy
 
                 // Built on the first shot rather than in _Ready, because projectilePrefab can still be
                 // replaced by the spawner between the two.
-                _projectilePool ??= new EnemyProjectilePool(projectilePrefab, SpawnRoot());
+                _projectilePool ??= new EnemyProjectilePool(
+                    projectilePrefab, SpawnRoot(), _projectileTint, _projectileSortingOrder);
 
                 EnemyProjectile projectile = _projectilePool.Spawn(GlobalPosition);
                 if (projectile != null)
                 {
-                    float projSpeed = tuningData != null ? tuningData.projectileSpeed : World.U(5f);
-                    float projDmg = tuningData != null ? tuningData.projectileDamage : 8f;
-                    projectile.Initialize(direction, projSpeed, projDmg, World.U(3f));
+                    // Every one of these is already pixels where it is a distance - RangedCasterData
+                    // scaled them at load. The knockback used to be a World.U(3f) literal that ignored
+                    // the attackKnockback sitting in the same file at the same 3 metres; it reads it now.
+                    float projSpeed = tuningData.projectileSpeed;
+                    float projDmg = tuningData.projectileDamage;
+                    float projKnockback = tuningData.attackKnockback;
+                    float projLifetime = tuningData.projectileLifetime;
+                    float projArcHeight = tuningData.projectileArcHeight;
+                    projectile.Initialize(direction, projSpeed, projDmg, projKnockback, projLifetime, projArcHeight);
                 }
             }
 
@@ -387,7 +394,7 @@ namespace MyGame.Enemy
 
         private void Strafe()
         {
-            float strafeSpeed = tuningData != null ? tuningData.strafeSpeed : World.U(1.5f);
+            float strafeSpeed = tuningData.strafeSpeed;
             float dir = ClampToGroundAhead(ClampHomewardDirection(_strafeDir));
             Velocity = new Vector2(dir * strafeSpeed, Velocity.Y);
             if (Mathf.IsZeroApprox(dir))
@@ -395,7 +402,7 @@ namespace MyGame.Enemy
                 _strafeDir *= -1f;
             }
 
-            if (GD.Randf() < 0.01f)
+            if (GD.Randf() < tuningData.strafeFlipChance)
             {
                 _strafeDir *= -1f;
             }
@@ -420,7 +427,9 @@ namespace MyGame.Enemy
 
             _lastRepositionTime = GameClock.Time;
             _isRepositioning = true;
-            _repositionCooldown = (float)GD.RandRange(1.2f, 2f);
+            _repositionCooldown = (float)GD.RandRange(
+                tuningData.repositionCooldownMin,
+                tuningData.repositionCooldownMax);
 
             float dir = Mathf.Sign(GlobalPosition.X - _player.GlobalPosition.X);
 
@@ -431,7 +440,7 @@ namespace MyGame.Enemy
             }
 
             dir = ClampToGroundAhead(ClampHomewardDirection(dir));
-            Velocity = new Vector2(dir * (tuningData?.moveSpeed ?? World.U(2f)), 0f);
+            Velocity = new Vector2(dir * tuningData.moveSpeed, 0f);
             _strafeDir = Mathf.IsZeroApprox(dir) ? -Mathf.Sign(GlobalPosition.X - _startPos.X) : dir;
 
             OnReposition?.Invoke();
@@ -440,10 +449,11 @@ namespace MyGame.Enemy
             EndRepositionAfterDelay();
         }
 
-        /// <summary>Unity's <c>Invoke(nameof(EndReposition), 0.5f)</c>.</summary>
+        /// <summary>Unity's <c>Invoke(nameof(EndReposition), 0.5f)</c>, with the delay authored.</summary>
         private async void EndRepositionAfterDelay()
         {
-            await ToSignal(GetTree().CreateTimer(0.5f), SceneTreeTimer.SignalName.Timeout);
+            float duration = tuningData.repositionDuration;
+            await ToSignal(GetTree().CreateTimer(duration), SceneTreeTimer.SignalName.Timeout);
 
             if (GodotObject.IsInstanceValid(this))
             {
@@ -481,7 +491,7 @@ namespace MyGame.Enemy
         public void Stun()
         {
             _isStunned = true;
-            _stunTimer = tuningData != null ? tuningData.stunDuration : 0.8f;
+            _stunTimer = tuningData.stunDuration;
             _isCasting = false;
             _isRepositioning = false;
             Velocity = Vector2.Zero;
@@ -509,7 +519,7 @@ namespace MyGame.Enemy
             {
                 _sr.Modulate = new Color(0.24705882f, 0.32941177f, 0.34117648f); // COLD_400 #3F5457
             }
-            else if (tuningData != null)
+            else
             {
                 _sr.Modulate = tuningData.enemyColor;
             }

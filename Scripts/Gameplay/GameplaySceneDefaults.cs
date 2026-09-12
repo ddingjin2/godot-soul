@@ -7,12 +7,12 @@ namespace MyGame.Gameplay
     /// The arena the builders read: one flat object holding every position, size and bound the world is
     /// made of.
     ///
-    /// UNITS - this is the conversion boundary for the arena. Everything the Unity project authored in
+    /// UNITS - this is the conversion boundary for the arena. Everything the designer authored in
     /// metres with +Y up is <b>already in Godot pixels with +Y down</b> by the time it is a property on
-    /// this object. Two places write it and both convert: the literals in <see cref="Create"/> (through
-    /// <see cref="ToGodot(float,float)"/> and <see cref="ToGodotSize"/>) and
-    /// <see cref="GameplaySceneLayoutData.ApplyTo"/>, which converts what it read out of the design
-    /// JSON. Nothing downstream of this class converts anything again.
+    /// this object. One place writes it: <see cref="GameplaySceneLayoutData.ApplyTo"/>, which converts
+    /// what it read out of <c>Resources/Design/SceneLayout*.json</c> through the <c>ToGodot*</c>
+    /// helpers below. Nothing downstream of this class converts anything again, and nothing in this
+    /// class holds a number of its own - the arena is the file or it is null.
     ///
     /// The one exception is <see cref="CameraOrthographicSize"/>, which stays in Unity units. It is not
     /// a position: Godot's Camera2D has no orthographic size at all, and the bootstrap turns it into a
@@ -21,17 +21,14 @@ namespace MyGame.Gameplay
     /// </summary>
     public sealed class GameplaySceneDefaults
     {
-        /// <summary>Unity metres with +Y up -> Godot pixels with +Y down. The only place a position flips.</summary>
-        internal static Vector2 ToGodot(float unityX, float unityY) => World.V(new Vector2(unityX, unityY));
-
-        /// <summary>The same for a Unity <c>Vector3</c> position out of the design JSON; z was only ever draw order.</summary>
+        /// <summary>
+        /// Unity metres with +Y up -> Godot pixels with +Y down, for a <c>Vector3</c> position out of the
+        /// design JSON; z was only ever draw order. The only place a position flips.
+        /// </summary>
         internal static Vector2 ToGodot(Vector3 unityPosition) => World.V(new Vector2(unityPosition.X, unityPosition.Y));
 
         /// <summary>A size scales but never flips - there is no such thing as a negative height.</summary>
         internal static Vector2 ToGodotSize(Vector2 unitySize) => new Vector2(World.U(unitySize.X), World.U(unitySize.Y));
-
-        internal static Vector2 ToGodotSize(float unityWidth, float unityHeight) =>
-            new Vector2(World.U(unityWidth), World.U(unityHeight));
 
         /// <summary>
         /// A camera's horizontal clamp: same order, just scaled. <c>x</c> is still the left edge.
@@ -173,22 +170,23 @@ namespace MyGame.Gameplay
 
         /// <summary>
         /// The one-way door back to the checkpoint, if this chapter has one. Off is every arena shipped
-        /// before 300-unit levels existed, and off means no door is built at all.
+        /// before 300-unit levels existed, and off means no door is built at all - and that the two
+        /// properties after this one are never read.
         /// </summary>
         public bool HasShortcutGate { get; internal set; }
         public Vector2 ShortcutGatePosition { get; internal set; }
-        public Vector2 ShortcutGateSize { get; internal set; } = ToGodotSize(0.32f, 4.6f);
+        public Vector2 ShortcutGateSize { get; internal set; }
 
         /// <summary>
         /// Which side of that door is the far one - the side the level makes the player earn. True is
         /// the right (+x), which is the only shape authored so far: bonfire, door, boss, left to right.
         /// </summary>
-        public bool ShortcutOpensFromRight { get; internal set; } = true;
+        public bool ShortcutOpensFromRight { get; internal set; }
 
         /// <summary>
         /// Whether the arena holds anything besides its boss. False is a room that is only the fight.
         /// </summary>
-        public bool SpawnApproachEnemies { get; internal set; } = true;
+        public bool SpawnApproachEnemies { get; internal set; }
         public Vector2 WrathMiniBossSpawnPosition { get; internal set; }
 
         /// <summary>
@@ -210,72 +208,17 @@ namespace MyGame.Gameplay
         public PlatformDefinition[] Platforms { get; internal set; }
         public SceneryDefinition[] BackdropScenery { get; internal set; }
 
-        public static GameplaySceneDefaults Create()
-        {
-            // Every literal below is the Unity number, converted on the spot. Read them as metres.
-            return new GameplaySceneDefaults
-            {
-                CameraPosition = ToGodot(0f, 2f),
-                CameraOrthographicSize = 6.8f,
-                CameraHorizontalBounds = ToGodotHorizontalBounds(new Vector2(-4f, 34f)),
-                CameraVerticalBounds = ToGodotVerticalBounds(new Vector2(0.5f, 7.5f)),
-                FallDeathY = ToGodotY(-8f),
-
-                PlayerSpawnPosition = ToGodot(-2f, 0.5f),
-                CheckpointPositions = new[] { ToGodot(-2f, 0.5f) },
-
-                BackdropPosition = ToGodot(13f, 2f),
-                BackdropSize = ToGodotSize(48f, 22f),
-                GroundPosition = ToGodot(13f, -1f),
-                GroundSize = ToGodotSize(44f, 1f),
-                GroundRimPosition = ToGodot(13f, -0.43f),
-                GroundRimSize = ToGodotSize(44f, 0.08f),
-                LeftArenaGatePosition = ToGodot(-8.7f, 1.35f),
-                RightArenaGatePosition = ToGodot(35.8f, 1.35f),
-                ArenaGateSize = ToGodotSize(0.32f, 4.6f),
-
-                CheckpointLabelPosition = ToGodot(-2f, 1.8f),
-                DuelFloorLabelPosition = ToGodot(7f, 0.35f),
-                WrathAltarLabelPosition = ToGodot(31f, 3.1f),
-
-                SpiritPlatformPosition = ToGodot(20f, 5.5f),
-                SpiritPlatformSize = ToGodotSize(3f, 0.3f),
-                SpiritPlatformStartsActive = false,
-
-                MeleeGruntSpawns = new[]
-                {
-                    new EnemySpawn(ToGodot(6f, 0.5f), null),
-                    new EnemySpawn(ToGodot(13f, 0.5f), null),
-                    new EnemySpawn(ToGodot(21f, 0.5f), null),
-                },
-                LeapingAttackerSpawns = new[] { new EnemySpawn(ToGodot(16f, 0.5f), null) },
-                RangedCasterSpawns = new[] { new EnemySpawn(ToGodot(24f, 0.5f), null) },
-                WrathMiniBossSpawnPosition = ToGodot(29.5f, 1f),
-
-                Platforms = new[]
-                {
-                    new PlatformDefinition("LowerPlatform", ToGodot(4f, 2.5f), ToGodotSize(4f, 0.4f)),
-                    new PlatformDefinition("UpperPlatform", ToGodot(12f, 4f), ToGodotSize(4.5f, 0.4f)),
-                    new PlatformDefinition("MidBridgePlatform", ToGodot(19f, 2.4f), ToGodotSize(4f, 0.4f)),
-                    new PlatformDefinition("RightPlatform", ToGodot(28f, 2f), ToGodotSize(4f, 0.4f)),
-                    new PlatformDefinition("CheckpointRunPlatform", ToGodot(-4.9f, 1.45f), ToGodotSize(2.6f, 0.35f)),
-                },
-                BackdropScenery = new[]
-                {
-                    new SceneryDefinition("Moon", GameplayVisualFactory.SpriteKind.Disc, ToGodot(27f, 7.5f), ToGodotSize(2.2f, 2.2f)),
-                    new SceneryDefinition("DistantArchLeft", GameplayVisualFactory.SpriteKind.Arch, ToGodot(1.2f, 1.2f), ToGodotSize(2.5f, 5.5f)),
-                    new SceneryDefinition("DistantArchMid", GameplayVisualFactory.SpriteKind.Arch, ToGodot(10f, 1.7f), ToGodotSize(3.5f, 6.5f)),
-                    new SceneryDefinition("DistantArchFar", GameplayVisualFactory.SpriteKind.Arch, ToGodot(20f, 1.35f), ToGodotSize(3.2f, 6f)),
-                    new SceneryDefinition("DistantArchRight", GameplayVisualFactory.SpriteKind.Arch, ToGodot(31f, 1.1f), ToGodotSize(3f, 5.8f)),
-                },
-            };
-        }
+        /// <summary>
+        /// The shared arena, <c>Resources/Design/SceneLayout.json</c>, converted. Null when that file is
+        /// missing: the loader has already said so, and the bootstrap refuses to build on an incomplete
+        /// catalog (PLAN_CLOSEOUT D1). There is no arena in code to fall back to.
+        /// </summary>
+        public static GameplaySceneDefaults Create() => FromLayout(GameplayTuningCatalog.Load().SceneLayout);
 
         /// <summary>
-        /// Two layers over the shipped values, applied in order. The layout JSON is the arena a designer
-        /// edits as a diff - <c>SceneLayout_&lt;SceneName&gt;.json</c> for the open scene if there is one,
-        /// otherwise the shared <c>SceneLayout.json</c>. The per-scene asset is the narrow override a
-        /// scene carries for itself, so it goes last and wins. Either being absent is normal.
+        /// The arena for the open scene - <c>SceneLayout_&lt;SceneName&gt;.json</c> if there is one,
+        /// otherwise the shared <c>SceneLayout.json</c> - with the per-scene asset's narrow override
+        /// applied last, so it wins. The asset being absent is normal; the file is not.
         /// </summary>
         public static GameplaySceneDefaults CreateFromAsset(GameplaySceneDefaultsAsset asset)
         {
@@ -288,11 +231,18 @@ namespace MyGame.Gameplay
         /// </summary>
         public static GameplaySceneDefaults CreateForScene(string sceneName, GameplaySceneDefaultsAsset asset)
         {
-            GameplaySceneDefaults defaults = Create();
-
-            GameplayTuningCatalog.Load()?.SceneLayoutFor(sceneName)?.ApplyTo(defaults);
+            GameplaySceneDefaults defaults = FromLayout(GameplayTuningCatalog.Load().SceneLayoutFor(sceneName));
             asset?.ApplyTo(defaults);
+            return defaults;
+        }
 
+        private static GameplaySceneDefaults FromLayout(GameplaySceneLayoutData layout)
+        {
+            if (layout == null)
+                return null;
+
+            var defaults = new GameplaySceneDefaults();
+            layout.ApplyTo(defaults);
             return defaults;
         }
 

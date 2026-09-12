@@ -105,7 +105,7 @@ kept its Unity name and shape.
 - Enemies are `CharacterBody2D`; the Unity `_rb.linearVelocity` is `Velocity`. A defeated boss's
   `bodyType = Static` is `protected bool _bodyFrozen` in `EnemyStateMachine`, which skips gravity and
   `MoveAndSlide`.
-- Enemy gravity is applied in `EnemyStateMachine` / `GameplayEnemy2D` at `World.U(9.81f)`, because
+- Enemy gravity is applied in `EnemyStateMachine` at `World.U(9.81f)`, because
   `project.godot` sets `default_gravity = 0`.
 - No `MyGame.Player` type is referenced from Enemy any more: the player is found with
   `Phys2D.FindActorInGroup(hit, World.Group.Player)`.
@@ -118,3 +118,333 @@ kept its Unity name and shape.
 `Sprite2D.SetSpriteSize(Vector2 px)` (Unity's sliced `SpriteRenderer.size`) and
 `Node2D.BodyBounds(Vector2 fallbackHalfExtents)` (Unity's `Collider2D.bounds` as a `Rect2`).
 Both shims are fine to use; prefer whichever name reads better at the call site.
+
+## Scene migration — signatures that moved (branch `refactor/godot-scene-data`)
+
+Changed by the move from runtime-built node trees to authored scenes. See
+`docs/migrations/scene-data/PLAN.md` for why.
+
+### Effects are `PackedScene` now, not template nodes
+
+The three "prefab" fields were `[Export] Node2D` holding a detached template that callers copied with
+`Duplicate()`. They are `[Export] PackedScene` and callers instance them:
+
+- `RangedCaster.SetProjectilePrefab(PackedScene scene, Color? tint = null, int? sortingOrder = null)` -
+  the two optional arguments carry the designer's `projectileColor` and sorting order from
+  `Resources/Art/Readability.json` through to each instance. Baking the colour into the `.tscn` alone
+  would have silently killed a live override; the scene ships the code default so an unwired caster
+  still works.
+- `RainbowChapterBossBehaviour.SetHazardPrefab(PackedScene)` and `SetAfterimagePrefab(PackedScene)`.
+- `EnemyProjectilePool(PackedScene scene, Node parent)`.
+- `EnemyProjectile.ScenePath`, `BossHazardStrip.ScenePath`, `BossAfterimage.ScenePath` - the
+  `res://Scenes/Effects/*.tscn` constants, used as the fallback when nothing wired a scene.
+
+`GameplayEnemySpawner.CreateProjectilePrefab` / `CreateHazardPrefab` / `CreateAfterimagePrefab` are
+**deleted**. `RangedCaster.CreateDefaultProjectile` is **deleted** - it was a second, divergent
+builder for the same tree whose sprite had no texture and no size.
+
+`GameplayPrefabNames.EnemyProjectile` is now unused. The scene root keeps that node name, so nothing
+depends on the constant; it is left in place rather than removed in a stage that did not own the file.
+
+### Cutscene overlay
+
+`CutsceneOverlay.Create()` keeps its signature but instances
+`res://Scenes/UI/CutsceneOverlay.tscn` instead of constructing nodes. `Build()` and `CreateBar()` are
+gone. The child names (`Fade`, `LetterboxTop`, `LetterboxBottom`, `Line`) are the contract the script
+binds against - they were the Unity Timeline track paths and they stay fixed names.
+
+### Arena geometry is instanced, not built
+
+`GameplayEnvironmentBuilder.Build` is unchanged - it still reads `SceneLayout_*.json` and places what
+it makes. Only the construction moved:
+
+- `CreateSolidBox` gained a sixth parameter, `string scenePath = "res://Scenes/World/SolidBox.tscn"`,
+  and now instances that scene instead of building a `StaticBody2D` node by node. It also parents the
+  body itself, which `GameplayBuildShim.NewObject` used to do. Every caller still passes the layout's
+  own name (`platform.Name`, `"Ground"`, `"SpiritPlatform"`, `"ShortcutGate"`, the two world edges),
+  so the built arena carries the same node names it always did - the scene root's name never survives.
+- `CreateWorldEdge` builds no nodes: it is `CreateSolidBox` plus `Sprite.Visible = false`.
+- `CreateShortcutGate` passes `res://Scenes/World/ShortcutGate.tscn`, an inherited scene, and reaches
+  the gate with `GetNode<ShortcutGate>("ShortcutGate")` instead of `AddComponent`.
+- `CreateCheckpointAt` and `CreateGatePortal` instance `Checkpoint.tscn` / `GatePortal.tscn`.
+  `CreateCheckpoint(GameplaySceneDefaults)` keeps its exact name and one-parameter signature - the P0
+  runner reflects on it.
+
+**New public API**, and the reason it is public rather than folded into `_Ready`:
+
+- `CheckpointZone.BindAuthoredTriggerAndMarker()` and `GateTravelZone.BindAuthoredTriggerAndMarker()`.
+  The builder calls these while the instance is still detached. `GameplayTelegraphPulse` caches the
+  marker colour it finds when it readies and writes that cached colour back every frame afterwards, so
+  the designer's `Readability.json` tint has to land before the marker enters the tree. `Initialize`
+  still calls the same two helpers, so a zone built by hand - which is every fixture - is unaffected.
+
+`CheckpointZone.EnsureTrigger` now *binds* `WorldTuning.checkpointZoneRadius` onto the authored shape
+rather than only creating one when absent; without that, authoring the trigger would have taken the
+radius away from the design file. `CheckpointZone.EnsureMarker` and `GateTravelZone.EnsureMarker` bind
+the authored `MarkerDisc.tscn` instance when there is one and instance it when there is not.
+
+`ShortcutGate.ZoneRadius` (5 m) is **deleted**; the reach and the whole argument for its size are
+authored in `Scenes/World/ShortcutGate.tscn`. `ShortcutGate.EnsureTrigger` no longer builds the
+`Area2D` - a gate with no authored `ShortcutGateTrigger` child now warns loudly, because on this one
+component a missing trigger means a chapter nobody can finish.
+
+`CreateSceneryPiece` is deliberately **not** a scene; see `docs/migrations/scene-data/AUDIT_SCENES_UI.md` §7.
+
+### HUD is a scene now
+
+`GameplayHud.CreateUi(CanvasLayer canvas = null)` keeps its signature but **ignores the argument** -
+the HUD is instanced from `res://Scenes/UI/GameplayHud.tscn`, which already has its own root, so
+there is nothing left to build into. `GameplayHudSpawner` instances the scene, renames the root and
+resolves the two authored controllers instead of adding them.
+
+`GameplayHud.Plate` and `Mul` are **deleted** with the Theme; they were `internal` and called from
+`TitleMenuBootstrap`, which no longer styles buttons in code at all.
+
+### The title screen is a scene now, and `PlaceRect` / `Face` are gone
+
+`GameplayHud.PlaceRect` and `GameplayHud.Face` are **deleted**. Both were `internal` and survived only
+for `TitleMenuBootstrap`'s four and one call sites; `Scenes/UI/TitleScreen.tscn` carries those rects
+and label faces now, so nothing in the project calls either.
+
+`Scenes/TitleScene.tscn` - the boot scene, `run/main_scene` - **inherits** `Scenes/UI/TitleScreen.tscn`
+and adds nothing. The script sits on the screen's root, which the boot scene inherits, so the root's
+name (`TitleRoot`) and every scene path into it are unchanged. Anything that wants the screen without
+booting it (the test does) instantiates `TitleScreen.tscn`.
+
+Widgets on that screen are named `<localisation key><role>` - `UI_TITLE_QUITButton`,
+`UI_OPTION_VSYNCToggle`, `UI_OPTION_MSAARow` - never after the translated caption, which a change of
+locale would rewrite.
+
+
+### `CombatTuning.json` exists now, and three signatures moved with it
+
+`CombatTuningData` lost eight fields nothing read - `hitStopDurationBoss`, `knockbackMedium`,
+`knockbackHeavy`, `knockbackDecayRate`, `telegraphScalePulseMin/Max`,
+`telegraphColorFlashInterval` - and the six stamina fields that duplicated `PlayerResources.json`
+(`attackCost`, `dodgeCost`, `parryCost`, `maxStamina`, `staminaRegenRate`, `staminaRegenDelay`). It
+gained `hitStopDurationParry`, `hitStopPauseScale`, `shakeIntensity/DurationInvulnerable`,
+`shakeIntensity/DurationBossPhase`, `shakeDefaultDuration`, `shakeFrequency`, `audioFallbackVolume`
+and `alignmentForce`, plus `FileName` and a cached `CombatTuningData.Shared` that every consumer
+reads so the file is parsed once per run.
+
+**`CameraShake.TriggerShake(float intensity, float duration)` now takes pixels, not metres.** The
+`World.U` pass moved out of `_Process` and into `CombatTuningData.Load`, where the project's boundary
+rule puts it. Every caller in the repository uses the `CameraShakePreset` overload, so nothing else
+changed; a new caller passing a raw authored metre value would be 100x too small.
+
+`HumanityController.Configure(float max, float lowThreshold, float lossOnHit, float regenRate, float regenDelay)`
+is new - `MyGame.Combat` may not read `PlayerResources.json` itself, so `GameplayPlayerSpawner` pushes
+the five humanity numbers in, exactly as it does for `Poise.Configure`.
+
+`DeathStateController.ApplyTuning(PlayerResourceData resources)` is new and must be called **before**
+`Initialize`; a null argument leaves the shipped defaults standing.
+
+
+### The shared enemy behaviour is pushed down, not read up
+
+`EnemyStateMachine.Configure(float gravityPixels, float disengageDistancePixels, float idleToPatrol,
+float investigate, float recovery, float ledgeProbeAheadPixels, float ledgeProbeDepthPixels,
+float perfectParryMultiplier)` is new. `MyGame.Enemy` sits below `MyGame.Gameplay` and below
+`MyGame.Player`, so it cannot open `WorldTuning.json` or `PlayerCombat.json` itself;
+`GameplayEnemySpawner.InstantiateEnemy` calls this on every archetype it builds, the same shape
+`Poise.Configure` and `HumanityController.Configure` use. **Every distance it takes is pixels** -
+`WorldTuningData.Load` already ran `ScaleToPixels`. One funnel, so a new archetype cannot forget it.
+
+`EnemyStateMachine.Gravity` (a `protected static readonly` field) is gone; it is now the instance
+field `gravity`, still in pixels. `LedgeProbeAhead` / `LedgeProbeDepth` became `_ledgeProbeAhead` /
+`_ledgeProbeDepth` and are private. `perfectParryStunMultiplier` is a new `protected` field the four
+archetypes multiply their stun by, replacing the `1.6f` each of them typed.
+
+**`EnemyProjectile.Initialize` takes two more arguments** - `float projectileLifetime` (seconds) and
+`float projectileArcHeight` (**pixels**), after the existing knockback. `RangedCaster` is the only
+caller in the repository. The shot's contact radius and sprite size are deliberately *not* among
+them: `Scenes/Effects/EnemyProjectile.tscn` authors both, and a design key would be a second owner.
+
+`RainbowChapterBossBehaviour.MaxChainSteps` (a `const`) is now `DefaultMaxChainSteps`, used only when
+the boss has no encounter file; the authored number is `<chapter>_Encounter.json.maxChainSteps`.
+
+### The camera feel is pushed in, like the enemy block
+
+`GameplayCameraFollow2D.ApplyTuning(WorldTuningData world)` is new and additive - `Initialize` is
+unchanged. `GameplaySystemBootstrapper.ConfigureCameraFollow` calls it right before `Initialize` with
+`GameplayTuningCatalog.Load()?.WorldTuning`; a null argument keeps the shipped defaults. Every value
+it takes is already pixels - `WorldTuningData.ScaleToPixels` did the conversion, including the Y flip
+on `cameraLookAhead`. The four bound fallbacks the follow used to initialise itself with are gone; a
+follow that was never `Initialize`d is unbounded rather than pinned to numbers from no arena.
+
+### The readability layout is data, and four properties are gone
+
+`GameplayReadabilityLayoutData` is new (`Resources/Design/ReadabilityLayout.json`), reached as
+`GameplayTuningCatalog.Load()?.ReadabilityLayout` and applied by `GameplayReadabilityDefaults.Create()`
+after the palette. Every number it hands the defaults is **already pixels**, flipped where the property
+is an offset - the same contract the defaults always had, so no consumer changed.
+
+**Removed from `GameplayReadabilityDefaults`:** `PlayerHitboxAnchorLocalPosition`, `SwordLocalPosition`,
+`SwordLocalRotation`, `AttackArcLocalPosition`. Nothing in the repository read them; `Player.tscn`
+authors those transforms. **Added:** `HealthBarFrameMargin`, `HealthBarLowHealthThreshold`,
+`HealthBarLowHealthTintBlend`, `LockOnMarkerOffset`, `PlatformRimThickness`, `PlatformRimHeightFraction`.
+
+`WorldTuningData` gained `worldEdgeWallThickness`, `worldEdgeWallHeight` and `gatePortalOffsetX`, all
+pixels after `ScaleToPixels`. `GameplayWorldHealthBar` and `GameplayLockOnMarker` now call
+`GameplayReadabilityDefaults.Create()` themselves for their few numbers, as the lock-on marker already
+did for its colour; no `Initialize` signature changed.
+
+### `GameplayEnemy2D` is gone
+
+`Scripts/Enemy/GameplayEnemy2D.cs` is deleted (numbers audit §3.10). Nothing in the repository built or
+referenced it apart from `MyGameStateProbe`, whose `CaptureEnemyTelegraphState` lost its
+`GameplayEnemy2D` parameter. An external caller that still had one should build a `MeleeGrunt` - the
+archetype that replaced it - through `GameplayEnemySpawner`.
+
+### `Res.LoadJson` reports a missing file; three `.Shared` singletons can be null
+
+`Res.LoadJson<T>(string path, bool required = true)` pushes an error when the file is absent; pass
+`required: false` only for a lookup that is allowed to miss. `GameplaySceneLayoutData.Load` gained the
+same parameter. `CombatTuningData.Shared`, `DifficultyTuningData.Shared` and `CutsceneTuningData.Shared`
+are **null** while their file is missing rather than a default-filled object; `GameplayBootstrap` checks
+all three and `GameplayTuningCatalog.IsComplete` (new) before it builds, so a consumer that runs at all
+can still assume non-null. A tool or test that reads `.Shared` without the bootstrap must handle null.
+
+### `GameplayTuningDefaults` lost its four enemy factories
+
+Second-phase stage K1, decision D3. `GameplayTuningDefaults.CreateMeleeGrunt(Color)`,
+`CreateLeapingAttacker()`, `CreateRangedCaster()` and `CreateWrathMiniBoss(Color)` are deleted. A caller
+that wants an archetype's numbers loads the design file through that type's own `Load()` -
+`MeleeGruntData.Load()`, `LeapingAttackerData.Load()`, `RangedCasterData.Load()`,
+`WrathMiniBossData.Load()` - which is also where the metres-to-pixels pass runs. Each call returns a
+fresh object, so a test may still edit one field before handing it to `SetTuningData`.
+`GameplayEnemySpawner` reads `catalog.X` directly; the catalog is complete by the time it runs (K0).
+The four constants (`SoulStainPickupDelay`, `CheckpointZoneRadius`, `LockOnRange`, `LockOnBreakRange`)
+stay until K5.
+
+### The archetypes have no inline numbers (K2)
+
+`MeleeGrunt`, `LeapingAttacker`, `RangedCaster` and `WrathMiniBoss` read `tuningData.x` unguarded,
+including the public `DetectionRange` / `AttackRange` / `AttackRadius` properties. An archetype that
+enters the tree without `SetTuningData` logs `<Class> '<Node>' entered the tree without tuning data;
+call SetTuningData first.`, disables both process callbacks and returns from `_Ready` before `_health`
+is resolved - a later `TakeDamage` / `Stun` / `IsDead` on such a node null-references, by design. No
+signature changed. The `encounterData` `Default*` constants in both bosses are untouched and await a
+decision.
+
+### Data classes carry no defaults (K3)
+
+Every `[Export]` initialiser on the 17 tuning Data classes is gone. A key a design file does not set
+reads as zero or null, so a Data object built in code (`new XData()`, a partial inline JSON) no longer
+carries shipped numbers - a test that needs a number must state it. `ProgressionTuningData.Load()`
+returns null for a missing file like every other `Load`; `PlayerProgression` then reports every stat
+as capped (`IsAtCap` true, `CostOf` 0, `TryPurchase` false) and applies nothing, after one
+`PushError`. The eight `SceneLayout*.json`, `Chapter01_Red_Encounter.json` and the eight chapter-boss
+files gained the keys the classes used to default; the boss attack rows are now complete against
+`BossAttackProfile`, whose own defaults are still in place.
+
+### The layout and readability tables are files, not code (K4)
+
+`GameplayReadabilityDefaults.CreateBase()` is gone; `Create()` is the only constructor and returns
+null when `Resources/Art/Readability.json` or `Resources/Design/ReadabilityLayout.json` is missing.
+`GameplaySceneDefaults.Create()` / `CreateForScene()` keep their signatures but return null when the
+layout file is missing. Deleted with them: the `internal` `ToGodot(float, float)` /
+`ToGodotSize(float, float)` overloads (the `Vector3` / `Vector2` forms remain),
+`GameplayReadabilityThemeData.CopyFrom`, `addons/mygame_tools/ReadabilityThemeWriter` and its dock
+button. `Tests/Unit/DesignFileCompletenessTests` is the new permanent test; the two
+`Applied*_ReproducesEveryShipped*` identity tests are gone.
+
+### The component numbers, the HUD palette and the last constants (K5, core half)
+
+`GameplayCameraFollow2D.ApplyTuning(null)`, `ActorIdleBob._Ready`, `GameplayTelegraphPulse._Ready`,
+`GameplayWorldHealthBar.Build`, `CheckpointZone.AuthoredRadius` / `EnsureMarker`,
+`GameplayEnvironmentBuilder.CreateWorldEdge` / `CreateGatePortal`, `GameplayEnemySpawner.ConfigureSharedBehaviour`
+and `GameplayPlayerSpawner.EnsureLockOn` push an error and do nothing where they used to keep a code copy;
+`GameplaySoulDrop._pickupDelay` starts at 0 and `Initialize` is its only writer. `GameplayTuningDefaults` is
+deleted. New: `MyGame.Gameplay.UiTuningData` + `Resources/Design/UiTuning.json` (three HUD timings, seconds),
+registered in `GameplayTuningCatalog` so `IsComplete` requires it; `GameplayReadabilityDefaults.HealthBarFrameColor`
+/ `.HealthBarLowHealthTint` from two new keys in `Resources/Art/Readability.json`; nine `Palette/colors/*` items in
+`MenuTheme.tres` that `GameplayHud` reads with `Theme.GetColor` (the five names stay as private properties, so
+call sites did not move). `Scripts/UI/GameplayHud.cs` now has `using MyGame.Gameplay;` - the first UI → Gameplay
+reference, mirroring the Gameplay → UI one `CheckpointZone.Activate` already had.
+
+### The boss encounter is required, and the state machine has no numbers of its own (K5, boss half)
+
+`BossEncounterData` is required by both bosses. `WrathMiniBoss.SetEncounterData` must be called before the boss
+is parented: `_Ready` refuses to run the fight without one, as it already refused without tuning data.
+`RainbowChapterBossBehaviour` cannot check at ready time (the spawner parents it and then binds its two files),
+so it checks once at the top of `_Process` and disables both callbacks if either is missing.
+`RainbowChapterBossBehaviour.GetDetectionRange()` is the encounter's `detectionRange` and no longer falls through
+to the boss file or the base 5 m. `BossAttackProfile` and `EnemyStateMachine` carry no `[Export]` initialisers:
+an attack row is what the design file says, and an enemy's four state-transition numbers
+(`enemyIdleToPatrolTime` etc., already authored once in `WorldTuning.json`) arrive only through
+`EnemyStateMachine.Configure` - code that builds an enemy by hand must call it, as the P0 fixtures now do through
+`ConfigureFromDesign<T>`.
+
+### The actor scenes author no number the spawner writes (K6)
+
+The seven scenes in `Scenes/Actors/` lost sixty property lines and eight empty override blocks: capsule sizes,
+Visual scale / modulate / z_index, HealthBar, AttackReadout and RoleMarker positions and scales - all written on
+every spawn by `ResizeCapsuleCollider`, `DressActorVisual` / `DressSprite`, `DressAttackReadout`,
+`DressRoleMarker` and `AddHealthBar` from `ReadabilityLayout.json`. Node trees, scripts, collision layers,
+textures and the transforms nothing writes are untouched; a probe of all 493 spawned values before and after was
+identical. `GameplaySceneDefaultsAsset` keeps its four `[Export]`s without initialisers; they are read only behind
+`overrideCamera` / `overrideSpawn`. No signature changed.
+
+### The state machine must be configured, and `GetDetectionRange` is abstract (K5b)
+
+- `EnemyStateMachine.GetDetectionRange()` is `protected abstract`. The `World.U(5f)` body was unreachable:
+  the four archetypes override `DetectPlayer` and the chapter boss already overrode this. `MeleeGrunt`,
+  `LeapingAttacker` and `RangedCaster` answer `tuningData.detectionRange`, `WrathMiniBoss` its encounter's
+  `DetectionRange`, and a subclass built for a test answers 0.
+- `EnemyStateMachine.Configure(...)` is required. The eight shared numbers have no initialiser and `_Ready`
+  stops the machine with one error if it was never called. Code that builds an enemy by hand calls
+  `MyGame.Tests.EnemyFixture.ConfigureFromDesign<T>(machine)` before adding it to the tree (moved out of
+  `P0CombatStabilityTests`, which keeps a one-line forward under its old private name).
+- `GameplayPlayerSpawner.Spawn(...)` returns `default` with one error when `PlayerResources.json` is
+  missing; the code copy of 100 / 100 / 100 is gone.
+- `GameplayHud.GetSinColor` reads `MenuTheme.tres` `Palette/colors/sin_<name>` through `Hue(token)`.
+- `GameplayWorldHealthBar` has no size, offset or fill colour of its own until `Initialize` runs. Both
+  spawners call it in the same frame as `AddChild`, through `AddHealthBar`.
+
+### One shell, spawners that find, a shim that only looks up (K7)
+
+- `Scenes/World/GameplayShell.tscn` is the base every chapter inherits; the eight chapter files are one
+  `instance=` line each. Node names the code depends on: `GameplayRoot`, `CameraRig` (the
+  `GameplayCameraFollow2D`), `Main Camera` (child of the rig, kept current), `CameraShake` (child of the
+  camera), `HitStopManager`, `CutsceneDirector` (`process_mode = 3`), `GameplayCutsceneTriggers` (child of
+  the director), `EnemyRespawner`. `addons/mygame_tools/ChapterSceneCreator.ShellScene` replaces its
+  `BootstrapScript` constant and writes the inherited form.
+- `GameplaySystemBootstrapper.EnsureCamera` / `EnsureCameraRig` / `EnsureHitStopManager` are
+  `FindCamera` / `FindCameraRig` / `FindHitStopManager`: lookup only, `PushError` + null when the shell
+  lacks the node. Nothing creates a camera any more.
+- `CutsceneDirector.Create(overlay)` is `Bind(overlay)`: the node is authored, `Instance` is set in its
+  own `_Ready` before the bootstrap's, and `Bind` only attaches the overlay.
+- `GameplayBuildShim` has five public members: `Root`, `SceneRoot`, `ActiveSceneName`, `SetActive`, and
+  `RequireComponent<T>(this Node, string owner)` - `GetComponent` plus one error naming the owner and the
+  type. `NewObject` (both overloads), `AddComponent` and `EnsureComponent` are gone from product code.
+- `Tests/Framework/NodeBuild.AddComponent<T>(this Node, string)` is the fixture builder the suites use,
+  same signature, namespace `MyGame.Tests`. `EnemyFixture.ConfigureFromDesign` now also attaches
+  `CombatFeedback` and `EnemyGroupCombat`, as `EnemyBase.tscn` would.
+- `CheckpointZone` and `GateTravelZone` require an authored `Trigger` shape and marker; a bare zone in the
+  tree logs one error and does nothing. `GateTravelZone.ZoneRadius` is deleted; `GatePortal.tscn`'s
+  `radius = 140.0` is the only source and `EnsureMarker` sizes the disc from the shape.
+- `GameplayEnvironmentBuilder.CreateSceneryPiece` instances `Scenes/World/SceneryPiece.tscn`; callers
+  unchanged.
+- `GameplayWorldHealthBar.Build` requires an authored `HealthBar`; it no longer instances one.
+
+### The components carry no numbers, and an unconfigured one stops (K7b)
+
+- Every Combat and Player component field a design file owns has no `[Export]` initialiser:
+  `PlayerActionController` 31, `SinResonanceController` 9, `StaminaSystem` 8, `PlayerMotor2D` 8,
+  `HumanityController` 6, `Poise` 5, `DeathStateController` 5, `DamageHitbox2D` 3, `PlayerLockOn` 2,
+  `GameplayFallDeath` 2, `Health` 1, `ShortcutGate` 1. Read before its `ApplyTuning` / `Configure` /
+  `SetMaxHealth` / `Initialize`, a field reads zero.
+- A component that enters the tree and reaches the end of its first frame unconfigured logs one error
+  naming the type, the node and the missing call (`MyGame.Core.TuningGuard.Check`) and stops processing.
+  The spawners configure within the same frame as `AddChild`. Hand-built nodes call
+  `MyGame.Tests.PlayerFixture.Configure(x)` (an overload per component, plus `Configure(Health, float)`)
+  or `EnemyFixture.ConfigureFromDesign` before advancing a frame - including fixtures that never enter
+  the tree, which the guard cannot reach.
+- `DeathStateController.ApplyTuning(PlayerResourceData)` -> `ApplyTuning(PlayerResourceData, Color spiritTintColor)`.
+  `GameplayReadabilityDefaults.SpiritTint` and `GameplayReadabilityThemeData.spiritTint` are new;
+  `Art/Readability.json` carries the key.
+- `GameplayFallDeath.respawnLockout` reads `WorldTuning.json` in its own `_Ready`; `ShortcutGate.openAlpha`
+  is authored in `ShortcutGate.tscn`. Neither is guarded.
+- `GameplayHud.ShowVictory` no longer grabs focus when the restart button is out of the tree (K7 exit
+  order, see PORT_STATUS).

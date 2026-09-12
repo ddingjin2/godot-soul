@@ -1,0 +1,75 @@
+; The gameplay shell every chapter inherits. Replaces eight byte-identical copies of the same six
+; lines (rule 2: a node tree copied eight times is not a reusable unit), and carries the system nodes
+; GameplaySystemBootstrapper and GameplayBootstrap used to build at runtime.
+;
+; It lives under Scenes/World/ rather than beside the chapters on purpose: ChapterRoute.Scenes() lists
+; every .tscn directly in Scenes/ except TitleScene, so a shell parked next to them would be played as
+; a ninth chapter. A subfolder is the exclusion, and costs ChapterRoute no code.
+;
+; The eight chapter files are one line each - [node name="GameplayRoot" instance=<this>] - exactly as
+; Scenes/TitleScene.tscn inherits Scenes/UI/TitleScreen.tscn. GameplayBuildShim.ActiveSceneName reads
+; the base name of CurrentScene.SceneFilePath, so an inherited Chapter02_Orange.tscn still answers
+; "Chapter02_Orange" and still reads SceneLayout_Chapter02_Orange.json.
+;
+; WHY THESE FIVE NODES AND NOT THE ARENA: they are one per scene, they are found by type or by the
+; name spelled in a const below, and nothing about them varies per chapter. The arena itself is still
+; built from Resources/Design/SceneLayout_*.json by GameplayEnvironmentBuilder - authoring that is
+; scene S9, a separate decision about who owns the designer's data.
+;
+; ORDER: children ready before their parent, so CameraShake.Instance, HitStopManager.Instance and
+; CutsceneDirector.Instance are all set by the time GameplayBootstrap._Ready runs and looks for them.
+;
+; NOTHING IS AUTHORED HERE BUT SHAPE. The framing, the follow bounds, the clear colour and the
+; cutscene bindings are all still written per boot from GameplaySceneDefaults / Readability.json /
+; CutsceneTuning.json (decision D1/D4).
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Gameplay/GameplayBootstrap.cs" id="1_bootstrap"]
+[ext_resource type="Script" path="res://Scripts/Gameplay/GameplayCameraFollow2D.cs" id="2_follow"]
+[ext_resource type="Script" path="res://Scripts/Combat/CameraShake.cs" id="3_shake"]
+[ext_resource type="Script" path="res://Scripts/Combat/HitStopManager.cs" id="4_hitstop"]
+[ext_resource type="Script" path="res://Scripts/Gameplay/CutsceneDirector.cs" id="5_director"]
+[ext_resource type="Script" path="res://Scripts/Gameplay/GameplayCutsceneTriggers.cs" id="6_triggers"]
+[ext_resource type="Script" path="res://Scripts/Gameplay/GameplayEnemyRespawner.cs" id="7_respawner"]
+
+[node name="GameplayRoot" type="Node2D"]
+script = ExtResource("1_bootstrap")
+
+; The rig IS the follow: a Godot child cannot move its parent, so what Unity had as a component on the
+; rig GameObject is the node itself. GameplaySystemBootstrapper.CameraRigObjectName is this name and
+; CutsceneRole.CameraRig binds by it - renaming it unbinds the cutscene role and fails
+; GameplayCutsceneTests. No position: FrameCombatRoom writes it from SceneLayout_*.json every boot.
+[node name="CameraRig" type="Node2D" parent="."]
+script = ExtResource("2_follow")
+
+; The name Unity's MainCamera tag became. It stays the CURRENT camera (the bootstrap calls
+; MakeCurrent) and it stays the rig's child, which is what GetViewport().GetCamera2D() answers and
+; what the cutscene suite asserts. No zoom: FrameCombatRoom writes it from the arena's authored
+; orthographic half height.
+[node name="Main Camera" type="Camera2D" parent="CameraRig"]
+
+; Shake writes the camera's OWN offset, so it rides on top of whatever the follow and the cutscene
+; sequence left on the rig. On the rig instead it would be stomped by the follow every frame.
+[node name="CameraShake" type="Node" parent="CameraRig/Main Camera"]
+script = ExtResource("3_shake")
+
+; GameplayBootstrap.HitStopManagerObjectName. A singleton, found through HitStopManager.Instance.
+[node name="HitStopManager" type="Node" parent="."]
+script = ExtResource("4_hitstop")
+
+; CutsceneDirector.ObjectName. process_mode 3 is ProcessModeEnum.Always, which Create() used to write
+; in code: the victory shot runs on a zero timescale and the pause menu can open over any shot, so
+; this node has to keep ticking through both.
+[node name="CutsceneDirector" type="Node" parent="."]
+process_mode = 3
+script = ExtResource("5_director")
+
+; Named for its type, because that is the name the bootstrap wrote and GetComponent<T>() reads the
+; tree back by type. A child of the director, as it was.
+[node name="GameplayCutsceneTriggers" type="Node" parent="CutsceneDirector"]
+script = ExtResource("6_triggers")
+
+; GameplayBootstrap.EnemyRespawnerObjectName. Initialize is still called from the bootstrap, after the
+; cutscene layer exists, because a respawn hands the new boss to the intro shot as well.
+[node name="EnemyRespawner" type="Node" parent="."]
+script = ExtResource("7_respawner")

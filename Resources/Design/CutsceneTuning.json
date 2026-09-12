@@ -1,0 +1,32 @@
+{
+    "enterSettleHeight": 1.0,
+    "enterSettleDuration": 1.2,
+    "bossIntroMoveDuration": 0.5,
+    "deathHitStop": 0.12,
+    "deathMoveDelay": 0.45,
+    "deathMoveDuration": 0.35,
+    "deathMoveDistance": 0.6,
+    "shots": [
+        {
+            "key": "GameplayEnter",
+            "fade": [ { "time": 0.0, "value": 1.0 }, { "time": 1.2, "value": 0.0 }, { "time": 1.8, "value": 0.0 } ],
+            "letterbox": [ { "time": 0.0, "value": 64 }, { "time": 1.2, "value": 64 }, { "time": 1.6, "value": 0 }, { "time": 1.8, "value": 0 } ]
+        },
+        {
+            "key": "BossIntro",
+            "letterbox": [ { "time": 0.0, "value": 0 }, { "time": 0.25, "value": 96 }, { "time": 2.3, "value": 96 }, { "time": 2.6, "value": 0 } ],
+            "cameraSize": [ { "time": 0.0, "value": 1.0 }, { "time": 0.5, "value": 0.88 }, { "time": 1.3, "value": 0.88 }, { "time": 2.3, "value": 1.0 }, { "time": 2.6, "value": 1.0 } ]
+        },
+        {
+            "key": "PlayerDeath",
+            "fade": [ { "time": 0.0, "value": 0.0 }, { "time": 0.45, "value": 0.55 }, { "time": 0.8, "value": 0.55 }, { "time": 1.2, "value": 0.0 } ],
+            "letterbox": [ { "time": 0.0, "value": 0 }, { "time": 0.45, "value": 48 }, { "time": 0.8, "value": 48 }, { "time": 1.2, "value": 0 } ],
+            "cameraSize": [ { "time": 0.0, "value": 1.0 }, { "time": 0.45, "value": 1.0 }, { "time": 0.8, "value": 0.94 }, { "time": 1.2, "value": 1.0 } ]
+        },
+        {
+            "key": "Victory",
+            "letterbox": [ { "time": 0.0, "value": 0 }, { "time": 0.3, "value": 96 }, { "time": 1.7, "value": 96 }, { "time": 2.0, "value": 0 } ],
+            "cameraSize": [ { "time": 0.0, "value": 1.0 }, { "time": 0.3, "value": 1.0 }, { "time": 1.3, "value": 0.9 }, { "time": 1.7, "value": 0.9 }, { "time": 2.0, "value": 1.0 } ]
+        }
+    ]
+}

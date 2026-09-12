@@ -1,0 +1,304 @@
+[gd_scene load_steps=4 format=3]
+
+; The title screen. In Unity this was an authored Canvas; the port rebuilt the whole of it in
+; TitleMenuBootstrap.BuildTitleUi and this scene puts it back. Every static property is here - the
+; backdrop colour, every anchor and offset, every font size and colour, both separations, the 16px
+; panel inset, the six menu buttons, the four option boxes and the two option rows - and what is left
+; in TitleMenuBootstrap.cs is binding, state and signals.
+;
+; Scenes/TitleScene.tscn, the scene the game boots into, inherits this one and adds nothing. The
+; split is what lets TitleGraphicsOptionsTests instantiate the screen on its own: changing scenes in
+; a test would free the runner, which *is* the current scene.
+;
+; NODE NAMES ARE THE LOCALISATION KEY PLUS A ROLE, never the translated caption. A node named
+; 새로하기Button - which is what CreateButton produced - is renamed by a change of locale, and every
+; lookup by name breaks with it. So: UI_TITLE_NEW_GAMEButton, UI_OPTION_VSYNCToggle,
+; UI_OPTION_MSAARow. TitleGraphicsOptionsTests addresses all three by those names.
+;
+; TEXT IS THE KEY. Every authored caption is a localisation key resolved by Godot's auto-translation,
+; the way Stage 3 authored the HUD panels. The three lines that are not keys are written at runtime
+; because they carry a value: the difficulty button, the preset line, and the segment captions
+; (4x, 100%, and the translated Off).
+;
+; THE FONT IS NOT NAMED HERE, on purpose. An ext_resource pointing at a font Godot has not imported
+; yet is a hard load failure, so MenuTheme.tres carries no font either and
+; GameplayHud.LoadMenuTheme() writes its default_font at runtime from LoadUiFont(), which degrades to
+; ThemeDB.FallbackFont. The theme sits on TitleRoot so every label, button and box below it picks
+; that face up without naming one.
+;
+; UNITS: every number in this file is a screen pixel, exactly as it was in uGUI. World.Ppu is a
+; world-space conversion and has no business in a menu. Colours are MoodDirection.md section 2 -
+; Bone100 #C3BDB1, Bone200 #9A9488, Bone300 #6E685C.
+
+[ext_resource type="Script" path="res://Scripts/UI/TitleMenuBootstrap.cs" id="1_title"]
+[ext_resource type="Theme" path="res://Resources/UI/MenuTheme.tres" id="2_theme"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/SegmentedRow.tscn" id="3_row"]
+
+[node name="TitleRoot" type="Node"]
+script = ExtResource("1_title")
+
+[node name="TitleCanvas" type="CanvasLayer" parent="."]
+
+[node name="TitleRoot" type="Control" parent="TitleCanvas"]
+; uGUI's CanvasScaler (ScaleWithScreenSize, 1920x1080, match 0.5) is Godot's display/window/stretch
+; project setting - one stretch for the whole game rather than a component per canvas - so there is
+; nothing here for it. Unity's EnsureEventSystem has no counterpart either: Godot routes mouse,
+; keyboard and gamepad through the viewport and its own focus chain with nothing to install.
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+; Ignore: the screen itself must not eat clicks meant for the buttons. Children are hit-tested on
+; their own.
+mouse_filter = 2
+theme = ExtResource("2_theme")
+
+[node name="Backdrop" type="ColorRect" parent="TitleCanvas/TitleRoot"]
+; What is left of Unity's EnsureCamera: that method existed to give the title scene a camera clearing
+; to #06070A and Godot's 2D root already draws without one, so only the colour survives, painted as
+; the bottom layer of the screen. The AudioListener has no Godot counterpart either - buses are
+; global.
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+mouse_filter = 2
+color = Color(0.023529412, 0.02745098, 0.039215688, 1)
+
+[node name="Title" type="Label" parent="TitleCanvas/TitleRoot"]
+; 520x72 centred, 165px above the middle. Not a localisation key: the game is called MyGame in every
+; locale.
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -260.0
+offset_top = -201.0
+offset_right = 260.0
+offset_bottom = -129.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+theme_override_font_sizes/font_size = 54
+text = "MyGame"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Subtitle" type="Label" parent="TitleCanvas/TitleRoot"]
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -260.0
+offset_top = -132.0
+offset_right = 260.0
+offset_bottom = -100.0
+mouse_filter = 2
+; Bone300, the dim one: the tagline is read once and then ignored.
+theme_override_colors/font_color = Color(0.43137255, 0.40784314, 0.36078432, 1)
+theme_override_font_sizes/font_size = 18
+text = "Wrath altar"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="MenuButtons" type="VBoxContainer" parent="TitleCanvas/TitleRoot"]
+; 260x250 centred, 40px below the middle. Six 48px buttons and five 14px gaps come to 358, so the
+; stack is taller than its rect and the centre alignment spills it evenly above and below - which is
+; what the shipped screen did, since the rect and the separation are the ones it shipped with.
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -130.0
+offset_top = -85.0
+offset_right = 130.0
+offset_bottom = 165.0
+mouse_filter = 2
+theme_override_constants/separation = 14
+alignment = 1
+
+[node name="UI_TITLE_NEW_GAMEButton" type="Button" parent="TitleCanvas/TitleRoot/MenuButtons"]
+; The screen's first selectable. TitleMenuBootstrap.Bind grabs focus onto it: the Unity menu leaned
+; on the EventSystem's implicit first selectable and Godot hands focus to nothing until something
+; asks, and that call is what makes the menu playable on a gamepad without a mouse ever touching it.
+; The stack's tree order is its focus order, so no neighbour needs declaring.
+custom_minimum_size = Vector2(260, 48)
+theme_type_variation = &"TitleButton"
+text = "UI_TITLE_NEW_GAME"
+
+[node name="UI_TITLE_CONTINUEButton" type="Button" parent="TitleCanvas/TitleRoot/MenuButtons"]
+; Bind greys this out when there is no save, so Continue never looks like it did nothing.
+custom_minimum_size = Vector2(260, 48)
+theme_type_variation = &"TitleButton"
+text = "UI_TITLE_CONTINUE"
+
+[node name="UI_TITLE_DIFFICULTYButton" type="Button" parent="TitleCanvas/TitleRoot/MenuButtons"]
+; Cycles rather than opening a sub-menu: three values, one of which is usually locked, is not worth a
+; second panel. RefreshDifficultyLabel rewrites this caption with the current choice
+; (UI_TITLE_DIFFICULTY_VALUE), so the stack still reads as a list of buttons rather than as a form.
+custom_minimum_size = Vector2(260, 48)
+theme_type_variation = &"TitleButton"
+text = "UI_TITLE_DIFFICULTY"
+
+[node name="UI_TITLE_NEW_GAME_PLUSButton" type="Button" parent="TitleCanvas/TitleRoot/MenuButtons"]
+; Greyed out rather than hidden by Bind, so the reward is visible before it is earned.
+custom_minimum_size = Vector2(260, 48)
+theme_type_variation = &"TitleButton"
+text = "UI_TITLE_NEW_GAME_PLUS"
+
+[node name="UI_TITLE_SETTINGSButton" type="Button" parent="TitleCanvas/TitleRoot/MenuButtons"]
+custom_minimum_size = Vector2(260, 48)
+theme_type_variation = &"TitleButton"
+text = "UI_TITLE_SETTINGS"
+
+[node name="UI_TITLE_QUITButton" type="Button" parent="TitleCanvas/TitleRoot/MenuButtons"]
+custom_minimum_size = Vector2(260, 48)
+theme_type_variation = &"TitleButton"
+text = "UI_TITLE_QUIT"
+
+[node name="SettingsPanel" type="ColorRect" parent="TitleCanvas/TitleRoot"]
+; 440x620 centred, 20px above the middle, and it starts hidden - the settings button toggles it.
+; Stop, unlike the screen behind it: an open panel swallows clicks aimed at the menu under it.
+;
+; NOT ModalPanel.tscn. That scene is a full-screen plate with a title and a subtitle pinned near the
+; top of the viewport; this is a 440-wide card floating over the menu whose heading and preset line
+; are rows of a flowing column, so inheriting it would mean hiding both of its labels and overriding
+; its rect until nothing of it was left.
+visible = false
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -290.0
+offset_right = 220.0
+offset_bottom = 330.0
+mouse_filter = 0
+; PanelInk #0A0B0E at the alpha the settings card shipped with.
+color = Color(0.039215688, 0.043137256, 0.05490196, 0.96)
+
+[node name="SettingsColumn" type="VBoxContainer" parent="TitleCanvas/TitleRoot/SettingsPanel"]
+; uGUI put the padding on the layout group; Godot puts it on the column's own offsets, which is the
+; same 16px inset with one node fewer. TitleGraphicsOptionsTests asserts this column's combined
+; minimum height fits inside the panel, which is what catches a row added until the list overflows.
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = -16.0
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Heading" type="Label" parent="TitleCanvas/TitleRoot/SettingsPanel/SettingsColumn"]
+custom_minimum_size = Vector2(0, 36)
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+theme_override_font_sizes/font_size = 24
+text = "UI_OPTION_HEADING"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PresetLine" type="Label" parent="TitleCanvas/TitleRoot/SettingsPanel/SettingsColumn"]
+; Written per refresh with the preset the six values currently add up to (UI_OPTION_PRESET_VALUE), so
+; it is left empty here rather than authored as a key.
+custom_minimum_size = Vector2(0, 30)
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.6039216, 0.5803922, 0.53333336, 1)
+theme_override_font_sizes/font_size = 18
+text = ""
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="UI_OPTION_PRESET_HIGHButton" type="Button" parent="TitleCanvas/TitleRoot/SettingsPanel/SettingsColumn"]
+; Named for the preset it applies and captioned with that preset's button key - the fuller label,
+; not the bare word the preset line reports.
+custom_minimum_size = Vector2(260, 48)
+theme_type_variation = &"TitleButton"
+text = "UI_OPTION_PRESET_HIGH_BUTTON"
+
+[node name="UI_OPTION_PRESET_LOWButton" type="Button" parent="TitleCanvas/TitleRoot/SettingsPanel/SettingsColumn"]
+custom_minimum_size = Vector2(260, 48)
+theme_type_variation = &"TitleButton"
+text = "UI_OPTION_PRESET_LOW_BUTTON"
+
+[node name="UI_OPTION_SCREEN_SHAKEToggle" type="CheckBox" parent="TitleCanvas/TitleRoot/SettingsPanel/SettingsColumn"]
+; Two values get a box, three or more get a row of value buttons: the widget says how many choices an
+; option has before the player clicks anything, which one cycling button could not. Godot's CheckBox
+; is that widget already - box, caption and the whole row as the hit target - so the Unity original's
+; hand-built box, checkmark and caption collapse into it.
+;
+; The four boxes carry the same overrides the builder used to write on them: Bone100 in the four live
+; states and 22pt, one point under the menu buttons.
+;
+; ONE DELIBERATE VISUAL CHANGE, and the only one this stage makes. A CheckBox is a Button, so with
+; MenuTheme.tres on TitleRoot it now resolves that theme's five plates where the code-built box
+; resolved Godot's default CheckBox styleboxes - four empty ones and a focus ring. So an option row
+; is drawn on the shared plate now, and it lights on hover and on focus like every other row on this
+; screen, where before it did neither. Kept rather than overridden back: restoring the flat look
+; means overriding four of the five slots with an empty box, and the fifth - focus - would have to
+; reproduce the default theme's ring or a gamepad would lose track of where it is. Four
+; theme_override_styles lines per box put it back if the flat look is wanted.
+custom_minimum_size = Vector2(408, 48)
+theme_override_colors/font_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+theme_override_colors/font_focus_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+theme_override_colors/font_hover_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+theme_override_colors/font_pressed_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+theme_override_font_sizes/font_size = 22
+text = "UI_OPTION_SCREEN_SHAKE"
+alignment = 0
+
+[node name="UI_OPTION_HIT_STOPToggle" type="CheckBox" parent="TitleCanvas/TitleRoot/SettingsPanel/SettingsColumn"]
+custom_minimum_size = Vector2(408, 48)
+theme_override_colors/font_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+theme_override_colors/font_focus_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+theme_override_colors/font_hover_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+theme_override_colors/font_pressed_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+theme_override_font_sizes/font_size = 22
+text = "UI_OPTION_HIT_STOP"
+alignment = 0
+
+[node name="UI_OPTION_HIT_FLASHToggle" type="CheckBox" parent="TitleCanvas/TitleRoot/SettingsPanel/SettingsColumn"]
+custom_minimum_size = Vector2(408, 48)
+theme_override_colors/font_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+theme_override_colors/font_focus_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+theme_override_colors/font_hover_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+theme_override_colors/font_pressed_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+theme_override_font_sizes/font_size = 22
+text = "UI_OPTION_HIT_FLASH"
+alignment = 0
+
+[node name="UI_OPTION_VSYNCToggle" type="CheckBox" parent="TitleCanvas/TitleRoot/SettingsPanel/SettingsColumn"]
+custom_minimum_size = Vector2(408, 48)
+theme_override_colors/font_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+theme_override_colors/font_focus_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+theme_override_colors/font_hover_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+theme_override_colors/font_pressed_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+theme_override_font_sizes/font_size = 22
+text = "UI_OPTION_VSYNC"
+alignment = 0
+
+[node name="UI_OPTION_MSAARow" parent="TitleCanvas/TitleRoot/SettingsPanel/SettingsColumn" instance=ExtResource("3_row")]
+
+[node name="Caption" parent="TitleCanvas/TitleRoot/SettingsPanel/SettingsColumn/UI_OPTION_MSAARow" index="0"]
+text = "UI_OPTION_MSAA"
+
+[node name="UI_OPTION_RENDER_SCALERow" parent="TitleCanvas/TitleRoot/SettingsPanel/SettingsColumn" instance=ExtResource("3_row")]
+
+[node name="Caption" parent="TitleCanvas/TitleRoot/SettingsPanel/SettingsColumn/UI_OPTION_RENDER_SCALERow" index="0"]
+text = "UI_OPTION_RENDER_SCALE"
+
+[node name="UI_COMMON_CLOSEButton" type="Button" parent="TitleCanvas/TitleRoot/SettingsPanel/SettingsColumn"]
+custom_minimum_size = Vector2(260, 48)
+theme_type_variation = &"TitleButton"
+text = "UI_COMMON_CLOSE"

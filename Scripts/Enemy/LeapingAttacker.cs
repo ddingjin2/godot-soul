@@ -30,17 +30,18 @@ namespace MyGame.Enemy
         public bool IsDead => _health.IsDead;
         public bool IsLeaping => _isLeaping;
         public bool IsVulnerableAfterLand => _isVulnerable;
-        public float DetectionRange => tuningData != null ? tuningData.detectionRange : World.U(5f);
-        public float AttackRange => tuningData != null ? tuningData.attackRange : World.U(1.5f);
+        public float DetectionRange => tuningData.detectionRange;
+        public float AttackRange => tuningData.attackRange;
 
         public void SetTuningData(LeapingAttackerData data) => tuningData = data;
 
         /// <summary>
-        /// Frozen telegraph base: the pre-mood leaper body colour. Blending from here instead of
+        /// Telegraph base: the pre-mood leaper body colour. Blending from here instead of
         /// tuningData.enemyColor keeps the telegraph at #FFD900 after the body is muted.
         /// See Docs/MoodDirection.md "The lerp trap".
+        /// Authored as <c>LeapingAttacker.json.telegraphColor</c>.
         /// </summary>
-        private static readonly Color TelegraphBase = new Color(1f, 0.5f, 0f);
+        private Color TelegraphBase => tuningData.telegraphColor;
 
         private static readonly Vector2 FallbackHalfExtents = new Vector2(World.U(0.3f), World.U(0.5f));
 
@@ -61,34 +62,42 @@ namespace MyGame.Enemy
         private float _idleTimer;
         private Vector2 _leapTarget;
         private float _recoveryTimer;
-        private static readonly float PatrolHalfWidth = World.U(3f);
+        /// <summary>
+        /// Already pixels - <c>LeapingAttackerData.ScaleToPixels</c> converted the authored metres at
+        /// load. Also the combat leash, not just the walk: see <see cref="ClampHomewardDirection"/>.
+        /// </summary>
+        private float PatrolHalfWidth => tuningData.patrolDistance;
 
         public override void _Ready()
         {
             base._Ready();
 
+            if (tuningData == null)
+            {
+                GD.PushError($"{GetType().Name} '{Name}' entered the tree without tuning data; call SetTuningData first.");
+                SetProcess(false);
+                SetPhysicsProcess(false);
+                return;
+            }
+
             _health = this.FindComponent<Health>();
             _startPos = GlobalPosition;
             _patrolTarget = _startPos + (Vector2.Right * PatrolHalfWidth);
 
-            if (tuningData != null)
+            _health.SetHealth(tuningData.maxHealth);
+            if (_sr != null)
             {
-                _health.SetHealth(tuningData.maxHealth);
-                if (_sr != null)
-                {
-                    _sr.Modulate = tuningData.enemyColor;
-                }
+                _sr.Modulate = tuningData.enemyColor;
             }
 
-            // Unity's Start.
-            if (this.FindComponent<EnemyGroupCombat>() == null)
+            // Unity's Start. Both nodes are authored on Scenes/Actors/EnemyBase.tscn, which every
+            // archetype scene inherits, so this used to be an add no shipped leaper ever reached
+            // (PLAN_CLOSEOUT D1/K7).
+            if (this.FindComponent<EnemyGroupCombat>() == null || this.FindComponent<CombatFeedback>() == null)
             {
-                AddChild(new EnemyGroupCombat { Name = "EnemyGroupCombat" });
-            }
-
-            if (this.FindComponent<CombatFeedback>() == null)
-            {
-                AddChild(new CombatFeedback { Name = "CombatFeedback" });
+                GD.PushError($"{GetType().Name} '{Name}' has no EnemyGroupCombat or no CombatFeedback; Scenes/Actors/EnemyBase.tscn authors both and nothing adds them at runtime. It does not run.");
+                SetProcess(false);
+                SetPhysicsProcess(false);
             }
         }
 
@@ -155,7 +164,7 @@ namespace MyGame.Enemy
 
             if (_currentState == EnemyState.Combat || _currentState == EnemyState.Investigate)
             {
-                if (dist <= (tuningData?.attackRange ?? World.U(1.5f)) && _attackCooldownTimer <= 0f)
+                if (dist <= tuningData.attackRange && _attackCooldownTimer <= 0f)
                 {
                     StartLeapAttack();
                 }
@@ -182,6 +191,13 @@ namespace MyGame.Enemy
             }
         }
 
+        /// <summary>
+        /// This archetype's reach, <c>LeapingAttacker.json.detectionRange</c>. Never reached through the base
+        /// <c>DetectPlayer</c> - the override below is what runs - but the base declares it abstract so
+        /// that no archetype can inherit a detection radius written in code (PLAN_CLOSEOUT K5b item 4).
+        /// </summary>
+        protected override float GetDetectionRange() => tuningData.detectionRange;
+
         protected override void DetectPlayer()
         {
             if (_player != null)
@@ -189,7 +205,7 @@ namespace MyGame.Enemy
                 return;
             }
 
-            float range = tuningData != null ? tuningData.detectionRange : World.U(5f);
+            float range = tuningData.detectionRange;
             GodotObject hit = Phys2D.OverlapCircle(this, GlobalPosition, range, World.Layer.Player);
             if (hit != null && Phys2D.FindActorInGroup(hit, World.Group.Player) is Node2D player)
             {
@@ -206,7 +222,7 @@ namespace MyGame.Enemy
                 return;
             }
 
-            float speed = tuningData != null ? tuningData.moveSpeed : World.U(2f);
+            float speed = tuningData.moveSpeed;
 
             // Turns at a ledge rather than stepping off, so a leaper can hold a platform. The chase and
             // the leap itself are left unclamped on purpose - crossing a gap is what a leaper is for.
@@ -229,7 +245,7 @@ namespace MyGame.Enemy
         {
             _facingDir *= -1;
             _patrolTarget = _startPos + (Vector2.Right * PatrolHalfWidth * _facingDir);
-            _idleTimer = 0.5f;
+            _idleTimer = tuningData.patrolIdleTime;
         }
 
         private void MaintainDistance()
@@ -240,14 +256,17 @@ namespace MyGame.Enemy
             }
 
             float dist = GlobalPosition.DistanceTo(_player.GlobalPosition);
-            float desiredDist = tuningData != null ? tuningData.maintainDistance : World.U(4f);
-            float speed = tuningData != null ? tuningData.moveSpeed : World.U(2f);
+            float desiredDist = tuningData.maintainDistance;
+            float speed = tuningData.moveSpeed;
 
-            if (dist > desiredDist + World.U(1f))
+            // Already pixels, like desiredDist beside it: LeapingAttackerData scaled both at load.
+            float deadband = tuningData.maintainDistanceDeadband;
+
+            if (dist > desiredDist + deadband)
             {
                 MoveTowards(_player.GlobalPosition, speed);
             }
-            else if (dist < desiredDist - World.U(1f))
+            else if (dist < desiredDist - deadband)
             {
                 MoveAwayFrom(_player.GlobalPosition, speed);
             }
@@ -318,7 +337,7 @@ namespace MyGame.Enemy
             }
 
             _isPreparingLeap = true;
-            _leapTelegraphTimer = tuningData?.leapTelegraphTime ?? 0.8f;
+            _leapTelegraphTimer = tuningData.leapTelegraphTime;
             _telegraphPulse = 0f;
             _leapTarget = _player.GlobalPosition;
             Velocity = Vector2.Zero;
@@ -334,9 +353,9 @@ namespace MyGame.Enemy
                 telegraphIndicator.Visible = true;
             }
 
-            if (_sr != null && tuningData != null)
+            if (_sr != null)
             {
-                _sr.Modulate = TelegraphBase.Lerp(Colors.Yellow, 0.7f);
+                _sr.Modulate = TelegraphBase.Lerp(Colors.Yellow, tuningData.telegraphBlend);
             }
         }
 
@@ -355,9 +374,9 @@ namespace MyGame.Enemy
             if (_isPreparingLeap)
             {
                 _leapTelegraphTimer -= dt;
-                _telegraphPulse += dt * 8f;
+                _telegraphPulse += dt * tuningData.telegraphPulseSpeed;
 
-                float pulse = 1f + (Mathf.Sin(_telegraphPulse) * 0.15f);
+                float pulse = 1f + (Mathf.Sin(_telegraphPulse) * tuningData.telegraphPulseAmplitude);
                 Scale = Vector2.One * pulse;
 
                 if (_leapTelegraphTimer <= 0f)
@@ -382,10 +401,10 @@ namespace MyGame.Enemy
             StopTelegraphVisuals();
             Scale = Vector2.One;
 
-            float leapSpeed = tuningData != null ? tuningData.leapSpeed : World.U(10f);
+            float leapSpeed = tuningData.leapSpeed;
             Vector2 direction = (_leapTarget - GlobalPosition).Normalized();
 
-            float heightBoost = tuningData != null ? tuningData.leapHeight : World.U(3f);
+            float heightBoost = tuningData.leapHeight;
 
             // Y FLIP: leapHeight is authored as an upward launch speed. Unity wrote it straight into
             // velocity.y because +Y was up there; Godot's +Y is down, so up is the negative one.
@@ -417,11 +436,11 @@ namespace MyGame.Enemy
 
             CheckLeapHit();
 
-            float vulnTime = tuningData != null ? tuningData.landingVulnerabilityTime : 0.5f;
+            float vulnTime = tuningData.landingVulnerabilityTime;
             _isVulnerable = true;
             _vulnerableTimer = vulnTime;
 
-            _attackCooldownTimer = tuningData != null ? tuningData.attackCooldown : 2f;
+            _attackCooldownTimer = tuningData.attackCooldown;
             TransitionTo(EnemyState.Recovery);
             _recoveryTimer = recoveryDuration + vulnTime;
 
@@ -437,7 +456,7 @@ namespace MyGame.Enemy
                 return;
             }
 
-            float range = tuningData != null ? tuningData.attackRange : World.U(1.5f);
+            float range = tuningData.attackRange;
 
             foreach (GodotObject hit in Phys2D.OverlapCircleAll(this, GlobalPosition, range, World.Layer.Player))
             {
@@ -448,8 +467,8 @@ namespace MyGame.Enemy
 
                 _hasHitInLeap = true;
 
-                float dmg = tuningData != null ? tuningData.attackDamage : 10f;
-                float knb = tuningData != null ? tuningData.attackKnockback : World.U(5f);
+                float dmg = tuningData.attackDamage;
+                float knb = tuningData.attackKnockback;
                 var request = new DamageRequest(
                     this,
                     player,
@@ -488,7 +507,7 @@ namespace MyGame.Enemy
         public void Stun(bool perfect = false)
         {
             _isStunned = true;
-            _stunTimer = (tuningData?.stunDuration ?? 0.8f) * (perfect ? 1.6f : 1f);
+            _stunTimer = tuningData.stunDuration * (perfect ? perfectParryStunMultiplier : 1f);
             _isLeaping = false;
             _isPreparingLeap = false;
             _isVulnerable = false;
@@ -521,7 +540,7 @@ namespace MyGame.Enemy
             {
                 _sr.Modulate = new Color(0.24705882f, 0.32941177f, 0.34117648f); // COLD_400 #3F5457
             }
-            else if (tuningData != null)
+            else
             {
                 _sr.Modulate = tuningData.enemyColor;
             }
@@ -542,7 +561,7 @@ namespace MyGame.Enemy
         {
             if (_isVulnerable)
             {
-                damage *= 2f;
+                damage *= tuningData.landingPunishMultiplier;
             }
 
             _health.ApplyDamage(damage, direction, knockback);

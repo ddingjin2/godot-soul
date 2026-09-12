@@ -21,8 +21,13 @@ namespace MyGame.Gameplay
     /// </remarks>
     public partial class ActorAnimationDriver : Node
     {
-        /// <summary>Horizontal speed above which an actor is running rather than standing. Unity's 0.15 units/s in pixels.</summary>
-        private static readonly float MoveEpsilon = World.U(0.15f);
+        /// <summary>
+        /// Horizontal speed above which an actor is running rather than standing, in <b>pixels</b> per
+        /// second. Authored in metres per second as <c>WorldTuning.json.actorMoveAnimThreshold</c> and
+        /// read in <see cref="_Ready"/>; the initialiser is Unity's 0.15 units/s, which is what a driver
+        /// running with no design file gets.
+        /// </summary>
+        private float _moveEpsilon = World.U(0.15f);
 
         /// <summary>The vector-era blade, authored on the player and on nothing else.</summary>
         private const string VectorSwordName = "ReadableSword";
@@ -168,6 +173,11 @@ namespace MyGame.Gameplay
             // Unity's LateUpdate. Godot ticks _Process in ascending ProcessPriority, so anything above
             // the default 0 runs after the gameplay nodes have written the state this reads.
             ProcessPriority = 100;
+
+            // Already pixels: WorldTuningData.Load scaled it. A missing file leaves the initialiser.
+            WorldTuningData world = GameplayTuningCatalog.Load()?.WorldTuning;
+            if (world != null)
+                _moveEpsilon = world.actorMoveAnimThreshold;
         }
 
         public override void _ExitTree()
@@ -257,7 +267,7 @@ namespace MyGame.Gameplay
                 return;
             }
 
-            _animator.SetState(Mathf.Abs(_player.Velocity.X) > MoveEpsilon ? "run" : "idle", "idle");
+            _animator.SetState(Mathf.Abs(_player.Velocity.X) > _moveEpsilon ? "run" : "idle", "idle");
         }
 
         private void DriveEnemy()
@@ -303,7 +313,7 @@ namespace MyGame.Gameplay
                 return;
 
             float speed = Mathf.Abs(_enemy.Velocity.X);
-            _animator.SetState(speed > MoveEpsilon ? "run" : "idle", "idle");
+            _animator.SetState(speed > _moveEpsilon ? "run" : "idle", "idle");
         }
     }
 }

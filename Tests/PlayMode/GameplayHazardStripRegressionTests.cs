@@ -235,8 +235,12 @@ namespace MyGame.Tests
             data = JsonData.FromJson<RainbowChapterBossData>(
                 "{\"maxHealth\":100,\"moveSpeed\":2,\"detectionRange\":8,\"attackRange\":1.5," +
                 "\"phaseTwoHealthThreshold\":0.5,\"phaseTwoSpeedMultiplier\":1,\"phaseTwoCooldownMultiplier\":1," +
+                // Stun, poise, body and pulse were class defaults until K3; a boss with a zero body or a
+                // zero stun is not the one these tests were written against, so the fixture says them.
+                "\"maxPoise\":90,\"poiseHeavyMultiplier\":2,\"poiseRegenDelay\":3,\"poiseRegenRate\":30,\"stunDuration\":1,\"soulReward\":300," +
+                "\"bodySize\":{\"x\":1.6,\"y\":2.3},\"telegraphPulseSpeed\":8,\"telegraphPulseAmplitude\":0.2," +
                 "\"bossName\":\"HazardDeathFixture\",\"chapterName\":\"Test Chapter\"," +
-                "\"attacks\":[{\"attackId\":\"test_lunge\",\"damage\":1,\"knockback\":0," +
+                "\"attacks\":[{\"attackId\":\"test_lunge\",\"damageType\":1,\"afterimageCountOverride\":-1,\"damage\":1,\"knockback\":0," +
                 "\"telegraphTime\":0.3,\"activeTime\":0.2,\"recoveryTime\":0.2,\"range\":1.5,\"forwardOffset\":0.5," +
                 "\"phaseTwoWeight\":1,\"leavesHazard\":true,\"hazardPhaseTwoOnly\":false," +
                 "\"hazardDamage\":1,\"hazardRadius\":1,\"hazardTickInterval\":0.1,\"hazardDuration\":1," +
@@ -257,6 +261,11 @@ namespace MyGame.Tests
                 Position = World.V(new Vector2(20f, 0f)),
             };
 
+            // Required since K5b: EnemyStateMachine has no initialisers for the eight shared
+            // numbers and refuses to run unconfigured. Before the tree, which is where the spawner
+            // does it.
+            EnemyFixture.ConfigureFromDesign(_boss);
+
             // Unity added a Kinematic Rigidbody2D; the ported boss is the body itself.
             _boss.AddComponent<Health>();
 
@@ -264,14 +273,20 @@ namespace MyGame.Tests
             // already be a sibling.
             FixtureRoot.AddChild(_boss);
 
+            // Required since K5 - see GameplayBossAttackGrammarTests for why chapter one's file.
+            _boss.SetEncounterData(BossEncounterData.Load("Design/WrathEncounter"));
             _boss.SetBossData(data);
             return _boss;
         }
 
         private BossHazardStrip BuildStripAt(Vector2 position, float damage, float tickInterval, float duration)
         {
-            // Unity's GameObject + AddComponent<BossHazardStrip> is one node here: the strip is a Node2D.
-            _hazard = new BossHazardStrip { Name = "HazardStripFixture", Position = position };
+            // Instanced from the shipped scene rather than built here, so the fixture is the strip the
+            // boss actually drops - sprite included. Unity's GameObject + AddComponent<BossHazardStrip>
+            // is one node here: the strip is the scene's root.
+            _hazard = GD.Load<PackedScene>(BossHazardStrip.ScenePath).Instantiate<BossHazardStrip>();
+            _hazard.Name = "HazardStripFixture";
+            _hazard.Position = position;
             FixtureRoot.AddChild(_hazard);
 
             // Configure takes a radius already in pixels, so the authored 1.5 metres converts here.
@@ -305,6 +320,12 @@ namespace MyGame.Tests
             Health health = _player.AddComponent<Health>();
             DamageReceiver receiver = _player.AddComponent<DamageReceiver>();
             PlayerController2D controller = _player.AddComponent<PlayerController2D>();
+
+            // Built here rather than left to PlayerController2D._Ready, which adds one deferred and
+            // hands it no tuning - and required since K7b, where an unconfigured component reports
+            // itself and stops. Both are the shape Scenes/Actors/Player.tscn already ships.
+            PlayerFixture.Configure(_player.AddComponent<PlayerActionController>());
+            PlayerFixture.Configure(_player);
 
             FixtureRoot.AddChild(_player);
 

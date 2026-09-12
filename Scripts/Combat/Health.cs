@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using MyGame.Core;
 
 namespace MyGame.Combat
 {
@@ -9,7 +10,7 @@ namespace MyGame.Combat
     /// </summary>
     public partial class Health : Node
     {
-        [Export] private float maxHealth = 100f;
+        [Export] private float maxHealth;
         [Export] private float currentHealth;
         [Export] private bool disableOnDeath = true;
 
@@ -33,10 +34,20 @@ namespace MyGame.Combat
         public Vector2 LastHitDirection { get; private set; }
         public float LastKnockback { get; private set; }
 
+        private bool _configured;
+
+        /// <summary>
+        /// Refills from the ceiling, which is zero until <see cref="SetMaxHealth"/> has run. Every
+        /// spawner calls it before or straight after parenting and then <see cref="SetHealth"/> on top,
+        /// so the invariant is: this line only ever repeats what the configure call already wrote.
+        /// </summary>
         public override void _Ready()
         {
             currentHealth = maxHealth;
+            CallDeferred(nameof(CheckConfigured));
         }
+
+        private void CheckConfigured() => TuningGuard.Check(this, _configured, "SetMaxHealth");
 
         public virtual void ApplyDamage(float amount, Vector2 knockbackDirection, float knockbackForce = 0f, bool ignoreInvulnerability = false)
         {
@@ -69,6 +80,7 @@ namespace MyGame.Combat
 
         public void SetMaxHealth(float value)
         {
+            _configured = true;
             maxHealth = value;
             currentHealth = Mathf.Min(currentHealth, maxHealth);
             OnHealthChanged?.Invoke(currentHealth);

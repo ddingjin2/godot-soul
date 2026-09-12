@@ -90,7 +90,7 @@ namespace MyGame.Tests
                 World.V(new Vector2(60f, 1f)),
                 GameplayReadabilityDefaults.Create(),
                 data,
-                null);
+                BossEncounterData.Load("Design/WrathEncounter"));
 
             _boss = behaviour;
 
@@ -180,9 +180,13 @@ namespace MyGame.Tests
             TestContext.Tree.Root.AddChild(pauseHost);
             pauseHost.Initialize(null, null, null, default);
 
-            var portal = new GateTravelZone { Name = "GatePortalFixture" };
-            _portal = portal;
-            TestContext.Tree.Root.AddChild(portal);
+            // The shipped portal, not a bare GateTravelZone: since K7 the zone no longer builds its own
+            // trigger shape when it finds none, so a hand-made one reports a missing collider on _Ready.
+            var portalRoot = GD.Load<PackedScene>("res://Scenes/World/GatePortal.tscn").Instantiate<Node2D>();
+            portalRoot.Name = "GatePortalFixture";
+            _portal = portalRoot;
+            TestContext.Tree.Root.AddChild(portalRoot);
+            GateTravelZone portal = portalRoot.GetNode<GateTravelZone>("GateTravelZone");
 
             pauseHost.SetPaused(true);
             Assert.AreEqual(0f, GameClock.TimeScale, 0.0001f, "Fixture guard: the pause menu owns the freeze first.");
@@ -213,8 +217,11 @@ namespace MyGame.Tests
                 "{\"maxHealth\":200,\"moveSpeed\":2,\"detectionRange\":8,\"attackRange\":1.5," +
                 "\"phaseTwoHealthThreshold\":0.5,\"phaseTwoSpeedMultiplier\":1.2,\"phaseTwoCooldownMultiplier\":0.75," +
                 "\"maxPoise\":90,\"poiseHeavyMultiplier\":2,\"poiseRegenDelay\":3,\"poiseRegenRate\":30,\"soulReward\":275," +
+                // Stun, poise, body and pulse were class defaults until K3; a boss with a zero body or a
+                // zero stun is not the one these tests were written against, so the fixture says them.
+                "\"stunDuration\":1,\"bodySize\":{\"x\":1.6,\"y\":2.3},\"telegraphPulseSpeed\":8,\"telegraphPulseAmplitude\":0.2," +
                 "\"bossName\":\"DifficultyFixtureBoss\",\"chapterName\":\"Test Chapter\"," +
-                "\"attacks\":[{\"attackId\":\"test_swing\",\"damage\":12,\"knockback\":0," +
+                "\"attacks\":[{\"attackId\":\"test_swing\",\"damageType\":1,\"afterimageCountOverride\":-1,\"damage\":12,\"knockback\":0," +
                 "\"telegraphTime\":0.25,\"activeTime\":0.25,\"recoveryTime\":0.25,\"range\":1.5,\"forwardOffset\":0.5," +
                 "\"phaseTwoWeight\":1}]}");
 

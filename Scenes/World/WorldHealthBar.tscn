@@ -1,0 +1,51 @@
+; The little bar over an actor's head: a frame sprite and a fill sprite, with the fill scaled along x
+; by the normalised health. Replaces GameplayWorldHealthBar.Build's construction half and
+; CreateSpriteChild; Build is now lookup-first and instances this when the lookup finds nothing.
+;
+; The root of this scene is the HealthBar node, not the GameplayWorldHealthBar - the bar component
+; itself is added to an actor by GameplayBuildShim.AddComponent/EnsureComponent, so what it needs is
+; the child tree, and "HealthBar" / "HealthBar/Frame" are the paths the P0 suite asserts.
+;
+; Unity used SpriteRenderer.size under SpriteDrawMode.Sliced for the bar's dimensions and the fill
+; transform's localScale for how full it is - two independent knobs on one object. Godot's Sprite2D
+; has no size, so size IS scale, and the two knobs are split across two nodes: Fill carries the
+; fullness, FillSprite under it carries the size.
+;
+; UNITS: 1 Unity metre = 100 px (World.Ppu). Nothing here carries a size or a position any more:
+; GameplayWorldHealthBar.ApplyLayout writes every one of them from the size, offset and colour
+; GameplayReadabilityDefaults hands each spawner, already in pixels. In the editor this scene opens
+; at the white texture's own 8x8, which is the cost of having one source (decision D4).
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="Gradient" id="Gradient_white"]
+; Unity's CreatePixelSprite made an 8x8 white square. Two white stops is the authored equivalent.
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_white"]
+gradient = SubResource("Gradient_white")
+width = 8
+height = 8
+
+[node name="HealthBar" type="Node2D"]
+; No position: ApplyLayout writes this node's position from the actor's own bar offset on every bar
+; (PLAN_CLOSEOUT K5b item 3), so the 1.2 m authored here was a second place to edit one number and
+; never a second source.
+
+[node name="Frame" type="Sprite2D" parent="."]
+texture = SubResource("GradientTexture2D_white")
+; No scale and no modulate: ApplyLayout sizes this sprite from the actor's bar size plus
+; ReadabilityLayout.json's frame margin, and paints it Art/Readability.json's healthBarFrameColor, on
+; every bar (PLAN_CLOSEOUT B3/K5b, decision D4). z_index is the one property no code writes.
+z_index = 40
+
+[node name="Fill" type="Node2D" parent="."]
+; The pivot the fullness scales. UpdateBar writes scale.x and position.x here; the sized sprite is
+; beneath it.
+
+[node name="FillSprite" type="Sprite2D" parent="Fill"]
+texture = SubResource("GradientTexture2D_white")
+; No scale and no modulate: ApplyLayout sizes this sprite from the actor's bar size and paints it the
+; spawner's designer-owned colour (PlayerHealthBarColor, EnemyHealthBarColor, BossHealthBarColor) on
+; every bar, and UpdateBar repaints it as health drops. z_index is the one property no code writes.
+z_index = 41

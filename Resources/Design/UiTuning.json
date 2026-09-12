@@ -1,0 +1,5 @@
+{
+    "ghostHoldSeconds": 0.4,
+    "ghostDrainSeconds": 0.5,
+    "hitFlashSeconds": 0.15
+}

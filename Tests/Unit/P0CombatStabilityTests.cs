@@ -372,8 +372,13 @@ namespace MyGame.Tests
             motor.Initialize();
             actions.Initialize(motor, stamina, hitbox);
 
+            PlayerFixture.Configure(motor);
+            PlayerFixture.Configure(stamina);
+            PlayerFixture.Configure(hitbox);
+            PlayerFixture.Configure(actions);
+
             Spawn(motor);
-            stamina.SetStamina(100f);
+            stamina.SetStamina(stamina.MaxStamina);
 
             Assert.Zero(
                 ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle(),
@@ -414,10 +419,17 @@ namespace MyGame.Tests
             hitbox.Initialize(motor);
             actions.Initialize(motor, stamina, hitbox);
 
+            // The shipped numbers, from the shipped files - the components carry none of their own
+            // since K7b, and one that reaches the tree unconfigured reports itself and stops.
+            PlayerFixture.Configure(motor);
+            PlayerFixture.Configure(stamina);
+            PlayerFixture.Configure(hitbox);
+            PlayerFixture.Configure(actions);
+
             Spawn(motor);
 
             // StaminaSystem._Ready refills to max, so the authored value has to land after tree entry.
-            stamina.SetStamina(100f);
+            stamina.SetStamina(stamina.MaxStamina);
 
             root = motor;
             return actions;
@@ -457,13 +469,17 @@ namespace MyGame.Tests
             motor.Initialize();
             actions.Initialize(motor, stamina, hitbox);
 
+            PlayerFixture.Configure(motor);
+            PlayerFixture.Configure(hitbox);
+            PlayerFixture.Configure(actions);
+
             Spawn(motor);
 
             // Health._Ready and StaminaSystem._Ready both refill to max, so the authored values land
             // after the node is in the tree rather than before it, as they did in Unity's edit mode.
-            health.SetMaxHealth(100f);
-            health.SetHealth(100f);
-            stamina.SetStamina(100f);
+            // PlayerResources.json is where the 100 / 100 used to be written by hand (K7b).
+            PlayerFixture.Configure(health);
+            PlayerFixture.Configure(stamina);
 
             return motor;
         }
@@ -524,6 +540,14 @@ namespace MyGame.Tests
             _spawned.Add(node);
             return node;
         }
+
+        /// <summary>
+        /// Kept as a local name because five call sites in this suite read better for it;
+        /// <see cref="EnemyFixture.ConfigureFromDesign"/> is the shared one the PlayMode boss fixtures
+        /// use as well.
+        /// </summary>
+        private static T ConfigureFromDesign<T>(T machine) where T : EnemyStateMachine
+            => EnemyFixture.ConfigureFromDesign(machine);
 
         // ---------------------------------------------------------------------------------------
         // Reflection helpers - ported verbatim in intent from the Unity runner
@@ -626,6 +650,13 @@ namespace MyGame.Tests
     /// </summary>
     public partial class TestEnemyStateMachine : EnemyStateMachine
     {
+        /// <summary>
+        /// Nothing to detect: the two tests that use this double put no player in the tree, and both
+        /// drive the transitions they measure by hand. Zero rather than a number copied from an
+        /// archetype's design file, which this double is not one of.
+        /// </summary>
+        protected override float GetDetectionRange() => 0f;
+
         public void TryTransitionForTest(EnemyState state)
         {
             TransitionTo(state);

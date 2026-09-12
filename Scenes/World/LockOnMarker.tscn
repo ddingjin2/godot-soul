@@ -1,0 +1,26 @@
+; The small disc that hovers over whatever PlayerLockOn is holding. Replaces
+; GameplayLockOnMarker.BuildMarker.
+;
+; It is instanced into the scene root rather than under the player, and it is NOT parented to the
+; target either: a parent would inherit the enemy's sprite flip and its hit-reaction scale punch, and
+; would be freed along with it on death - which is exactly the frame the marker still needs to be
+; around to hide itself. GameplayLockOnMarker._Process follows the target instead, and _ExitTree
+; frees this, because nothing else would ever collect it.
+;
+; Hidden at rest: the marker only appears once a target is acquired.
+;
+; UNITS: 1 Unity metre = 100 px (World.Ppu). Disc.png is 64x64.
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://Resources/Art/Disc.png" id="1"]
+
+[node name="LockOnMarker" type="Sprite2D"]
+visible = false
+texture = ExtResource("1")
+; 0.45 m marker -> World.U -> 45 px across, / 64 = 0.703125.
+scale = Vector2(0.703125, 0.703125)
+; GameplayReadabilityDefaults.PlayerAttackReadoutColor as shipped. Designer-owned via
+; Resources/Art/Readability.json, so the script binds it over this on every build.
+modulate = Color(0.82, 0.9, 1, 0.16)
+; RoleMarkerSortingOrder = 30.
+z_index = 30

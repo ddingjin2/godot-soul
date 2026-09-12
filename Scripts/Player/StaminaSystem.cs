@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using MyGame.Core;
 
 namespace MyGame.Player
 {
@@ -9,19 +10,19 @@ namespace MyGame.Player
     /// </summary>
     public partial class StaminaSystem : Node
     {
-        [Export] private float maxStamina = 100f;
+        [Export] private float maxStamina;
         [Export] private float currentStamina;
-        [Export] private float staminaRegenRate = 30f;
-        [Export] private float staminaRegenDelay = 1.5f;
+        [Export] private float staminaRegenRate;
+        [Export] private float staminaRegenDelay;
 
         // Costs
-        [Export] private float attackCost = 20f;
-        [Export] private float dodgeCost = 25f;
-        [Export] private float parryCost = 15f;
+        [Export] private float attackCost;
+        [Export] private float dodgeCost;
+        [Export] private float parryCost;
 
         // Blocking
-        [Export] private float blockCostPerSecond = 10f;
-        [Export] private float blockStaminaThreshold = 20f;
+        [Export] private float blockCostPerSecond;
+        [Export] private float blockStaminaThreshold;
 
         public event Action<float> OnStaminaChanged;
         public event Action OnStaminaDepleted;
@@ -37,11 +38,19 @@ namespace MyGame.Player
 
         private float _regenTimer;
         private bool _wasDepleted;
+        private bool _configured;
 
+        /// <summary>
+        /// Fills from the ceiling, which is zero until <see cref="ApplyTuning"/> has run - and
+        /// ApplyTuning refills too, so this line only ever repeats what the spawner already wrote.
+        /// </summary>
         public override void _Ready()
         {
             currentStamina = maxStamina;
+            CallDeferred(nameof(CheckConfigured));
         }
+
+        private void CheckConfigured() => TuningGuard.Check(this, _configured, "ApplyTuning");
 
         public override void _Process(double delta)
         {
@@ -114,6 +123,7 @@ namespace MyGame.Player
                 return;
             }
 
+            _configured = true;
             maxStamina = Mathf.Max(1f, tuning.maxStamina);
             staminaRegenRate = tuning.staminaRegenRate;
             staminaRegenDelay = tuning.staminaRegenDelay;

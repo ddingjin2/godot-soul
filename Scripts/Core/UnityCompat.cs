@@ -165,11 +165,24 @@ namespace MyGame.Core
     {
         public const string Root = "res://Resources/";
 
-        /// <summary>Reads a design/tuning JSON file - <c>Res.LoadJson&lt;T&gt;("Design/PlayerMovement")</c>.</summary>
-        public static T LoadJson<T>(string path)
+        /// <summary>
+        /// Reads a design/tuning JSON file - <c>Res.LoadJson&lt;T&gt;("Design/PlayerMovement")</c>.
+        /// A missing file is an error, said once here so no caller can swallow it into a fallback; the
+        /// two lookups that are allowed to miss (a scene's own layout file, a spawn row's variant file)
+        /// pass <paramref name="required"/> false and report in their own words.
+        /// </summary>
+        public static T LoadJson<T>(string path, bool required = true)
         {
             string text = LoadText(path, ".json");
-            return text == null ? default : JsonData.FromJson<T>(text);
+            if (text == null)
+            {
+                if (required)
+                    GD.PushError($"Res: design file '{Root}{path}.json' is missing. The numbers it owns have no other home.");
+
+                return default;
+            }
+
+            return JsonData.FromJson<T>(text);
         }
 
         /// <summary>Raw text of a resource file. Returns null when it is missing, so callers can fall back to defaults.</summary>

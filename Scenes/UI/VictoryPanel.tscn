@@ -1,0 +1,59 @@
+[gd_scene load_steps=2 format=3]
+
+; The boss-is-dead panel. Inherits ModalPanel.tscn - the plate, the mouse filter and the two lines
+; are all there - and adds the two buttons. Replaces GameplayHud.CreateVictoryPanel.
+;
+; Title is a literal, not a key: VICTORY is what the panel shipped with and localising it is a
+; product decision, not this stage's. Subtitle rests on the shipped "Wrath has fallen" and
+; GameplayVictoryController overwrites it with the boss that actually fell - the port shipped every
+; chapter reading Wrath's name, which is the defect GameplayVictoryPanelTests guards.
+;
+; RestartButton's text is the localisation key; ShowVictory rewrites it per open, either with the
+; caller's label (다음 관문, when a gate follows) or with UI_VICTORY_RESTART restored.
+;
+; UNITS: screen pixels.
+
+[ext_resource type="PackedScene" path="res://Scenes/UI/ModalPanel.tscn" id="1_base"]
+
+[node name="VictoryPanel" instance=ExtResource("1_base")]
+color = Color(0.039215688, 0.043137256, 0.05490196, 0.94)
+
+[node name="Title" parent="." index="0"]
+offset_top = -140.0
+offset_bottom = -70.0
+; #B8A57A - the one panel title that is not bone. Gilt, because it is the only line in the game that
+; is a reward rather than a statement.
+theme_override_colors/font_color = Color(0.72156864, 0.64705884, 0.47843137, 1)
+theme_override_font_sizes/font_size = 58
+text = "VICTORY"
+
+[node name="Subtitle" parent="." index="1"]
+offset_top = -81.0
+offset_bottom = -11.0
+; Bone100, not the base's Cold200: this line names the boss, not a resource.
+theme_override_colors/font_color = Color(0.7647059, 0.7411765, 0.69411767, 1)
+text = "Wrath has fallen"
+
+[node name="RestartButton" type="Button" parent="."]
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -140.0
+offset_top = 7.0
+offset_right = 140.0
+offset_bottom = 63.0
+text = "UI_VICTORY_RESTART"
+
+[node name="TitleButton" type="Button" parent="."]
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -140.0
+offset_top = 77.0
+offset_right = 140.0
+offset_bottom = 133.0
+text = "UI_COMMON_RETURN_TO_TITLE"

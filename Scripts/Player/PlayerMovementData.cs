@@ -14,22 +14,21 @@ namespace MyGame.Player
     /// <c>deceleration</c>, <c>gravity</c>, <c>maxFallSpeed</c>, <c>jumpForce</c>.</description></item>
     /// <item><description>Left alone (seconds): <c>coyoteTime</c>, <c>jumpBufferTime</c>.</description></item>
     /// </list>
-    /// The exported defaults are already in pixels, so an instance nobody loaded is still usable.
     /// </remarks>
     public partial class PlayerMovementData : Resource
     {
         /// <summary>Base name of the design file, shared with the Gameplay tuning catalog.</summary>
         public const string FileName = "PlayerMovement";
 
-        [Export] public float moveSpeed = World.U(6f);
-        [Export] public float acceleration = World.U(30f);
-        [Export] public float deceleration = World.U(25f);
-        [Export] public float gravity = World.U(20f);
-        [Export] public float maxFallSpeed = World.U(15f);
+        [Export] public float moveSpeed;
+        [Export] public float acceleration;
+        [Export] public float deceleration;
+        [Export] public float gravity;
+        [Export] public float maxFallSpeed;
 
-        [Export] public float jumpForce = World.U(12f);
-        [Export] public float coyoteTime = 0.1f;
-        [Export] public float jumpBufferTime = 0.12f;
+        [Export] public float jumpForce;
+        [Export] public float coyoteTime;
+        [Export] public float jumpBufferTime;
 
         /// <summary>The authored file scaled into pixels, or null when it is missing (Unity returned null too).</summary>
         public static PlayerMovementData Load()

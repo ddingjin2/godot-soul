@@ -1,0 +1,49 @@
+; The shooting enemy. Inherits Scenes/Actors/EnemyBase.tscn and adds the bar that shows how far its
+; shot reaches, plus the cleanup that removes the body after it dies. Replaces the construction half
+; of GameplayEnemySpawner.CreateRangedCasterAt.
+;
+; The shot itself is NOT authored here. It is Scenes/Effects/EnemyProjectile.tscn, handed over at
+; spawn by SetProjectilePrefab together with the projectile's designer-owned colour and sorting
+; order, and pooled by EnemyProjectilePool - so one caster's magazine is a pool of scene instances
+; rather than a template hanging off this tree.
+;
+; STILL BOUND AT RUNTIME: RangedCasterData (Resources/Design/RangedCaster.json, or the per-spawn
+; variant a placement names) through SetTuningData, the projectile scene, and every size, colour and
+; sorting order from GameplayReadabilityDefaults / Resources/Art/Readability.json - which since
+; decision D4 is all of them, so this file authors none. See the header of EnemyBase.tscn.
+;
+; UNITS: 1 Unity metre = 100 px (World.Ppu), +Y down.
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="PackedScene" path="res://Scenes/Actors/EnemyBase.tscn" id="1"]
+[ext_resource type="Script" path="res://Scripts/Enemy/RangedCaster.cs" id="2"]
+[ext_resource type="Texture2D" path="res://Resources/Art/ActorCaster.png" id="3"]
+[ext_resource type="PackedScene" path="res://Scenes/World/AttackReadout.tscn" id="4"]
+[ext_resource type="Script" path="res://Scripts/Enemy/EnemyDeathCleanup.cs" id="5"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_caster"]
+; Local to the scene - see the base. No radius and no height (decision D4): ResizeCapsuleCollider
+; writes both from ReadabilityLayout.json CasterColliderSize before the caster enters the tree.
+resource_local_to_scene = true
+
+[node name="RangedCaster" instance=ExtResource("1")]
+script = ExtResource("2")
+
+[node name="Collider" parent="."]
+shape = SubResource("CapsuleShape2D_caster")
+
+; The texture only. The size and the colour are DressActorVisual's, from CasterVisualSize and
+; CasterColor (decision D4); the RoleMarker and HealthBar overrides that used to sit here carried
+; nothing but CastRoleLocalPosition and CasterHealthBarOffset, which DressRoleMarker and
+; GameplayWorldHealthBar.ApplyLayout write, so both blocks are gone with them.
+[node name="Visual" parent="."]
+texture = ExtResource("3")
+
+; The lane the shot travels down - wide and flat rather than a landing circle, which is CastDangerSize
+; saying so in ReadabilityLayout.json. No numbers here: DressAttackReadout writes the position, the
+; size, the colour and the sorting order from CastDanger* on every spawn.
+[node name="CastRange" parent="." instance=ExtResource("4")]
+
+; One of the three archetypes that despawn on death - see the note in MeleeGrunt.tscn.
+[node name="EnemyDeathCleanup" type="Node" parent="."]
+script = ExtResource("5")

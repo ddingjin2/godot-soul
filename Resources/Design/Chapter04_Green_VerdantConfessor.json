@@ -18,16 +18,26 @@
     "chantDuration": 2.6,
     "chantHealPerSecond": 14.0,
 
+    "approachHopInterval": 0.0,
+    "approachHopImpulse": 5.0,
+    "afterimageCount": 0,
+    "afterimageSpread": 2.2,
+    "afterimageLifetime": 0.9,
+
     "maxPoise": 95.0,
     "poiseHeavyMultiplier": 2.0,
     "poiseRegenDelay": 3.0,
     "poiseRegenRate": 26.0,
+    "stunDuration": 1.0,
     "soulReward": 745,
 
     "primaryColor": { "r": 0.12, "g": 0.75, "b": 0.28, "a": 1.0 },
     "secondaryColor": { "r": 0.05, "g": 0.45, "b": 0.18, "a": 1.0 },
     "bodySize": { "x": 1.6, "y": 2.4 },
+    "telegraphPulseSpeed": 8.0,
+    "telegraphPulseAmplitude": 0.2,
 
+    "stanceRotationInterval": 0.0,
     "attacks": [
         {
             "attackId": "root_lash",
@@ -41,7 +51,19 @@
             "telegraphColor": { "r": 0.4, "g": 0.95, "b": 0.45, "a": 1.0 },
             "damageType": 1,
             "phaseTwoWeight": 0.3,
-            "forwardOffset": 0.8
+            "forwardOffset": 0.8,
+            "stanceId": "",
+            "chainNextAttackId": "",
+            "chainDelay": 0.35,
+            "chainDelayPhaseTwoScale": 1.0,
+            "afterimageCountOverride": -1,
+            "hazardPhaseTwoOnly": true,
+            "hazardDamage": 6.0,
+            "hazardRadius": 1.2,
+            "hazardTickInterval": 0.5,
+            "hazardDuration": 3.0,
+            "hazardForwardOffset": 1.5,
+            "hazardColor": { "r": 1.0, "g": 0.45, "b": 0.1, "a": 0.55 }
         },
         {
             "attackId": "growth_slam",
@@ -63,7 +85,12 @@
             "hazardTickInterval": 0.6,
             "hazardDuration": 5.0,
             "hazardForwardOffset": 1.6,
-            "hazardColor": { "r": 0.25, "g": 0.8, "b": 0.3, "a": 0.5 }
+            "hazardColor": { "r": 0.25, "g": 0.8, "b": 0.3, "a": 0.5 },
+            "stanceId": "",
+            "chainNextAttackId": "",
+            "chainDelay": 0.35,
+            "chainDelayPhaseTwoScale": 1.0,
+            "afterimageCountOverride": -1
         },
         {
             "attackId": "reclaim_sweep",
@@ -85,7 +112,12 @@
             "hazardTickInterval": 0.5,
             "hazardDuration": 4.5,
             "hazardForwardOffset": -1.4,
-            "hazardColor": { "r": 0.3, "g": 0.9, "b": 0.35, "a": 0.55 }
+            "hazardColor": { "r": 0.3, "g": 0.9, "b": 0.35, "a": 0.55 },
+            "stanceId": "",
+            "chainNextAttackId": "",
+            "chainDelay": 0.35,
+            "chainDelayPhaseTwoScale": 1.0,
+            "afterimageCountOverride": -1
         }
     ]
 }

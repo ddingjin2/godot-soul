@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using MyGame.Core;
 
 namespace MyGame.Combat
 {
@@ -13,11 +14,11 @@ namespace MyGame.Combat
     /// </summary>
     public partial class Poise : Node
     {
-        [Export] private float maxPoise = 50f;
-        [Export] private float currentPoise = 50f;
-        [Export] private float heavyHitMultiplier = 2f;
-        [Export] private float regenDelay = 2f;
-        [Export] private float regenRate = 25f;
+        [Export] private float maxPoise;
+        [Export] private float currentPoise;
+        [Export] private float heavyHitMultiplier;
+        [Export] private float regenDelay;
+        [Export] private float regenRate;
 
         public event Action<float> OnPoiseChanged;
         public event Action OnPoiseBroken;
@@ -30,11 +31,19 @@ namespace MyGame.Combat
         public bool CanBreak => maxPoise > 0f;
 
         private float _regenTimer;
+        private bool _configured;
 
+        /// <summary>
+        /// Refills from the ceiling, which is zero until <see cref="Configure"/> has run - and Configure
+        /// refills too, so this line only ever repeats what the spawner already wrote.
+        /// </summary>
         public override void _Ready()
         {
             currentPoise = maxPoise;
+            CallDeferred(nameof(CheckConfigured));
         }
+
+        private void CheckConfigured() => TuningGuard.Check(this, _configured, "Configure");
 
         public override void _Process(double delta)
         {
@@ -55,6 +64,7 @@ namespace MyGame.Combat
 
         public void Configure(float max, float heavyMultiplier, float delay, float rate)
         {
+            _configured = true;
             maxPoise = Mathf.Max(0f, max);
             heavyHitMultiplier = Mathf.Max(1f, heavyMultiplier);
             regenDelay = Mathf.Max(0f, delay);

@@ -279,13 +279,17 @@ namespace MyGame.Tests
         {
             return "{\"maxHealth\":200,\"moveSpeed\":2,\"detectionRange\":8,\"attackRange\":1.5," +
                    "\"phaseTwoHealthThreshold\":0.5,\"phaseTwoSpeedMultiplier\":1,\"phaseTwoCooldownMultiplier\":1," +
+                   // Stun, poise, body and pulse were class defaults until K3; a boss with a zero body or a
+                   // zero stun is not the one these tests were written against, so the fixture says them.
+                   "\"maxPoise\":90,\"poiseHeavyMultiplier\":2,\"poiseRegenDelay\":3,\"poiseRegenRate\":30,\"stunDuration\":1,\"soulReward\":300," +
+                   "\"bodySize\":{\"x\":1.6,\"y\":2.3},\"telegraphPulseSpeed\":8,\"telegraphPulseAmplitude\":0.2," +
                    "\"bossName\":\"SelfChainFixture\",\"chapterName\":\"Test Chapter\"," +
                    // Long recovery on purpose. Links skip the recovery - the chain has its own beat - but
                    // the fresh pick after the chain ends does not, so three seconds keeps the boss's next
                    // ordinary swing well outside the window this measures. Without it the cap looks
                    // broken: the counter resets when the chain ends and the same row is simply chosen
                    // again, which is a boss repeating itself, not a chain with no end.
-                   "\"attacks\":[{\"attackId\":\"loop_swing\",\"damage\":5,\"knockback\":0," +
+                   "\"attacks\":[{\"attackId\":\"loop_swing\",\"damageType\":1,\"afterimageCountOverride\":-1,\"damage\":5,\"knockback\":0," +
                    "\"telegraphTime\":0.1,\"activeTime\":0.1,\"recoveryTime\":3.0,\"range\":1.5," +
                    "\"forwardOffset\":0.5,\"phaseTwoWeight\":1,\"chainNextAttackId\":\"loop_swing\"," +
                    "\"chainDelay\":0.1,\"chainDelayPhaseTwoScale\":1}]}";
@@ -307,12 +311,21 @@ namespace MyGame.Tests
             // below is about attack bookkeeping rather than position.
             _boss = new RainbowChapterBossBehaviour { Name = "ChainCapFixture" };
 
+            // Required since K5b: EnemyStateMachine has no initialisers for the eight shared
+            // numbers and refuses to run unconfigured. Before the tree, which is where the spawner
+            // does it.
+            EnemyFixture.ConfigureFromDesign(_boss);
+
             // Before it enters the tree: the behaviour's _Ready reads the health it is about to resize,
             // and a child is always ready before its parent.
             _boss.AddComponent<Health>();
 
             TestContext.Runner.AddChild(_boss);
             _boss.GlobalPosition = Vector2.Zero;
+
+            // Required since K5 - the chain cap this fixture measures is the encounter's maxChainSteps,
+            // which used to be a constant on the behaviour. Chapter one's shipped file still says 4.
+            _boss.SetEncounterData(BossEncounterData.Load("Design/WrathEncounter"));
             _boss.SetBossData(data);
 
             // The chain only ticks past the intro gate, and a boss that never sees a player never leaves it.

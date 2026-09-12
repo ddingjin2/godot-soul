@@ -26,7 +26,7 @@ namespace MyGame.Gameplay
     }
 
     /// <summary>
-    /// Every enemy in the arena, built in code.
+    /// Every enemy in the arena: one authored scene per archetype, instanced and then tuned.
     ///
     /// UNITS: sizes, offsets and positions arrive already in Godot pixels with +Y down, from
     /// <see cref="GameplayReadabilityDefaults"/> and <see cref="GameplaySceneDefaults"/>; enemy tuning
@@ -35,10 +35,26 @@ namespace MyGame.Gameplay
     ///
     /// SHAPE: the Unity actor was a Rigidbody2D GameObject carrying a behaviour component. The port
     /// made <c>EnemyStateMachine</c> the <see cref="CharacterBody2D"/>, so the behaviour <i>is</i> the
-    /// actor root and everything else - health, poise, wallet, readouts - is a child of it.
+    /// actor root and everything else - health, poise, wallet, readouts - is a child of it. That tree
+    /// lives in <c>Scenes/Actors/</c> now: <c>EnemyBase.tscn</c> plus one inheriting scene per
+    /// archetype. What is left in this file is the <i>tuning</i>, and the order it happens in - which
+    /// a scene cannot express and which is load-bearing in two places (see
+    /// <see cref="EnsureEnemyHealthRig"/> and <see cref="PlaceInWorld"/>).
     /// </summary>
     public static class GameplayEnemySpawner
     {
+        // The authored actors. Each archetype scene inherits Scenes/Actors/EnemyBase.tscn, so the
+        // shared rig - collider, visual, health, poise, wallet, role marker, health bar - is declared
+        // once and every scene below is only what that archetype adds on top.
+        private const string MeleeGruntScenePath = "res://Scenes/Actors/MeleeGrunt.tscn";
+        private const string LeapingAttackerScenePath = "res://Scenes/Actors/LeapingAttacker.tscn";
+        private const string RangedCasterScenePath = "res://Scenes/Actors/RangedCaster.tscn";
+        private const string WrathMiniBossScenePath = "res://Scenes/Actors/WrathMiniBoss.tscn";
+        private const string ChapterBossScenePath = "res://Scenes/Actors/ChapterBoss.tscn";
+
+        /// <summary>Who the <see cref="GameplayBuildShim.RequireComponent{T}"/> error lines name.</summary>
+        private const string Owner = nameof(GameplayEnemySpawner);
+
         public static GameplayEnemyContext Spawn(
             GameplaySceneDefaults scene,
             GameplayReadabilityDefaults readability,
@@ -121,18 +137,16 @@ namespace MyGame.Gameplay
 
         private static MeleeGrunt CreateMeleeGruntAt(GameplaySceneDefaults.EnemySpawn spawn, GameplayReadabilityDefaults readability, GameplayTuningCatalog catalog)
         {
-            MeleeGrunt go = CreateEnemyRoot<MeleeGrunt>(GameplayPrefabNames.MeleeGrunt);
-            AddCapsuleCollider(go, readability.MeleeColliderSize);
-            AddActorVisual(go, GameplayVisualFactory.ActorSpriteKind.Grunt, readability.EnemyColor, readability.MeleeVisualSize, readability.ActorSortingOrder);
+            MeleeGrunt go = InstantiateEnemy<MeleeGrunt>(MeleeGruntScenePath, GameplayPrefabNames.MeleeGrunt);
+            ResizeCapsuleCollider(go, readability.MeleeColliderSize);
+            DressActorVisual(go, readability.EnemyColor, readability.MeleeVisualSize, readability.ActorSortingOrder);
 
-            var attackPoint = new Node2D { Name = "AttackPoint", Position = new Vector2(World.U(0.6f), 0f) };
-            go.AddChild(attackPoint);
+            Node2D attackPoint = go.GetNode<Node2D>("AttackPoint");
 
-            CreateAttackReadout(go, "SlashDanger", readability.MeleeDangerLocalPosition, readability.MeleeDangerSize, readability.MeleeDangerColor, readability.EnemyReadoutSortingOrder);
-            CreateRoleMarker(go, "Melee", readability.MeleeRoleLocalPosition, readability.MeleeRoleColor, readability);
+            DressAttackReadout(go, "SlashDanger", readability.MeleeDangerLocalPosition, readability.MeleeDangerSize, readability.MeleeDangerColor, readability.EnemyReadoutSortingOrder);
+            DressRoleMarker(go, "Melee", readability.MeleeRoleLocalPosition, readability.MeleeRoleColor, readability);
 
-            MeleeGruntData tuning = SpawnTuning<MeleeGruntData>(spawn) ?? (catalog?.MeleeGrunt
-                ?? GameplayTuningDefaults.CreateMeleeGrunt(readability.EnemyColor));
+            MeleeGruntData tuning = SpawnTuning<MeleeGruntData>(spawn) ?? catalog.MeleeGrunt;
 
             go.SetTuningData(tuning);
             go.SetAttackPoint(attackPoint);
@@ -148,15 +162,14 @@ namespace MyGame.Gameplay
 
         private static LeapingAttacker CreateLeapingAttackerAt(GameplaySceneDefaults.EnemySpawn spawn, GameplayReadabilityDefaults readability, GameplayTuningCatalog catalog)
         {
-            LeapingAttacker go = CreateEnemyRoot<LeapingAttacker>(GameplayPrefabNames.LeapingAttacker);
-            AddCapsuleCollider(go, readability.LeaperColliderSize);
-            AddActorVisual(go, GameplayVisualFactory.ActorSpriteKind.Leaper, readability.LeaperColor, readability.LeaperVisualSize, readability.ActorSortingOrder);
+            LeapingAttacker go = InstantiateEnemy<LeapingAttacker>(LeapingAttackerScenePath, GameplayPrefabNames.LeapingAttacker);
+            ResizeCapsuleCollider(go, readability.LeaperColliderSize);
+            DressActorVisual(go, readability.LeaperColor, readability.LeaperVisualSize, readability.ActorSortingOrder);
 
-            CreateAttackReadout(go, "LeapLandingDanger", readability.LeapDangerLocalPosition, readability.LeapDangerSize, readability.LeapDangerColor, readability.EnemyReadoutSortingOrder);
-            CreateRoleMarker(go, "Leap", readability.LeapRoleLocalPosition, readability.LeapRoleColor, readability);
+            DressAttackReadout(go, "LeapLandingDanger", readability.LeapDangerLocalPosition, readability.LeapDangerSize, readability.LeapDangerColor, readability.EnemyReadoutSortingOrder);
+            DressRoleMarker(go, "Leap", readability.LeapRoleLocalPosition, readability.LeapRoleColor, readability);
 
-            LeapingAttackerData tuning = SpawnTuning<LeapingAttackerData>(spawn) ?? (catalog?.LeapingAttacker
-                ?? GameplayTuningDefaults.CreateLeapingAttacker());
+            LeapingAttackerData tuning = SpawnTuning<LeapingAttackerData>(spawn) ?? catalog.LeapingAttacker;
 
             go.SetTuningData(tuning);
 
@@ -171,17 +184,22 @@ namespace MyGame.Gameplay
 
         private static RangedCaster CreateRangedCasterAt(GameplaySceneDefaults.EnemySpawn spawn, GameplayReadabilityDefaults readability, GameplayTuningCatalog catalog)
         {
-            RangedCaster go = CreateEnemyRoot<RangedCaster>(GameplayPrefabNames.RangedCaster);
-            AddCapsuleCollider(go, readability.CasterColliderSize);
-            AddActorVisual(go, GameplayVisualFactory.ActorSpriteKind.Caster, readability.CasterColor, readability.CasterVisualSize, readability.ActorSortingOrder);
+            RangedCaster go = InstantiateEnemy<RangedCaster>(RangedCasterScenePath, GameplayPrefabNames.RangedCaster);
+            ResizeCapsuleCollider(go, readability.CasterColliderSize);
+            DressActorVisual(go, readability.CasterColor, readability.CasterVisualSize, readability.ActorSortingOrder);
 
-            CreateAttackReadout(go, "CastRange", readability.CastDangerLocalPosition, readability.CastDangerSize, readability.CastDangerColor, readability.EnemyReadoutSortingOrder);
-            CreateRoleMarker(go, "Cast", readability.CastRoleLocalPosition, readability.CastRoleColor, readability);
+            DressAttackReadout(go, "CastRange", readability.CastDangerLocalPosition, readability.CastDangerSize, readability.CastDangerColor, readability.EnemyReadoutSortingOrder);
+            DressRoleMarker(go, "Cast", readability.CastRoleLocalPosition, readability.CastRoleColor, readability);
 
-            go.SetProjectilePrefab(CreateProjectilePrefab(readability));
+            // The shot is a scene now, not a template built here and duplicated per shot. Colour and
+            // sorting order still travel: they are readability's, so Resources/Art/Readability.json
+            // keeps overriding what the scene ships with.
+            go.SetProjectilePrefab(
+                GD.Load<PackedScene>(EnemyProjectile.ScenePath),
+                readability.ProjectileColor,
+                readability.ProjectileSortingOrder);
 
-            RangedCasterData tuning = SpawnTuning<RangedCasterData>(spawn) ?? (catalog?.RangedCaster
-                ?? GameplayTuningDefaults.CreateRangedCaster());
+            RangedCasterData tuning = SpawnTuning<RangedCasterData>(spawn) ?? catalog.RangedCaster;
 
             go.SetTuningData(tuning);
 
@@ -226,7 +244,7 @@ namespace MyGame.Gameplay
             // Deserialized into the archetype's own data type rather than the shared base, so a variant
             // file can carry the fields that archetype actually reads - a grunt's telegraph pulse, a
             // leaper's arc - instead of only the four everything shares.
-            var data = Res.LoadJson<T>(DesignResourceFolder + dataFile);
+            var data = Res.LoadJson<T>(DesignResourceFolder + dataFile, required: false);
             if (data == null)
             {
                 // Said once rather than on every respawn, and said at all: a placement whose data file was
@@ -310,10 +328,10 @@ namespace MyGame.Gameplay
             RainbowChapterBossData data,
             BossEncounterData encounter)
         {
-            RainbowChapterBossBehaviour go = CreateEnemyRoot<RainbowChapterBossBehaviour>(data.BossName);
-            AddCapsuleCollider(go, data.BodySize);
-            AddActorVisual(go, GameplayVisualFactory.ActorSpriteKind.Boss, data.PrimaryColor, readability.BossVisualSize, readability.ActorSortingOrder);
-            CreateRoleMarker(go, data.ChapterName, readability.BossRoleLocalPosition, readability.BossRoleColor, readability);
+            RainbowChapterBossBehaviour go = InstantiateEnemy<RainbowChapterBossBehaviour>(ChapterBossScenePath, data.BossName);
+            ResizeCapsuleCollider(go, data.BodySize);
+            DressActorVisual(go, data.PrimaryColor, readability.BossVisualSize, readability.ActorSortingOrder);
+            DressRoleMarker(go, data.ChapterName, readability.BossRoleLocalPosition, readability.BossRoleColor, readability);
 
             // Added before the boss enters the tree: its _Ready reads the health it is about to resize,
             // and the sprite it paints, and a child is always ready before its parent. The rig only - no
@@ -323,15 +341,21 @@ namespace MyGame.Gameplay
 
             // Without these a chapter boss cannot be poise-broken and pays nothing for dying - it looks
             // like a boss and behaves like scenery with health.
-            Poise poise = go.AddComponent<Poise>();
+            // Found, never added: EnemyBase.tscn carries both, and a second SoulsWallet would be the one
+            // written while GetComponent<SoulsWallet>() kept answering with the empty first - the boss's
+            // kill silently worth nothing. A scene that has lost either gets an error (PLAN_CLOSEOUT K7).
+            Poise poise = go.RequireComponent<Poise>(Owner);
             poise.Configure(data.MaxPoise, data.PoiseHeavyMultiplier, data.PoiseRegenDelay, data.PoiseRegenRate);
-            go.AddComponent<SoulsWallet>().SetSouls(data.SoulReward);
+            go.RequireComponent<SoulsWallet>(Owner).SetSouls(data.SoulReward);
 
             PlaceInWorld(go, position);
 
             go.SetEncounterData(encounter);
-            go.SetHazardPrefab(CreateHazardPrefab(readability, go));
-            go.SetAfterimagePrefab(CreateAfterimagePrefab(go));
+            // Scenes rather than templates parented to the boss and deactivated. Nothing leaks out of a
+            // PackedScene instance, so neither of these needs re-arming where it is spawned; the hazard's
+            // colour and size come off the attack profile, and the afterimage's off the boss.
+            go.SetHazardPrefab(GD.Load<PackedScene>(BossHazardStrip.ScenePath));
+            go.SetAfterimagePrefab(GD.Load<PackedScene>(BossAfterimage.ScenePath));
             go.SetBossData(data);
 
             // After SetBossData, which is where this boss's max health is decided.
@@ -342,16 +366,15 @@ namespace MyGame.Gameplay
 
         private static WrathMiniBoss CreateWrathMiniBoss(Vector2 position, GameplayReadabilityDefaults readability, GameplayTuningCatalog catalog)
         {
-            WrathMiniBoss go = CreateEnemyRoot<WrathMiniBoss>(GameplayPrefabNames.WrathMiniBoss);
-            AddCapsuleCollider(go, readability.BossColliderSize);
-            AddActorVisual(go, GameplayVisualFactory.ActorSpriteKind.Boss, readability.BossColor, readability.BossVisualSize, readability.ActorSortingOrder);
+            WrathMiniBoss go = InstantiateEnemy<WrathMiniBoss>(WrathMiniBossScenePath, GameplayPrefabNames.WrathMiniBoss);
+            ResizeCapsuleCollider(go, readability.BossColliderSize);
+            DressActorVisual(go, readability.BossColor, readability.BossVisualSize, readability.ActorSortingOrder);
 
-            CreateAttackReadout(go, "BossSlashDanger", readability.BossSlashDangerLocalPosition, readability.BossSlashDangerSize, readability.BossSlashDangerColor, readability.BossSlashReadoutSortingOrder);
-            CreateAttackReadout(go, "BossSlamDanger", readability.BossSlamDangerLocalPosition, readability.BossSlamDangerSize, readability.BossSlamDangerColor, readability.BossSlamReadoutSortingOrder);
-            CreateRoleMarker(go, "Mini Boss", readability.BossRoleLocalPosition, readability.BossRoleColor, readability);
+            DressAttackReadout(go, "BossSlashDanger", readability.BossSlashDangerLocalPosition, readability.BossSlashDangerSize, readability.BossSlashDangerColor, readability.BossSlashReadoutSortingOrder);
+            DressAttackReadout(go, "BossSlamDanger", readability.BossSlamDangerLocalPosition, readability.BossSlamDangerSize, readability.BossSlamDangerColor, readability.BossSlamReadoutSortingOrder);
+            DressRoleMarker(go, "Mini Boss", readability.BossRoleLocalPosition, readability.BossRoleColor, readability);
 
-            WrathMiniBossData tuning = catalog?.WrathMiniBoss
-                ?? GameplayTuningDefaults.CreateWrathMiniBoss(readability.BossColor);
+            WrathMiniBossData tuning = catalog.WrathMiniBoss;
 
             go.SetTuningData(tuning);
 
@@ -370,19 +393,63 @@ namespace MyGame.Gameplay
         }
 
         /// <summary>
-        /// The actor body, detached. The Unity version was a Rigidbody2D with freezeRotation,
-        /// interpolation and Continuous collision; a CharacterBody2D never rotates, is interpolated by
-        /// the engine and sweeps itself in MoveAndSlide, so none of the three has a line here.
+        /// The actor, detached and already complete. Every archetype scene inherits
+        /// <c>Scenes/Actors/EnemyBase.tscn</c>, so the collision layer and mask, the capsule, the body
+        /// sprite and the whole component rig arrive with the instance rather than being written here.
+        ///
+        /// The name is still bound: three of the five scenes ship the name their spawner wants, but a
+        /// chapter boss is named after the boss it *is* - "Crimson Warden", not "ChapterBoss" - and the
+        /// save data, the debug jump menu and the tests all read that name back.
+        ///
         /// The Enemy group is joined by <c>EnemyStateMachine._Ready</c>, which is Unity's "Enemy" tag.
+        ///
+        /// The shared behaviour numbers are pushed here rather than read there: <c>MyGame.Enemy</c> sits
+        /// below this namespace and below <c>MyGame.Player</c>, so it cannot open <c>WorldTuning.json</c>
+        /// or <c>PlayerCombat.json</c> itself. Same shape as <c>Poise.Configure</c>. One funnel, so a new
+        /// archetype cannot forget it.
         /// </summary>
-        private static T CreateEnemyRoot<T>(string name) where T : CharacterBody2D, new()
+        private static T InstantiateEnemy<T>(string scenePath, string name) where T : CharacterBody2D
         {
-            return new T
+            var go = GD.Load<PackedScene>(scenePath).Instantiate<T>();
+            go.Name = name;
+            ConfigureSharedBehaviour(go);
+            return go;
+        }
+
+        /// <summary>
+        /// <c>WorldTuning.json</c>'s enemy block and <c>PlayerCombat.json</c>'s perfect-parry reward, into
+        /// the state machine every archetype shares. A missing design file leaves the machine unconfigured
+        /// and says so - there is no copy of either file's numbers here (PLAN_CLOSEOUT D1).
+        /// </summary>
+        /// <remarks>
+        /// UNITS: every distance handed over is already <b>pixels</b>. <c>WorldTuningData.Load</c> ran
+        /// <c>ScaleToPixels</c> over the metre values on the way in, and nothing re-scales below.
+        /// </remarks>
+        private static void ConfigureSharedBehaviour(Node actor)
+        {
+            if (actor is not EnemyStateMachine machine)
             {
-                Name = name,
-                CollisionLayer = World.Layer.Enemy,
-                CollisionMask = World.Layer.GroundProbe | World.Layer.Player,
-            };
+                return;
+            }
+
+            GameplayTuningCatalog catalog = GameplayTuningCatalog.Load();
+            WorldTuningData world = catalog?.WorldTuning;
+            MyGame.Player.PlayerCombatData combat = catalog?.PlayerCombat;
+            if (world == null || combat == null)
+            {
+                GD.PushError($"GameplayEnemySpawner: Design/WorldTuning.json or Design/PlayerCombat.json is missing; '{machine.Name}' keeps no shared behaviour.");
+                return;
+            }
+
+            machine.Configure(
+                world.enemyGravity,
+                world.enemyDisengageDistance,
+                world.enemyIdleToPatrolTime,
+                world.enemyInvestigateDuration,
+                world.enemyRecoveryDuration,
+                world.enemyLedgeProbeForward,
+                world.enemyLedgeProbeDepth,
+                combat.perfectParryStunMultiplier);
         }
 
         /// <summary>
@@ -402,85 +469,35 @@ namespace MyGame.Gameplay
             GameplayBuildShim.SceneRoot?.AddChild(actor);
         }
 
-        private static void AddCapsuleCollider(Node2D go, Vector2 size)
+        /// <summary>
+        /// Resizes the capsule the actor scene already carries. The shape is marked
+        /// <c>resource_local_to_scene</c> in <c>EnemyBase.tscn</c> and in every archetype that
+        /// overrides it, so this writes one actor's body and not the whole arena's.
+        /// The size still arrives from outside because a chapter boss takes its body from
+        /// <c>RainbowChapterBossData.BodySize</c>, which no scene can know.
+        /// </summary>
+        private static void ResizeCapsuleCollider(Node2D go, Vector2 size)
         {
-            CollisionShape2D col = go.AddComponent<CollisionShape2D>("Collider");
-            col.Shape = new CapsuleShape2D
-            {
-                // Unity's CapsuleCollider2D.size is the full width and height; Godot wants a radius.
-                Radius = size.X * 0.5f,
-                Height = size.Y,
-            };
+            if (go.GetNode<CollisionShape2D>("Collider").Shape is not CapsuleShape2D capsule)
+                return;
+
+            // Unity's CapsuleCollider2D.size is the full width and height; Godot wants a radius.
+            capsule.Radius = size.X * 0.5f;
+            capsule.Height = size.Y;
         }
 
-        private static void AddActorVisual(Node2D go, GameplayVisualFactory.ActorSpriteKind spriteKind, Color color, Vector2 size, int sortingOrder)
+        /// <summary>
+        /// Binds the designer-owned half of the body sprite. The texture and the feet-heavy pivot are
+        /// authored per archetype scene; the colour comes from <c>Resources/Art/Readability.json</c>
+        /// (or from the boss's own data), and the size and sorting order from
+        /// <see cref="GameplayReadabilityDefaults"/>, so those three stay bound per spawn.
+        /// </summary>
+        private static void DressActorVisual(Node2D go, Color color, Vector2 size, int sortingOrder)
         {
-            Sprite2D sr = go.AddComponent<Sprite2D>("Visual");
-            GameplayVisualFactory.Dress(
-                sr, GameplayVisualFactory.CreateActorSprite(spriteKind), size, GameplayVisualFactory.Pivot(spriteKind));
+            Sprite2D sr = go.GetNode<Sprite2D>("Visual");
+            sr.SetSpriteSize(size);
             sr.Modulate = color;
             sr.ZIndex = sortingOrder;
-        }
-
-        /// <summary>
-        /// The template a caster duplicates per shot. Deliberately <b>not</b> added to the tree: Unity's
-        /// <c>SetActive(false)</c> bought the same thing, and a live template in the scene is a trigger
-        /// that damages the player on contact and then destroys itself, taking every future shot with it.
-        /// </summary>
-        private static Node2D CreateProjectilePrefab(GameplayReadabilityDefaults readability)
-        {
-            var go = new EnemyProjectile { Name = GameplayPrefabNames.EnemyProjectile };
-
-            var sr = new Sprite2D { Name = "Sprite" };
-            go.AddChild(sr);
-            GameplayVisualFactory.Dress(
-                sr,
-                GameplayVisualFactory.CreateDiscSprite(),
-                new Vector2(World.U(0.42f), World.U(0.42f)),
-                GameplayVisualFactory.Pivot(GameplayVisualFactory.SpriteKind.Disc));
-            sr.Modulate = readability.ProjectileColor;
-            sr.ZIndex = readability.ProjectileSortingOrder;
-
-            return go;
-        }
-
-        /// <summary>
-        /// The body a hazard strip wears. Colour and size come off the attack that drops it, so this is
-        /// only the shape; the readout sorting order puts it above the floor and under the actors
-        /// standing on it, which is where a danger marker on the ground belongs.
-        /// </summary>
-        /// <remarks>
-        /// Parented to the boss so it dies with it. As a root object it was one leaked object per spawn,
-        /// and <see cref="GameplayEnemyRespawner"/> respawns on every death and every rest - the leak was
-        /// unbounded across a session. Duplicating from it still produces a detached node, because a
-        /// duplicate has no parent until someone gives it one.
-        /// </remarks>
-        private static Node2D CreateHazardPrefab(GameplayReadabilityDefaults readability, Node2D owner)
-        {
-            var go = new BossHazardStrip { Name = "BossHazardStripTemplate" };
-            owner.AddChild(go);
-
-            Sprite2D sr = go.AddComponent<Sprite2D>("Sprite");
-            GameplayVisualFactory.Dress(sr, GameplayVisualFactory.CreateDiscSprite(), Vector2.Zero, GameplayVisualFactory.Pivot(GameplayVisualFactory.SpriteKind.Disc));
-            sr.ZIndex = readability.EnemyReadoutSortingOrder;
-
-            go.SetActive(false);
-            return go;
-        }
-
-        /// <summary>
-        /// The body an afterimage wears. Sprite, colour, size and sorting order all come off the boss at
-        /// the moment it casts one, so this is only the shell - and it is parented to the boss for the
-        /// same reason the hazard template is. <c>BossAfterimage</c> is itself a Sprite2D here, so it is
-        /// one node rather than Unity's component plus renderer.
-        /// </summary>
-        private static Node2D CreateAfterimagePrefab(Node2D owner)
-        {
-            var go = new BossAfterimage { Name = "BossAfterimageTemplate" };
-            owner.AddChild(go);
-
-            go.SetActive(false);
-            return go;
         }
 
         private static void ApplyEnemyHealth(Node2D go, float maxHealth, Vector2 barSize, Vector2 barOffset, Color barColor, bool destroyOnDeath)
@@ -514,11 +531,11 @@ namespace MyGame.Gameplay
         /// </remarks>
         private static Health EnsureEnemyHealthRig(Node2D go, bool destroyOnDeath)
         {
-            Health health = go.EnsureComponent<Health>();
+            Health health = go.RequireComponent<Health>(Owner);
 
             EnsureDamageReceiver(go, health);
 
-            CombatFeedback feedback = go.EnsureComponent<CombatFeedback>();
+            CombatFeedback feedback = go.RequireComponent<CombatFeedback>(Owner);
             EnsureCombatResultBridge(go);
 
             var sr = go.GetComponent<Sprite2D>();
@@ -526,7 +543,7 @@ namespace MyGame.Gameplay
                 feedback.SetOriginalColor(sr.Modulate);
 
             if (destroyOnDeath)
-                go.EnsureComponent<EnemyDeathCleanup>();
+                go.RequireComponent<EnemyDeathCleanup>(Owner);
 
             return health;
         }
@@ -541,71 +558,62 @@ namespace MyGame.Gameplay
             if (tuning == null)
                 return;
 
-            Poise poise = go.EnsureComponent<Poise>();
+            Poise poise = go.RequireComponent<Poise>(Owner);
             poise.Configure(tuning.maxPoise, tuning.poiseHeavyMultiplier, tuning.poiseRegenDelay, tuning.poiseRegenRate);
 
-            SoulsWallet wallet = go.EnsureComponent<SoulsWallet>();
+            SoulsWallet wallet = go.RequireComponent<SoulsWallet>(Owner);
             wallet.SetSouls(tuning.soulReward);
         }
 
         private static void AddHealthBar(Node target, Health health, Vector2 size, Vector2 offset, Color color)
         {
-            GameplayWorldHealthBar bar = target.EnsureComponent<GameplayWorldHealthBar>();
+            GameplayWorldHealthBar bar = target.RequireComponent<GameplayWorldHealthBar>(Owner);
             bar.Initialize(health, size, offset, color);
         }
 
         private static DamageReceiver EnsureDamageReceiver(Node target, Health health)
         {
-            DamageReceiver receiver = target.EnsureComponent<DamageReceiver>();
+            DamageReceiver receiver = target.RequireComponent<DamageReceiver>(Owner);
             receiver.Initialize(health);
             return receiver;
         }
 
         private static void EnsureCombatResultBridge(Node target)
         {
-            target.EnsureComponent<CombatResultBroadcaster>();
-        }
-
-        private static void CreateAttackReadout(Node2D parent, string name, Vector2 localPosition, Vector2 size, Color color, int sortingOrder)
-        {
-            var go = new Sprite2D { Name = name, Position = localPosition };
-            parent.AddChild(go);
-
-            GameplayVisualFactory.Dress(go, GameplayVisualFactory.CreateDiscSprite(), size, GameplayVisualFactory.Pivot(GameplayVisualFactory.SpriteKind.Disc));
-            go.Modulate = color;
-            go.ZIndex = sortingOrder;
-
-            go.AddComponent<GameplayTelegraphPulse>();
+            target.RequireComponent<CombatResultBroadcaster>(Owner);
         }
 
         /// <summary>
-        /// The word under an enemy's feet saying what it is. Unity's TextMesh has no Godot twin, so this
-        /// is a Control <see cref="Label"/> under a Node2D - the same arrangement the arena's world
-        /// labels use, and it scales with the camera the way a TextMesh did.
+        /// The danger disc under an attack, which every archetype scene already carries as an
+        /// <c>AttackReadout.tscn</c> instance under the name given here. The texture, the disc's
+        /// centring and the telegraph pulse child are authored; the local position, the size and the
+        /// designer-owned colour are readability's and stay bound per spawn.
         /// </summary>
-        private static void CreateRoleMarker(Node2D parent, string label, Vector2 localPosition, Color color, GameplayReadabilityDefaults readability)
+        private static void DressAttackReadout(Node2D parent, string name, Vector2 localPosition, Vector2 size, Color color, int sortingOrder)
         {
-            var go = new Node2D { Name = "RoleMarker", Position = localPosition };
-            parent.AddChild(go);
+            var go = parent.GetNode<Sprite2D>(name);
+            go.Position = localPosition;
+            go.SetSpriteSize(size);
+            go.Modulate = color;
+            go.ZIndex = sortingOrder;
+        }
 
-            var text = new Label
-            {
-                Name = "Text",
-                Text = label,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                ZIndex = readability.RoleMarkerSortingOrder,
+        /// <summary>
+        /// The word under an enemy's feet saying what it is - the <c>WorldLabel.tscn</c> instance
+        /// <c>EnemyBase.tscn</c> carries as <c>RoleMarker</c>, the very scene the arena's signage
+        /// instances too. The caption, the local position, the colour, the font size and the sorting
+        /// order all differ per enemy, so all five are bound here.
+        /// </summary>
+        private static void DressRoleMarker(Node2D parent, string label, Vector2 localPosition, Color color, GameplayReadabilityDefaults readability)
+        {
+            var go = parent.GetNode<Node2D>("RoleMarker");
+            go.Position = localPosition;
 
-                // Unity's TextAnchor.MiddleCenter: a Control is placed by its top-left, so growing both
-                // ways from a zero-sized rect centres the text on the node's origin with no measuring.
-                GrowHorizontal = Control.GrowDirection.Both,
-                GrowVertical = Control.GrowDirection.Both,
-                Size = Vector2.Zero,
-            };
-
+            Label text = go.GetNode<Label>("Text");
+            text.Text = label;
+            text.ZIndex = readability.RoleMarkerSortingOrder;
             text.AddThemeFontSizeOverride("font_size", readability.RoleMarkerFontSizePx);
             text.AddThemeColorOverride("font_color", color);
-            go.AddChild(text);
         }
     }
 }

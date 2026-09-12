@@ -31,7 +31,8 @@ namespace MyGame.Combat
     {
         [Export] private AudioStreamPlayer audioSource;
         [Export] private AudioFeedbackCueClip[] clips;
-        [Export(PropertyHint.Range, "0,1")] private float fallbackVolume = 0.75f;
+        // Linear gain, authored in CombatTuning.json as audioFallbackVolume. Unitless.
+        [Export(PropertyHint.Range, "0,1")] private float fallbackVolume = CombatTuningData.Shared.audioFallbackVolume;
 
         public override void _Ready()
         {

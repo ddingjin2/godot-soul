@@ -1,0 +1,44 @@
+; The pouncing enemy. Inherits Scenes/Actors/EnemyBase.tscn and adds the disc that shows where its
+; leap lands, plus the cleanup that removes the body after it dies. Replaces the construction half of
+; GameplayEnemySpawner.CreateLeapingAttackerAt.
+;
+; STILL BOUND AT RUNTIME: LeapingAttackerData (Resources/Design/LeapingAttacker.json, or the
+; per-spawn variant a placement names) through SetTuningData, and every size, colour and sorting
+; order from GameplayReadabilityDefaults / Resources/Art/Readability.json - which since decision D4
+; is all of them, so this file authors none. See the header of EnemyBase.tscn.
+;
+; UNITS: 1 Unity metre = 100 px (World.Ppu), +Y down.
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="PackedScene" path="res://Scenes/Actors/EnemyBase.tscn" id="1"]
+[ext_resource type="Script" path="res://Scripts/Enemy/LeapingAttacker.cs" id="2"]
+[ext_resource type="Texture2D" path="res://Resources/Art/ActorLeaper.png" id="3"]
+[ext_resource type="PackedScene" path="res://Scenes/World/AttackReadout.tscn" id="4"]
+[ext_resource type="Script" path="res://Scripts/Enemy/EnemyDeathCleanup.cs" id="5"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_leaper"]
+; Local to the scene for the same reason as the base's: two leapers in one arena must not share one
+; shape. No radius and no height (decision D4) - ResizeCapsuleCollider writes both from
+; ReadabilityLayout.json LeaperColliderSize before the leaper enters the tree.
+resource_local_to_scene = true
+
+[node name="LeapingAttacker" instance=ExtResource("1")]
+script = ExtResource("2")
+
+[node name="Collider" parent="."]
+shape = SubResource("CapsuleShape2D_leaper")
+
+; The texture only. The size and the colour are DressActorVisual's, from LeaperVisualSize and
+; LeaperColor (decision D4); the RoleMarker and HealthBar overrides that used to sit here carried
+; nothing but LeapRoleLocalPosition and LeaperHealthBarOffset, which DressRoleMarker and
+; GameplayWorldHealthBar.ApplyLayout write, so both blocks are gone with them.
+[node name="Visual" parent="."]
+texture = ExtResource("3")
+
+; The ring showing where the leap lands. No numbers: DressAttackReadout writes the position, the
+; size, the colour and the sorting order from LeapDanger* on every spawn.
+[node name="LeapLandingDanger" parent="." instance=ExtResource("4")]
+
+; One of the three archetypes that despawn on death - see the note in MeleeGrunt.tscn.
+[node name="EnemyDeathCleanup" type="Node" parent="."]
+script = ExtResource("5")

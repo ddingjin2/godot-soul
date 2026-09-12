@@ -23,20 +23,21 @@ namespace MyGame.Enemy
         public bool IsStunned => _isStunned;
         public bool IsDead => _health.IsDead;
         public bool IsInRecovery => _currentState == EnemyState.Recovery;
-        public float DetectionRange => tuningData != null ? tuningData.detectionRange : World.U(5f);
-        public float AttackRange => tuningData != null ? tuningData.attackRange : World.U(1.5f);
-        public float AttackRadius => tuningData != null ? tuningData.attackRadius : World.U(0.8f);
+        public float DetectionRange => tuningData.detectionRange;
+        public float AttackRange => tuningData.attackRange;
+        public float AttackRadius => tuningData.attackRadius;
 
         public void SetTuningData(MeleeGruntData data) => tuningData = data;
 
         public void SetAttackPoint(Node2D point) => attackPoint = point;
 
         /// <summary>
-        /// Frozen telegraph base: the pre-mood grunt body colour. The telegraph blends toward yellow
-        /// from here rather than from tuningData.enemyColor, so muting the body cannot drag the
-        /// danger read dark. Output stays #F7C20E. See Docs/MoodDirection.md "The lerp trap".
+        /// Telegraph base: the pre-mood grunt body colour. The telegraph blends toward yellow from here
+        /// rather than from tuningData.enemyColor, so muting the body cannot drag the danger read dark.
+        /// Output stays #F7C20E. See Docs/MoodDirection.md "The lerp trap".
+        /// Authored as <c>MeleeGrunt.json.telegraphColor</c>.
         /// </summary>
-        private static readonly Color TelegraphBase = new Color(0.9f, 0.2f, 0.18f);
+        private Color TelegraphBase => tuningData.telegraphColor;
 
         private Health _health;
 
@@ -67,29 +68,33 @@ namespace MyGame.Enemy
             // Base wires the sprite, the health-depleted hook and the enemy group.
             base._Ready();
 
+            if (tuningData == null)
+            {
+                GD.PushError($"{GetType().Name} '{Name}' entered the tree without tuning data; call SetTuningData first.");
+                SetProcess(false);
+                SetPhysicsProcess(false);
+                return;
+            }
+
             _health = this.FindComponent<Health>();
 
-            if (tuningData != null)
+            _health.SetHealth(tuningData.maxHealth);
+            if (_sr != null)
             {
-                _health.SetHealth(tuningData.maxHealth);
-                if (_sr != null)
-                {
-                    _sr.Modulate = tuningData.enemyColor;
-                }
+                _sr.Modulate = tuningData.enemyColor;
             }
 
             _startPos = GlobalPosition;
-            _patrolTarget = _startPos + (Vector2.Right * (tuningData?.patrolDistance ?? World.U(3f)));
+            _patrolTarget = _startPos + (Vector2.Right * tuningData.patrolDistance);
 
-            // Unity's Start. Godot has one entry point, so the two run back to back.
-            if (this.FindComponent<CombatFeedback>() == null)
+            // Unity's Start. Godot has one entry point, so the two run back to back. Both nodes are
+            // authored on Scenes/Actors/EnemyBase.tscn, which every archetype scene inherits, so this
+            // used to be an add that no shipped grunt ever reached (PLAN_CLOSEOUT D1/K7).
+            if (this.FindComponent<CombatFeedback>() == null || this.FindComponent<EnemyGroupCombat>() == null)
             {
-                AddChild(new CombatFeedback { Name = "CombatFeedback" });
-            }
-
-            if (this.FindComponent<EnemyGroupCombat>() == null)
-            {
-                AddChild(new EnemyGroupCombat { Name = "EnemyGroupCombat" });
+                GD.PushError($"{GetType().Name} '{Name}' has no CombatFeedback or no EnemyGroupCombat; Scenes/Actors/EnemyBase.tscn authors both and nothing adds them at runtime. It does not run.");
+                SetProcess(false);
+                SetPhysicsProcess(false);
             }
         }
 
@@ -129,10 +134,10 @@ namespace MyGame.Enemy
             {
                 _telegraphTimer -= dt;
 
-                float pulseSpeed = tuningData?.telegraphPulseSpeed ?? 8f;
+                float pulseSpeed = tuningData.telegraphPulseSpeed;
                 _telegraphPulse += dt * pulseSpeed;
 
-                float pulse = 1f + (Mathf.Sin(_telegraphPulse) * 0.15f);
+                float pulse = 1f + (Mathf.Sin(_telegraphPulse) * tuningData.telegraphPulseAmplitude);
                 if (attackPoint != null)
                 {
                     attackPoint.Scale = Vector2.One * pulse;
@@ -144,10 +149,10 @@ namespace MyGame.Enemy
                 {
                     PerformAttack();
                 }
-                else if (_telegraphTimer <= -(tuningData?.attackDuration ?? 0.3f))
+                else if (_telegraphTimer <= -tuningData.attackDuration)
                 {
                     _isAttacking = false;
-                    _attackCooldownTimer = tuningData?.attackCooldown ?? 1.5f;
+                    _attackCooldownTimer = tuningData.attackCooldown;
                     StopTelegraphVisuals();
                     TransitionTo(EnemyState.Recovery);
                     _recoveryTimer = recoveryDuration;
@@ -170,7 +175,7 @@ namespace MyGame.Enemy
 
             if (_currentState == EnemyState.Combat || _currentState == EnemyState.Investigate)
             {
-                if (dist <= (tuningData?.attackRange ?? World.U(1.5f)) && _attackCooldownTimer <= 0f)
+                if (dist <= tuningData.attackRange && _attackCooldownTimer <= 0f)
                 {
                     StartAttack();
                 }
@@ -178,9 +183,9 @@ namespace MyGame.Enemy
                 {
                     TransitionTo(EnemyState.Recovery);
                 }
-                else if (dist > (tuningData?.attackRange ?? World.U(1.5f)))
+                else if (dist > tuningData.attackRange)
                 {
-                    MoveTowards(_player.GlobalPosition, tuningData?.moveSpeed ?? World.U(2f));
+                    MoveTowards(_player.GlobalPosition, tuningData.moveSpeed);
                 }
             }
             else if (_currentState == EnemyState.Patrol)
@@ -197,6 +202,13 @@ namespace MyGame.Enemy
             }
         }
 
+        /// <summary>
+        /// This archetype's reach, <c>MeleeGrunt.json.detectionRange</c>. Never reached through the base
+        /// <c>DetectPlayer</c> - the override below is what runs - but the base declares it abstract so
+        /// that no archetype can inherit a detection radius written in code (PLAN_CLOSEOUT K5b item 4).
+        /// </summary>
+        protected override float GetDetectionRange() => tuningData.detectionRange;
+
         protected override void DetectPlayer()
         {
             if (_player != null)
@@ -204,7 +216,7 @@ namespace MyGame.Enemy
                 return;
             }
 
-            float range = tuningData != null ? tuningData.detectionRange : World.U(5f);
+            float range = tuningData.detectionRange;
             GodotObject hit = Phys2D.OverlapCircle(this, GlobalPosition, range, World.Layer.Player);
             if (hit != null && Phys2D.FindActorInGroup(hit, World.Group.Player) is Node2D player)
             {
@@ -233,7 +245,7 @@ namespace MyGame.Enemy
                 return;
             }
 
-            Move(dir.X, tuningData?.moveSpeed ?? World.U(2f));
+            Move(dir.X, tuningData.moveSpeed);
 
             if (GlobalPosition.DistanceTo(_patrolTarget) < World.U(0.2f))
             {
@@ -244,7 +256,7 @@ namespace MyGame.Enemy
         private void TurnPatrolAround()
         {
             _patrolTarget = _startPos + ((_patrolTarget - _startPos) * -1f);
-            _idleTimer = tuningData?.patrolIdleTime ?? 1f;
+            _idleTimer = tuningData.patrolIdleTime;
         }
 
         /// <summary>Shadows the base <c>MoveTowards</c> so a grunt's move goes through its own attack and stun gates.</summary>
@@ -272,7 +284,7 @@ namespace MyGame.Enemy
         private void StartAttack()
         {
             _isAttacking = true;
-            _telegraphTimer = tuningData?.telegraphTime ?? 0.6f;
+            _telegraphTimer = tuningData.telegraphTime;
             _hasHitInAttack = false;
             _telegraphPulse = 0f;
             Velocity = Vector2.Zero;
@@ -290,7 +302,7 @@ namespace MyGame.Enemy
 
             if (attackPoint != null && _sr != null)
             {
-                _sr.Modulate = TelegraphBase.Lerp(Colors.Yellow, 0.7f);
+                _sr.Modulate = TelegraphBase.Lerp(Colors.Yellow, tuningData.telegraphBlend);
             }
         }
 
@@ -311,7 +323,7 @@ namespace MyGame.Enemy
 
             this.FindComponent<CombatFeedback>()?.TriggerImpactScale();
 
-            float radius = tuningData?.attackRadius ?? World.U(0.8f);
+            float radius = tuningData.attackRadius;
             Vector2 origin = attackPoint != null
                 ? attackPoint.GlobalPosition
                 : GlobalPosition + (Vector2.Right * _facingDir * World.U(0.5f));
@@ -323,8 +335,8 @@ namespace MyGame.Enemy
                     continue;
                 }
 
-                float dmg = tuningData != null ? tuningData.attackDamage : 10f;
-                float knb = tuningData != null ? tuningData.attackKnockback : World.U(5f);
+                float dmg = tuningData.attackDamage;
+                float knb = tuningData.attackKnockback;
                 var request = new DamageRequest(
                     this,
                     player,
@@ -366,7 +378,7 @@ namespace MyGame.Enemy
         public void Stun(bool perfect = false)
         {
             _isStunned = true;
-            _stunTimer = (tuningData?.stunDuration ?? 0.8f) * (perfect ? 1.6f : 1f);
+            _stunTimer = tuningData.stunDuration * (perfect ? perfectParryStunMultiplier : 1f);
             _isAttacking = false;
             _telegraphTimer = 0f;
             Velocity = Vector2.Zero;
@@ -394,7 +406,7 @@ namespace MyGame.Enemy
             {
                 _sr.Modulate = new Color(0.24705882f, 0.32941177f, 0.34117648f); // COLD_400 #3F5457
             }
-            else if (tuningData != null)
+            else
             {
                 _sr.Modulate = tuningData.enemyColor;
             }

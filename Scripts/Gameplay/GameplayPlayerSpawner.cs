@@ -67,8 +67,16 @@ namespace MyGame.Gameplay
     /// </summary>
     public static class GameplayPlayerSpawner
     {
-        private const float StartingHealth = 100f;
-        private const float StartingHumanity = 100f;
+        /// <summary>
+        /// The authored player. Every node the actor has is in there - body, collider, visual, the
+        /// whole component rig, the hitbox anchor with its sword and swing arc, and the world health
+        /// bar - so an instance arrives complete and detached, which is what <see cref="Spawn"/>
+        /// needs and what the old <c>BuildPlayer</c> spent seventy lines assembling by hand.
+        /// </summary>
+        private const string PlayerScenePath = "res://Scenes/Actors/Player.tscn";
+
+        /// <summary>Who the <see cref="GameplayBuildShim.RequireComponent{T}"/> error lines name.</summary>
+        private const string Owner = nameof(GameplayPlayerSpawner);
 
         public static GameplayPlayerContext Spawn(
             GameplaySceneDefaults scene,
@@ -78,9 +86,20 @@ namespace MyGame.Gameplay
         {
             GameplayTuningCatalog tuning = GameplayTuningCatalog.Load();
             PlayerResourceData resources = tuning?.PlayerResources;
-            float maxHealth = resources != null ? resources.maxHealth : StartingHealth;
-            float startingHealth = resources != null ? resources.startingHealth : StartingHealth;
-            float startingHumanity = resources != null ? resources.startingHumanity : StartingHumanity;
+
+            // No copy of the shipped 100 / 100 / 100 lives here any more: a player with no resource file
+            // would start on numbers from nowhere, which is a different game rather than a broken build
+            // (PLAN_CLOSEOUT D1). GameplayBootstrap already refuses to build the arena when the catalog
+            // is short a file, so nothing shipped reaches this return.
+            if (resources == null)
+            {
+                GD.PushError("GameplayPlayerSpawner: Design/PlayerResources.json is missing; no player is spawned.");
+                return default;
+            }
+
+            float maxHealth = resources.maxHealth;
+            float startingHealth = resources.startingHealth;
+            float startingHumanity = resources.startingHumanity;
 
             // Built detached and parented last. Every component's _Ready looks for its siblings, and a
             // node that entered the tree before they existed would find none of them - so the whole
@@ -118,16 +137,22 @@ namespace MyGame.Gameplay
             player.SetHitboxAnchor(hitbox);
 
             // Last of the three, and it has to be. PlayerController2D._Ready re-runs
-            // actions.Initialize with *its own* serialized damageHitbox, which is null on a player built
-            // from code - so a hitbox handed to the action controller any earlier is clobbered the
-            // moment the player enters the tree. This call puts it back afterwards. See the trap comment
-            // in PlayerController2D._Ready before moving it.
+            // actions.Initialize with *its own* serialized damageHitbox, which Scenes/Actors/Player.tscn
+            // leaves unset on purpose - so a hitbox handed to the action controller any earlier is
+            // clobbered the moment the player enters the tree. This call puts it back afterwards. See
+            // the trap comment in PlayerController2D._Ready, and the header of Player.tscn, before
+            // moving it.
             player.SetDamageHitbox(hitbox);
 
             var attackAnimator = hitbox.GetNode("ReadableSword").GetComponentInChildren<PlayerAttackAnimator2D>();
             attackAnimator.Initialize(player, attackAnimator.GetComponent<AnimationPlayer>());
 
             var humanity = go.GetComponent<HumanityController>();
+            if (resources != null)
+            {
+                humanity.Configure(resources.maxHumanity, resources.lowHumanityThreshold,
+                    resources.humanityLossOnHit, resources.humanityRegenRate, resources.humanityRegenDelay);
+            }
             humanity.SetHumanity(startingHumanity);
 
             var sin = go.GetComponent<SinResonanceController>();
@@ -140,11 +165,12 @@ namespace MyGame.Gameplay
 
             AddHealthBar(go, health, readability.PlayerHealthBarSize, readability.PlayerHealthBarOffset, readability.PlayerHealthBarColor);
 
-            DeathStateController deathController = go.EnsureComponent<DeathStateController>();
+            DeathStateController deathController = go.RequireComponent<DeathStateController>(Owner);
+            deathController.ApplyTuning(resources, readability.SpiritTint);
             deathController.Initialize(health, humanity, checkpoint, spiritPlatform);
             player.SetDeathStateController(deathController);
 
-            DebugVisualization debugVisualization = go.EnsureComponent<DebugVisualization>();
+            DebugVisualization debugVisualization = go.RequireComponent<DebugVisualization>(Owner);
             debugVisualization.Initialize(player, checkpoint, spiritPlatform);
 
             Poise poise = EnsurePoise(go, resources);
@@ -159,9 +185,11 @@ namespace MyGame.Gameplay
             // moving this line.
             PlayerProgression.EnsureOn(go);
 
-            GameplaySoulDrop soulDrop = go.EnsureComponent<GameplaySoulDrop>();
-            soulDrop.Initialize(wallet, deathController, player,
-                resources != null ? resources.soulStainPickupDelay : GameplayTuningDefaults.SoulStainPickupDelay);
+            GameplaySoulDrop soulDrop = go.RequireComponent<GameplaySoulDrop>(Owner);
+            if (resources == null)
+                GD.PushError("GameplayPlayerSpawner: Design/PlayerResources.json is missing; the soul stain is not wired and nothing is dropped on death.");
+            else
+                soulDrop.Initialize(wallet, deathController, player, resources.soulStainPickupDelay);
 
             // Cosmetic and last: pixel frames when the player has them, the greybox breathing when it
             // does not. Both only read what every line above has finished writing.
@@ -171,23 +199,30 @@ namespace MyGame.Gameplay
         }
 
         /// <summary>
-        /// Added here rather than in the seed hierarchy so lock-on arrives on any player the spawner is
-        /// handed, the same way Poise and the souls wallet did.
+        /// Binds the two reaches onto the lock-on pair <c>Scenes/Actors/Player.tscn</c> authors. Both
+        /// nodes used to be added here, which was the last thing the spawner built rather than found;
+        /// K7 moved them into the scene and left the binding.
         /// </summary>
         private static void EnsureLockOn(Node target, WorldTuningData world)
         {
-            PlayerLockOn lockOn = target.EnsureComponent<PlayerLockOn>();
+            PlayerLockOn lockOn = target.RequireComponent<PlayerLockOn>(Owner);
+            target.RequireComponent<GameplayLockOnMarker>(Owner);
 
-            lockOn.Configure(
-                world != null ? world.lockOnRange : GameplayTuningDefaults.LockOnRange,
-                world != null ? world.lockOnBreakRange : GameplayTuningDefaults.LockOnBreakRange);
+            // Both reaches are WorldTuning.json's, already in pixels. No constant behind them: a build
+            // with no design file gets a lock-on that grabs nothing and an error saying why, rather than
+            // a reach nobody authored (PLAN_CLOSEOUT A4, decision D1).
+            if (world == null)
+            {
+                GD.PushError("GameplayPlayerSpawner: Design/WorldTuning.json is missing; lock-on keeps no reach.");
+                return;
+            }
 
-            target.EnsureComponent<GameplayLockOnMarker>();
+            lockOn.Configure(world.lockOnRange, world.lockOnBreakRange);
         }
 
         private static Poise EnsurePoise(Node target, PlayerResourceData resources)
         {
-            Poise poise = target.EnsureComponent<Poise>();
+            Poise poise = target.RequireComponent<Poise>(Owner);
 
             if (resources != null)
                 poise.Configure(resources.maxPoise, resources.poiseHeavyMultiplier, resources.poiseRegenDelay, resources.poiseRegenRate);
@@ -198,150 +233,104 @@ namespace MyGame.Gameplay
         /// <summary>The player's wallet starts empty; it fills from kills and empties on death.</summary>
         private static SoulsWallet EnsureSoulsWallet(Node target)
         {
-            SoulsWallet wallet = target.EnsureComponent<SoulsWallet>();
+            SoulsWallet wallet = target.RequireComponent<SoulsWallet>(Owner);
             wallet.SetSouls(0);
             return wallet;
         }
 
         /// <summary>
-        /// The whole player hierarchy, detached from the tree. Unity built this only when no player
-        /// prefab existed; there are no prefabs in this port, so it is the only path and
-        /// <c>BypassPrefabs</c> - which existed for the editor prefab extractor - is gone with them.
+        /// The whole player hierarchy, detached from the tree - one instance of
+        /// <c>Scenes/Actors/Player.tscn</c> with the designer-owned half bound over what the scene
+        /// ships. The Unity player was a Rigidbody2D with freezeRotation, interpolation and Continuous
+        /// collision; a CharacterBody2D never rotates, is interpolated by the engine and resolves its
+        /// own sweep in MoveAndSlide, so none of the three has a property to author or to write.
+        ///
+        /// Every [Export] on the instance is left as the scene ships it, which is null - and that is
+        /// deliberate for <c>PlayerController2D.damageHitbox</c>. Wiring it in the scene would defeat
+        /// the trap that <see cref="Spawn"/>'s <c>SetDamageHitbox</c> call exists to work around; see
+        /// the comment there and in <c>PlayerController2D._Ready</c>.
         /// </summary>
         private static PlayerMotor2D BuildPlayer(GameplayReadabilityDefaults readability)
         {
-            // The Unity player was a Rigidbody2D with freezeRotation, interpolation and Continuous
-            // collision. A CharacterBody2D never rotates, is interpolated by the engine and resolves its
-            // own sweep in MoveAndSlide, so all three settings have no counterpart to write.
-            var go = new PlayerMotor2D
-            {
-                Name = GameplayBootstrap.PlayerObjectName,
-                CollisionLayer = World.Layer.Player,
-                CollisionMask = World.Layer.GroundProbe | World.Layer.Enemy,
-            };
+            var go = GD.Load<PackedScene>(PlayerScenePath).Instantiate<PlayerMotor2D>();
 
-            CollisionShape2D col = go.AddComponent<CollisionShape2D>("Collider");
-            col.Shape = new CapsuleShape2D
-            {
-                Radius = readability.PlayerColliderSize.X * 0.5f,
-                Height = readability.PlayerColliderSize.Y,
-            };
+            // The scene root already ships this name; keeping the assignment is what stops the const
+            // and the scene from drifting apart in silence.
+            go.Name = GameplayBootstrap.PlayerObjectName;
 
-            Sprite2D sr = go.AddComponent<Sprite2D>("Visual");
-            GameplayVisualFactory.Dress(
-                sr,
-                GameplayVisualFactory.CreateActorSprite(GameplayVisualFactory.ActorSpriteKind.Player),
+            ResizeCapsuleCollider(go, readability.PlayerColliderSize);
+
+            DressSprite(
+                go.GetNode<Sprite2D>("Visual"),
+                readability.PlayerColor,
                 readability.PlayerVisualSize,
-                GameplayVisualFactory.Pivot(GameplayVisualFactory.ActorSpriteKind.Player));
-            sr.Modulate = readability.PlayerColor;
-            sr.ZIndex = readability.PlayerSortingOrder;
+                readability.PlayerSortingOrder);
 
-            go.AddComponent<Health>();
-            go.AddComponent<StaminaSystem>();
-            go.AddComponent<Poise>();
-            go.AddComponent<SoulsWallet>();
-            go.AddComponent<CombatFeedback>();
-            go.AddComponent<AudioFeedback>();
+            // The readable sword under the hitbox anchor, and the swing arc beside it. Their local
+            // positions, the sword's rotation and both pivots are authored; the colours are the
+            // artist's (Resources/Art/Readability.json), so those - and the two sizes with them - stay
+            // bound per spawn.
+            var hitbox = go.GetNode<DamageHitbox2D>("HitboxAnchor");
 
-            // One node, not two: the anchor and the damage volume were the same GameObject in Unity, and
-            // DamageHitbox2D is an Area2D. It runs its own overlap query every frame rather than reading
-            // signals, so it needs no CollisionShape2D of its own - the radius passed to Configure is
-            // the query.
-            var hitbox = new DamageHitbox2D
-            {
-                Name = "HitboxAnchor",
-                Position = readability.PlayerHitboxAnchorLocalPosition,
-                CollisionLayer = World.Layer.PlayerHitbox,
-                CollisionMask = World.Layer.Enemy,
-            };
-            go.AddChild(hitbox);
+            DressSprite(
+                hitbox.GetNode<Sprite2D>("ReadableSword"),
+                readability.SwordColor,
+                readability.SwordSize,
+                readability.SwordSortingOrder);
 
-            go.AddComponent<PlayerActionController>();
-            // PlayerStateMachine is plain logic in this port, not a node - PlayerController2D owns one
-            // directly, so there is nothing to add for it here.
-            go.AddComponent<PlayerController2D>();
-
-            CreatePlayerSword(hitbox, readability);
-            CreateAttackReadout(
-                hitbox,
-                "AttackArc",
-                readability.AttackArcLocalPosition,
-                readability.AttackArcSize,
+            DressSprite(
+                hitbox.GetNode<Sprite2D>("AttackArc"),
                 readability.PlayerAttackReadoutColor,
+                readability.AttackArcSize,
                 readability.PlayerReadoutSortingOrder);
-
-            go.AddComponent<HumanityController>();
-            go.AddComponent<SinResonanceController>();
-            go.AddComponent<PlayerInputReceiver>();
-            go.AddComponent<GameplayFallDeath>();
-            go.AddComponent<GameplayWorldHealthBar>();
-            go.AddComponent<DeathStateController>();
-            go.AddComponent<DebugVisualization>();
-            go.AddComponent<GameplaySoulDrop>();
 
             return go;
         }
 
+        /// <summary>
+        /// Resizes the capsule the player scene already carries. The shape is marked
+        /// <c>resource_local_to_scene</c> in <c>Player.tscn</c>, so this writes one player's body and
+        /// not every instance's.
+        /// </summary>
+        private static void ResizeCapsuleCollider(Node2D go, Vector2 size)
+        {
+            if (go.GetNode<CollisionShape2D>("Collider").Shape is not CapsuleShape2D capsule)
+                return;
+
+            // Unity's CapsuleCollider2D.size is the full width and height; Godot wants a radius.
+            capsule.Radius = size.X * 0.5f;
+            capsule.Height = size.Y;
+        }
+
+        /// <summary>
+        /// The designer-owned half of an authored sprite. The texture and the Unity pivot (baked into
+        /// the scene as an <c>Offset</c>) live in the <c>.tscn</c>; the colour comes from
+        /// <c>Resources/Art/Readability.json</c> and the size and sorting order from
+        /// <see cref="GameplayReadabilityDefaults"/>, so all three stay bound per spawn.
+        /// </summary>
+        private static void DressSprite(Sprite2D sr, Color color, Vector2 size, int sortingOrder)
+        {
+            sr.SetSpriteSize(size);
+            sr.Modulate = color;
+            sr.ZIndex = sortingOrder;
+        }
+
         private static void AddHealthBar(Node target, Health health, Vector2 size, Vector2 offset, Color color)
         {
-            GameplayWorldHealthBar bar = target.EnsureComponent<GameplayWorldHealthBar>();
+            GameplayWorldHealthBar bar = target.RequireComponent<GameplayWorldHealthBar>(Owner);
             bar.Initialize(health, size, offset, color);
         }
 
         private static DamageReceiver EnsureDamageReceiver(Node target, Health health)
         {
-            DamageReceiver receiver = target.EnsureComponent<DamageReceiver>();
+            DamageReceiver receiver = target.RequireComponent<DamageReceiver>(Owner);
             receiver.Initialize(health);
             return receiver;
         }
 
         private static void EnsureCombatResultBridge(Node target)
         {
-            target.EnsureComponent<CombatResultBroadcaster>();
-        }
-
-        /// <summary>
-        /// The readable sword under the hitbox anchor. Unity had one GameObject carrying the sprite, the
-        /// Animator and PlayerAttackAnimator2D; here the sprite is the node and the animator pair hangs
-        /// under it, because PlayerAttackAnimator2D finds its AnimationPlayer among its own children.
-        /// </summary>
-        private static void CreatePlayerSword(Node2D parent, GameplayReadabilityDefaults readability)
-        {
-            var sword = new Sprite2D
-            {
-                Name = "ReadableSword",
-                Position = readability.SwordLocalPosition,
-                Rotation = readability.SwordLocalRotation,
-            };
-            parent.AddChild(sword);
-
-            GameplayVisualFactory.Dress(
-                sword,
-                GameplayVisualFactory.CreateSwordSprite(),
-                readability.SwordSize,
-                GameplayVisualFactory.Pivot(GameplayVisualFactory.SpriteKind.Sword));
-            sword.Modulate = readability.SwordColor;
-            sword.ZIndex = readability.SwordSortingOrder;
-
-            PlayerAttackAnimator2D animator = sword.AddComponent<PlayerAttackAnimator2D>();
-
-            // Unity loaded a RuntimeAnimatorController asset here. There is no swing clip in this port
-            // yet, so the AnimationPlayer is built empty: PlayerAttackAnimator2D checks HasAnimation
-            // before it plays, so an empty player is silent rather than broken, and dropping a clip
-            // named "Attack" into it is all this needs later.
-            animator.AddComponent<AnimationPlayer>();
-        }
-
-        private static void CreateAttackReadout(Node2D parent, string name, Vector2 localPosition, Vector2 size, Color color, int sortingOrder)
-        {
-            var go = new Sprite2D { Name = name, Position = localPosition };
-            parent.AddChild(go);
-
-            GameplayVisualFactory.Dress(go, GameplayVisualFactory.CreateDiscSprite(), size, GameplayVisualFactory.Pivot(GameplayVisualFactory.SpriteKind.Disc));
-            go.Modulate = color;
-            go.ZIndex = sortingOrder;
-
-            go.AddComponent<GameplayTelegraphPulse>();
+            target.RequireComponent<CombatResultBroadcaster>(Owner);
         }
     }
 }

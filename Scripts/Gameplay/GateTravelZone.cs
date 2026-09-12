@@ -24,11 +24,8 @@ namespace MyGame.Gameplay
     {
         private const string MarkerObjectName = "GateTravelZoneMarker";
 
-        /// <summary>
-        /// Reach of the portal, in Unity metres. Smaller than the bonfire's so the two can share a
-        /// corner of the arena.
-        /// </summary>
-        private const float ZoneRadius = 1.4f;
+        /// <summary>Shared with <see cref="CheckpointZone"/>, which tints the same disc differently.</summary>
+        private const string MarkerScenePath = "res://Scenes/World/MarkerDisc.tscn";
 
         private GameplayPlayerContext _player;
         private PlayerInputReceiver _input;
@@ -289,47 +286,75 @@ namespace MyGame.Gameplay
             return false;
         }
 
+        /// <summary>
+        /// Binds what <c>Scenes/World/GatePortal.tscn</c> authors but must not own: the marker colour
+        /// from <c>Readability.json</c>. The reach is this class's own constant, not designer data, so
+        /// the scene keeps it.
+        /// </summary>
+        /// <remarks>
+        /// Called by the arena builder while the instance is still detached, and that timing is the
+        /// whole reason this is public: <see cref="GameplayTelegraphPulse"/> caches the colour it finds
+        /// when it readies and writes that back every frame after, so a tint applied once the marker is
+        /// in the tree never shows.
+        /// </remarks>
+        public void BindAuthoredTriggerAndMarker()
+        {
+            EnsureTrigger();
+            EnsureMarker();
+        }
+
+        /// <summary>
+        /// The trigger <c>Scenes/World/GatePortal.tscn</c> authors. Unlike the bonfire's, this reach is
+        /// not designer data - there is no gate radius in <c>WorldTuning.json</c> - so the scene's own
+        /// <c>radius = 140.0</c> is the single source and nothing here rewrites it. All this binds is
+        /// the layer, the mask and monitoring.
+        /// </summary>
         private void EnsureTrigger()
         {
             CollisionLayer = World.Layer.Trigger;
             CollisionMask = World.Layer.Player;
             SetDeferred(Area2D.PropertyName.Monitoring, true);
 
-            if (this.GetComponent<CollisionShape2D>() != null)
-                return;
-
-            AddChild(new CollisionShape2D
-            {
-                Name = "Trigger",
-                Shape = new CircleShape2D { Radius = World.U(ZoneRadius) }
-            });
+            if (this.GetComponent<CollisionShape2D>() == null)
+                GD.PushError($"GateTravelZone: '{Name}' has no CollisionShape2D; Scenes/World/GatePortal.tscn authors one named 'Trigger'. This portal never answers Interact.");
         }
 
         /// <summary>
-        /// Greybox marker, built from the existing disc sprite in the arena-gate colour so it reads as a
-        /// gate rather than as a second bonfire. No new art.
+        /// Greybox marker: <c>Scenes/World/MarkerDisc.tscn</c>, the same scene
+        /// <see cref="CheckpointZone"/> instances, tinted the arena-gate colour so it reads as a gate
+        /// rather than as a second bonfire. That colour is the only thing that ever differed between
+        /// the two, and it is designer-owned, so it stays bound here.
         /// </summary>
+        /// <remarks>
+        /// Every portal comes from <c>Scenes/World/GatePortal.tscn</c>, which carries the marker, so this
+        /// only binds. It is sized and tinted while the instance is still detached, because the pulse
+        /// caches both when it is readied.
+        /// </remarks>
         private void EnsureMarker()
         {
-            if (GetNodeOrNull(MarkerObjectName) != null)
-                return;
-
-            var shape = this.GetComponent<CollisionShape2D>()?.Shape as CircleShape2D;
-            float radius = shape != null ? shape.Radius : World.U(ZoneRadius);
-            GameplayReadabilityDefaults readability = GameplayReadabilityDefaults.Create();
-
-            var sprite = new Sprite2D
+            var marker = GetNodeOrNull<GameplayTelegraphPulse>(MarkerObjectName);
+            if (marker == null)
             {
-                Name = "Disc",
-                Texture = GameplayVisualFactory.CreateDiscSprite(),
-                Modulate = readability.ArenaGateColor,
-                ZIndex = readability.SpiritPlatformSortingOrder
-            };
-            sprite.SetSpriteSize(new Vector2(radius * 2f, radius * 2f));
+                GD.PushError($"GateTravelZone: '{Name}' has no '{MarkerObjectName}'; Scenes/World/GatePortal.tscn authors a {MarkerScenePath} instance under that name. This portal is invisible.");
+                return;
+            }
 
-            var marker = new GameplayTelegraphPulse { Name = MarkerObjectName, Position = Vector2.Zero };
-            marker.AddChild(sprite);
-            AddChild(marker);
+            Sprite2D disc = marker.GetNode<Sprite2D>("Disc");
+
+            // The trigger's own reach, which the scene authors and nothing rewrites. EnsureTrigger has
+            // already reported a portal that lost its shape; the disc keeps the scene's size rather than
+            // collapsing to nothing on top of that.
+            if (this.GetComponent<CollisionShape2D>()?.Shape is CircleShape2D shape)
+                disc.SetSpriteSize(new Vector2(shape.Radius * 2f, shape.Radius * 2f));
+
+            // Null when either readability file is missing, which the loader has already named. The disc
+            // keeps the scene's own tint rather than being painted a colour from nowhere - the same
+            // answer CheckpointZone.EnsureMarker gives (PLAN_CLOSEOUT D1/K5b item 5).
+            GameplayReadabilityDefaults readability = GameplayReadabilityDefaults.Create();
+            if (readability == null)
+                GD.PushError("GateTravelZone: Art/Readability.json or Design/ReadabilityLayout.json is missing; the gate marker keeps no designer colour.");
+            else
+                disc.Modulate = readability.ArenaGateColor;
         }
     }
 }

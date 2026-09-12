@@ -8,14 +8,15 @@ namespace MyGame.Combat
     /// Keeps a pack of enemies from stacking on the same pixel: a spacing push away from crowded
     /// neighbours and a weak alignment pull towards the pack's average velocity.
     ///
-    /// The spacing distances and the force are authored in Unity metres and scaled to pixels here.
+    /// The spacing distances and the force are authored in Unity metres in CombatTuning.json and
+    /// converted to pixels once, inside CombatTuningData.Load - the fields below are already pixels.
     /// </summary>
     public partial class EnemyGroupCombat : Node2D
     {
-        [Export] private float preferredSpacing = World.Ppu * 2f;
-        [Export] private float spacingForce = World.Ppu * 2f;
-        [Export] private float spacingRadius = World.Ppu * 3f;
-        [Export] private float alignmentForce = 0.5f;
+        [Export] private float preferredSpacing = CombatTuningData.Shared.preferredSpacing;
+        [Export] private float spacingForce = CombatTuningData.Shared.spacingForce;
+        [Export] private float spacingRadius = CombatTuningData.Shared.spacingRadius;
+        [Export] private float alignmentForce = CombatTuningData.Shared.alignmentForce;
 
         private CharacterBody2D _rb;
         private Node2D _player;

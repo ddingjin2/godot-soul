@@ -17,22 +17,38 @@ namespace MyGame.Gameplay
     /// </remarks>
     public partial class GameplayWorldHealthBar : Node2D
     {
-        /// <summary>Bar size in Godot pixels.</summary>
-        private Vector2 _size = new(World.Ppu * 1.2f, World.Ppu * 0.12f);
+        /// <summary>
+        /// The authored bar. Its root is the <c>HealthBar</c> child this component looks for, not a
+        /// GameplayWorldHealthBar: the component is added to an actor, the tree under it is instanced.
+        /// </summary>
+        private const string ScenePath = "res://Scenes/World/WorldHealthBar.tscn";
 
-        /// <summary>Offset from the actor in Godot pixels (+Y down), so above it is negative.</summary>
-        private Vector2 _offset = new(0f, World.Ppu * -1.2f);
+        /// <summary>
+        /// Bar size, offset from the actor and fill colour, all in Godot pixels with +Y down, so above
+        /// the actor is negative. <see cref="Initialize"/> is the only writer and every spawner calls
+        /// it with <c>GameplayReadabilityDefaults</c>'s numbers; zero until then, because a bar nobody
+        /// initialised is a wiring fault rather than a bar with other numbers (PLAN_CLOSEOUT D1/K5b).
+        /// <c>Scenes/World/WorldHealthBar.tscn</c> used to author the same three values a second time.
+        /// </summary>
+        private Vector2 _size;
+        private Vector2 _offset;
+        private Color _fillColor;
 
-        private Color _fillColor = new(0.85f, 0.08f, 0.08f);
+        /// <summary>
+        /// The frame, and the bone the fill lifts toward at low health - INK_950 #06070A a0.92 and
+        /// BONE_100 #C3BDB1 as shipped, but the numbers are the artist's, in
+        /// <c>Resources/Art/Readability.json</c>, and <see cref="Build"/> is what reads them.
+        /// Static because one palette serves every bar in the scene; written rather than readonly
+        /// because the file is what writes them.
+        /// </summary>
+        private static Color FrameColor;
+        private static Color LowHealthTint;
 
-        /// <summary>INK_950 #06070A a0.92.</summary>
-        private static readonly Color FrameColor = new(0.023529412f, 0.02745098f, 0.039215688f, 0.92f);
-
-        /// <summary>BONE_100 #C3BDB1. Low health lifts the fill toward bone, not toward white.</summary>
-        private static readonly Color LowHealthTint = new(0.7647059f, 0.7411765f, 0.69411767f);
-
-        /// <summary>The frame's margin around the fill. A literal of this file's own, so Unity metres.</summary>
-        private const float FrameMargin = 0.08f;
+        // Read off GameplayReadabilityDefaults and the palette in Build, already pixels. Zero until
+        // then: a missing design file is an error, not a bar with different numbers (PLAN_CLOSEOUT D1).
+        private float _frameMarginPx;
+        private float _lowHealthThreshold;
+        private float _lowHealthTintBlend;
 
         private Health _health;
         private Node2D _barRoot;
@@ -93,38 +109,51 @@ namespace MyGame.Gameplay
             _subscribed = false;
         }
 
+        /// <summary>
+        /// Lookup only. Every actor scene authors this component with a <c>Scenes/World/WorldHealthBar.tscn</c>
+        /// instance named <c>HealthBar</c> under it (<c>Player.tscn</c>, <c>EnemyBase.tscn</c>), so a bar
+        /// that is missing is a scene that lost a node rather than something to put back at runtime
+        /// (PLAN_CLOSEOUT D1/K7). The instance fallback that stood here was only ever reachable while the
+        /// spawners added this component with <c>EnsureComponent</c>, which they no longer do.
+        /// </summary>
         private void Build()
         {
             if (_barRoot != null)
                 return;
 
-            // Reused when the actor was built with the bar already under it; _barRoot is not exported
-            // and is null on every fresh instance.
+            // The designer's frame margin and low-health read, from ReadabilityLayout.json by way of the
+            // same boundary the spawners use for the bar's size and offset; the frame and tint colours
+            // off the artist's palette beside it. Create() is null when either file is missing, which is
+            // a broken build rather than a bar with other numbers (PLAN_CLOSEOUT D1).
+            GameplayReadabilityDefaults readability = GameplayReadabilityDefaults.Create();
+            if (readability == null)
+            {
+                GD.PushError("GameplayWorldHealthBar: Art/Readability.json or Design/ReadabilityLayout.json is missing; the bar has no margin, threshold or frame colour.");
+            }
+            else
+            {
+                _frameMarginPx = readability.HealthBarFrameMargin;
+                _lowHealthThreshold = readability.HealthBarLowHealthThreshold;
+                _lowHealthTintBlend = readability.HealthBarLowHealthTintBlend;
+                FrameColor = readability.HealthBarFrameColor;
+                LowHealthTint = readability.HealthBarLowHealthTint;
+            }
+
+            // _barRoot is not exported and is null on every fresh instance, so this is the first read of
+            // the authored bar rather than a cache check.
             _barRoot = GetNodeOrNull<Node2D>("HealthBar");
-            if (_barRoot != null)
+            if (_barRoot == null)
             {
-                _frameRenderer = _barRoot.GetNodeOrNull<Sprite2D>("Frame");
-                _fill = _barRoot.GetNodeOrNull<Node2D>("Fill");
-                _fillRenderer = _fill?.GetNodeOrNull<Sprite2D>("FillSprite");
+                GD.PushError($"GameplayWorldHealthBar: '{Name}' has no 'HealthBar' child; the actor scene should carry a {ScenePath} instance under it. This actor shows no health.");
+                return;
             }
 
-            if (_frameRenderer == null || _fillRenderer == null)
-            {
-                if (_barRoot == null)
-                {
-                    _barRoot = new Node2D { Name = "HealthBar" };
-                    AddChild(_barRoot);
-                }
+            _frameRenderer = _barRoot.GetNodeOrNull<Sprite2D>("Frame");
 
-                _frameRenderer = CreateSpriteChild("Frame", _barRoot, FrameColor, 40);
+            // The pivot the fullness scales, with the sized sprite beneath it.
+            _fill = _barRoot.GetNodeOrNull<Node2D>("Fill");
+            _fillRenderer = _fill?.GetNodeOrNull<Sprite2D>("FillSprite");
 
-                // The pivot the fullness scales, with the sized sprite beneath it.
-                _fill = new Node2D { Name = "Fill" };
-                _barRoot.AddChild(_fill);
-                _fillRenderer = CreateSpriteChild("FillSprite", _fill, _fillColor, 41);
-            }
-
-            _frameRenderer.Position = Vector2.Zero;
             ApplyLayout();
         }
 
@@ -138,7 +167,15 @@ namespace MyGame.Gameplay
             Vector2 sizePx = _size;
             _baseFillWidth = sizePx.X;
 
-            _frameRenderer?.SetSpriteSize(sizePx + new Vector2(World.U(FrameMargin), World.U(FrameMargin)));
+            if (_frameRenderer != null)
+            {
+                _frameRenderer.SetSpriteSize(sizePx + new Vector2(_frameMarginPx, _frameMarginPx));
+
+                // The scene used to author this same colour and no longer does (PLAN_CLOSEOUT B3): this
+                // line ran over it on every bar anyway, so the copy in the .tscn was a second place to
+                // edit the frame and never a second source. It is what the P0 suite reads back.
+                _frameRenderer.Modulate = FrameColor;
+            }
 
             if (_fillRenderer != null)
             {
@@ -162,38 +199,8 @@ namespace MyGame.Gameplay
             _fill.Scale = new Vector2(normalized, 1f);
             _fill.Position = new Vector2(-_baseFillWidth * (1f - normalized) * 0.5f, 0f);
             if (_fillRenderer != null)
-                _fillRenderer.Modulate = normalized <= 0.3f ? _fillColor.Lerp(LowHealthTint, 0.35f) : _fillColor;
+                _fillRenderer.Modulate = normalized <= _lowHealthThreshold ? _fillColor.Lerp(LowHealthTint, _lowHealthTintBlend) : _fillColor;
         }
 
-        private static Sprite2D CreateSpriteChild(string name, Node2D parent, Color color, int sortingOrder)
-        {
-            var sprite = new Sprite2D
-            {
-                Name = name,
-                Texture = PixelTexture(),
-                Modulate = color,
-                ZIndex = sortingOrder
-            };
-            parent.AddChild(sprite);
-            sprite.Position = Vector2.Zero;
-            return sprite;
-        }
-
-        private static Texture2D _pixel;
-
-        /// <summary>
-        /// The 8x8 white square Unity's <c>CreatePixelSprite</c> made, once per session rather than once
-        /// per bar. Point filtering, because everything else in this project is pixel art.
-        /// </summary>
-        private static Texture2D PixelTexture()
-        {
-            if (_pixel != null)
-                return _pixel;
-
-            var image = Image.CreateEmpty(8, 8, false, Image.Format.Rgba8);
-            image.Fill(Colors.White);
-            _pixel = ImageTexture.CreateFromImage(image);
-            return _pixel;
-        }
     }
 }

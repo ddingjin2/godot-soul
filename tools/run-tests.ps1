@@ -8,6 +8,14 @@
 param([string]$Filter)
 
 $ErrorActionPreference = 'Stop'
+
+# Godot writes its warnings to stderr, and Windows PowerShell 5.1 wraps every stderr line from a
+# native executable in an ErrorRecord. With ErrorActionPreference = Stop that turns the first
+# warning into a terminating error and the run dies mid-suite - which is exactly what happened when
+# a filtered run hit the known SpriteFrameAnimator warning. The engine's own exit code is the only
+# thing that decides pass or fail here, so native stderr must not be treated as a failure.
+$nativeErrorAction = 'Continue'
+
 $root = Split-Path -Parent $PSScriptRoot
 
 & (Join-Path $PSScriptRoot 'build.ps1') -Quiet
@@ -20,5 +28,6 @@ if ($LASTEXITCODE -ne 0) {
 $godotArgs = @('--headless', 'res://Tests/TestMain.tscn')
 if ($Filter) { $godotArgs += @('--', "--test-filter=$Filter") }
 
+$ErrorActionPreference = $nativeErrorAction
 & (Join-Path $PSScriptRoot 'godot.ps1') @godotArgs
 exit $LASTEXITCODE

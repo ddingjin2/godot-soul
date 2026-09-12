@@ -59,6 +59,7 @@
     "hasShortcutGate": true,
     "shortcutGatePosition": { "x": 279.4, "y": 1.35, "z": 0.0 },
     "shortcutGateSize": { "x": 0.32, "y": 4.6 },
+    "shortcutOpensFromRight": true,
 
     "overridePlatforms": true,
     "platforms": [
