@@ -637,3 +637,51 @@ are 84 (`PlayerActionController` 31, `SinResonanceController` 9, `StaminaSystem`
 `GameplayFallDeath` 2, `Health` 1, `ShortcutGate` 1, `MyGameRuntimeAgentDriver` 2), every one overwritten
 by `ApplyTuning`/`Configure` on spawn - the same kind of copy K5b just removed from `EnemyStateMachine`.
 Their fate is an open decision in `PLAN_CLOSEOUT.md`.
+
+### Second phase K7 - the last nodes built in code
+
+Nothing a player sees changed; the probe is a dump of the booted tree before and after, identical
+except that the three system nodes now sit at the front of the shell's child list because they are
+authored rather than added, and nothing indexes them by position.
+
+The eight chapter files were byte-identical six-line shells. They are now one line each, inheriting
+`Scenes/World/GameplayShell.tscn` the way `TitleScene.tscn` inherits `TitleScreen.tscn`; a chapter is
+its file name, which is what `ActiveSceneName` reads and what picks its `SceneLayout_*.json`. The
+shell authors what `GameplaySystemBootstrapper` and `GameplayBootstrap` used to build on every boot:
+`CameraRig` (the follow) with `Main Camera` and `CameraShake` under it, `HitStopManager`,
+`CutsceneDirector` (`process_mode = Always`) with `GameplayCutsceneTriggers` under it, and
+`EnemyRespawner`. No scene had authored a `Camera2D` before this; the bootstrapper's find-or-create
+became find-or-error, and the nineteen-line parent swap that moved a camera under a new rig is gone.
+The editor dock's chapter creator writes the inherited form.
+
+`Player.tscn` was the last actor still assembled at runtime: four of the twenty `EnsureComponent`
+sites really added (`DamageReceiver`, `CombatResultBroadcaster`, `PlayerLockOn`,
+`GameplayLockOnMarker`). The scene authors them now, at the end of the child list in the order the
+spawner added them, and all twenty sites are `RequireComponent` - a lookup that names the actor and
+the missing type in one error, the missing-data policy applied to scene structure. The health bar
+component lost its instance-a-bar fallback for the same reason. `CheckpointZone` and `GateTravelZone`
+no longer build a trigger shape or a marker when the scene has none; `Checkpoint.tscn` and
+`GatePortal.tscn` author both, and the gate's radius has one source, the scene (there is no gate key
+in `WorldTuning.json`), so the code constant went with the fallback. Decoration is
+`Scenes/World/SceneryPiece.tscn` (one `Sprite2D`, no texture - the image is generated at runtime, the
+note `SolidBox.tscn` already carried), instanced by the same six calls. The four archetypes' add-a-
+`CombatFeedback`/`EnemyGroupCombat` guards are the K2 shape - error and stop - because
+`EnemyBase.tscn` authors both. `GameplayBuildShim` keeps `Root`, `SceneRoot`, `ActiveSceneName`,
+`SetActive` and the new `RequireComponent`; `NewObject`, `AddComponent` and `EnsureComponent` are
+deleted, and the `AddComponent` the suites build fixtures with lives in `Tests/Framework/NodeBuild.cs`
+(29 call sites, none edited - every test file was already in that namespace).
+
+Two P0 tests changed evidence, not property. `GameplayActorsAttachDamageReceivers` reflected the
+spawners' private helpers onto a bare node to prove they would *add* a receiver; it now instantiates
+`Player.tscn` and `EnemyBase.tscn` and asserts both author one (the K4 `CheckpointRunPlatform` kind
+of replacement). `WorldHealthBarBuildsAndPaintsItsFrame` depended on `Build` creating the bar; it now
+parents an authored `WorldHealthBar.tscn` first, which is the reuse branch the test's own message
+says it guards. The three zone fixtures that built a bare zone instance the shipped scene and take
+the zone out of it; the two-physics-frame `PlayerInside` contract stands.
+
+Left in code by decision, and listed so nobody re-finds them: the three cosmetic attach-if-absent
+builders (`ActorAnimationDriver`, `ActorIdleBob`, `SpriteFrameAnimator` - which one attaches depends
+on whether pixel frames exist for the actor, a runtime branch rather than a fallback),
+`CutsceneRigMove` (per shot), `GameplayDebugSceneJump` (above the scene, desktop only),
+`PlayerController2D`'s deferred `PlayerActionController` (beside the hitbox trap `CLAUDE.md` names),
+`AudioFeedback`'s player guard, and the physics-query shape in `Phys2D`.

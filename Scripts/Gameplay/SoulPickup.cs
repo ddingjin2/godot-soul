@@ -41,9 +41,9 @@ namespace MyGame.Gameplay
         {
             var pickup = GD.Load<PackedScene>(ScenePath).Instantiate<SoulPickup>();
 
-            // Written before the node enters the tree, as GameplayBuildShim.NewObject does: a body
-            // added at the origin and moved afterwards sweeps from the origin on its first physics
-            // step, hitting whatever stands in between.
+            // Written before the node enters the tree, as every spawner here does: a body added at
+            // the origin and moved afterwards sweeps from the origin on its first physics step,
+            // hitting whatever stands in between.
             pickup.GlobalPosition = position;
             pickup.souls = Mathf.Max(0, souls);
             pickup._pickupDelay = Mathf.Max(0f, pickupDelay);

@@ -26,7 +26,7 @@ texture = ExtResource("1")
 ; changes nothing about the pulse.
 
 [node name="GameplayTelegraphPulse" type="Node2D" parent="."]
-; Named for the type, because GameplayBuildShim.AddComponent<T>() named it that and
+; Named for the type, because the runtime builder this scene replaced named it that and
 ; NodeExt.GetComponent<T>() reads the tree back by type. Its own scale stays 1: the sprite above
 ; carries the size, and the pulse caches this scale when it is readied.
 script = ExtResource("2")

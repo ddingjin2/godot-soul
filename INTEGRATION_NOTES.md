@@ -401,3 +401,29 @@ identical. `GameplaySceneDefaultsAsset` keeps its four `[Export]`s without initi
 - `GameplayHud.GetSinColor` reads `MenuTheme.tres` `Palette/colors/sin_<name>` through `Hue(token)`.
 - `GameplayWorldHealthBar` has no size, offset or fill colour of its own until `Initialize` runs. Both
   spawners call it in the same frame as `AddChild`, through `AddHealthBar`.
+
+### One shell, spawners that find, a shim that only looks up (K7)
+
+- `Scenes/World/GameplayShell.tscn` is the base every chapter inherits; the eight chapter files are one
+  `instance=` line each. Node names the code depends on: `GameplayRoot`, `CameraRig` (the
+  `GameplayCameraFollow2D`), `Main Camera` (child of the rig, kept current), `CameraShake` (child of the
+  camera), `HitStopManager`, `CutsceneDirector` (`process_mode = 3`), `GameplayCutsceneTriggers` (child of
+  the director), `EnemyRespawner`. `addons/mygame_tools/ChapterSceneCreator.ShellScene` replaces its
+  `BootstrapScript` constant and writes the inherited form.
+- `GameplaySystemBootstrapper.EnsureCamera` / `EnsureCameraRig` / `EnsureHitStopManager` are
+  `FindCamera` / `FindCameraRig` / `FindHitStopManager`: lookup only, `PushError` + null when the shell
+  lacks the node. Nothing creates a camera any more.
+- `CutsceneDirector.Create(overlay)` is `Bind(overlay)`: the node is authored, `Instance` is set in its
+  own `_Ready` before the bootstrap's, and `Bind` only attaches the overlay.
+- `GameplayBuildShim` has five public members: `Root`, `SceneRoot`, `ActiveSceneName`, `SetActive`, and
+  `RequireComponent<T>(this Node, string owner)` - `GetComponent` plus one error naming the owner and the
+  type. `NewObject` (both overloads), `AddComponent` and `EnsureComponent` are gone from product code.
+- `Tests/Framework/NodeBuild.AddComponent<T>(this Node, string)` is the fixture builder the suites use,
+  same signature, namespace `MyGame.Tests`. `EnemyFixture.ConfigureFromDesign` now also attaches
+  `CombatFeedback` and `EnemyGroupCombat`, as `EnemyBase.tscn` would.
+- `CheckpointZone` and `GateTravelZone` require an authored `Trigger` shape and marker; a bare zone in the
+  tree logs one error and does nothing. `GateTravelZone.ZoneRadius` is deleted; `GatePortal.tscn`'s
+  `radius = 140.0` is the only source and `EnsureMarker` sizes the disc from the shape.
+- `GameplayEnvironmentBuilder.CreateSceneryPiece` instances `Scenes/World/SceneryPiece.tscn`; callers
+  unchanged.
+- `GameplayWorldHealthBar.Build` requires an authored `HealthBar`; it no longer instances one.
