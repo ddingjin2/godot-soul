@@ -26,9 +26,9 @@
 [sub_resource type="CircleShape2D" id="CircleShape2D_trigger"]
 ; Local to the scene so a chapter's several bonfires do not share one shape resource.
 resource_local_to_scene = true
-; WorldTuning.json checkpointZoneRadius = 1.5 m -> World.U -> 150 px. Rebound from the design file
-; on every instance; a zone with no catalog reports an error and keeps this shape (K5).
-radius = 150.0
+; No radius: CheckpointZone.EnsureTrigger writes it from WorldTuning.json's checkpointZoneRadius on
+; every instance, and a zone with no catalog gets a reach of zero and an error rather than a number
+; from here (PLAN_CLOSEOUT K5b item 3).
 
 [node name="Checkpoint" type="Node2D"]
 

@@ -7,8 +7,8 @@
 ; sprite; there it is the parent. GameplayTelegraphPulse caches the colour and the scale it finds
 ; when it is readied, so swapping the two is a behaviour change, not a refactor.
 ;
-; UNITS: 1 Unity metre = 100 px (World.Ppu). Disc.png is 64x64 and every size below is the converted
-; pixel value divided by that, with the metre value it came from named beside it.
+; UNITS: 1 Unity metre = 100 px (World.Ppu). No size is authored here at all - the spawner that
+; places an instance writes it, already converted.
 [gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://Scripts/Gameplay/GameplayTelegraphPulse.cs" id="2"]
@@ -18,14 +18,12 @@
 ; GameplayVisualFactory.Pivot(SpriteKind.Disc) is (0.5, 0.5), which is Sprite2D's own centring, so
 ; there is no offset to author.
 texture = ExtResource("1")
-; GameplayReadabilityDefaults.AttackArcSize = World.U(1.05, 0.75) = 105x75 px -> /64.
-; Every spawner binds its own size over this (MeleeDangerSize, BossSlamDangerSize, ...).
-scale = Vector2(1.640625, 1.171875)
-; PlayerAttackReadoutColor as shipped. Designer-owned via Resources/Art/Readability.json, so the
-; spawner overwrites it; this is what a readout nobody wired gets.
-modulate = Color(0.82, 0.9, 1, 0.16)
-; PlayerReadoutSortingOrder = 8. Enemies bind EnemyReadoutSortingOrder = 3 and the boss 4 / 2.
-z_index = 8
+; No scale, modulate or z_index: every instance of this scene is dressed on the spawn that places it -
+; GameplayEnemySpawner.DressAttackReadout for the five danger discs and GameplayPlayerSpawner
+; .DressSprite for the player's swing arc - from ReadabilityLayout.json and Art/Readability.json. The
+; three authored here were the same numbers a second time (PLAN_CLOSEOUT K5b item 3, decision D4).
+; GameplayTelegraphPulse caches only its OWN scale at _Ready, not this sprite's, so dropping them
+; changes nothing about the pulse.
 
 [node name="GameplayTelegraphPulse" type="Node2D" parent="."]
 ; Named for the type, because GameplayBuildShim.AddComponent<T>() named it that and

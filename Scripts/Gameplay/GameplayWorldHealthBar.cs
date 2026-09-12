@@ -23,13 +23,16 @@ namespace MyGame.Gameplay
         /// </summary>
         private const string ScenePath = "res://Scenes/World/WorldHealthBar.tscn";
 
-        /// <summary>Bar size in Godot pixels.</summary>
-        private Vector2 _size = new(World.Ppu * 1.2f, World.Ppu * 0.12f);
-
-        /// <summary>Offset from the actor in Godot pixels (+Y down), so above it is negative.</summary>
-        private Vector2 _offset = new(0f, World.Ppu * -1.2f);
-
-        private Color _fillColor = new(0.85f, 0.08f, 0.08f);
+        /// <summary>
+        /// Bar size, offset from the actor and fill colour, all in Godot pixels with +Y down, so above
+        /// the actor is negative. <see cref="Initialize"/> is the only writer and every spawner calls
+        /// it with <c>GameplayReadabilityDefaults</c>'s numbers; zero until then, because a bar nobody
+        /// initialised is a wiring fault rather than a bar with other numbers (PLAN_CLOSEOUT D1/K5b).
+        /// <c>Scenes/World/WorldHealthBar.tscn</c> used to author the same three values a second time.
+        /// </summary>
+        private Vector2 _size;
+        private Vector2 _offset;
+        private Color _fillColor;
 
         /// <summary>
         /// The frame, and the bone the fill lifts toward at low health - INK_950 #06070A a0.92 and
