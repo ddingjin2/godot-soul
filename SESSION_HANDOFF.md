@@ -20,7 +20,7 @@ PLAN_CLOSEOUT §종결에 숫자로 있다.
 ## 브랜치
 
 `refactor/godot-scene-data`는 2026-09-12 `524f8be`로 `master`에 병합됐다(`--no-ff`, 이력 보존). **이제 작업 브랜치는 `master`.** 원격은 2026-09-12부터 `origin` = https://github.com/ddingjin2/godot-soul (public, 기본 브랜치 `master`), 두 브랜치 모두 push됨.
-이번 세션(09-12) 커밋 17개: K5b 3, K7 4, K7b 2, 수정 1, 문서·잡무 7. 풀 스위트 3회(K5b, K7, K7b 각 착지 뒤),
+이번 세션(09-12) 커밋 22개: K5b 3, K7 4, K7b 2, 수정 1, 문서·잡무 7, .gitignore 2(브랜치별), 원격·병합 문서 3, 머지 1. 풀 스위트 3회(K5b, K7, K7b 각 착지 뒤),
 전부 210 / 1 / 1.
 
 ## 착지한 것 — 이번 세션
@@ -76,6 +76,7 @@ PLAN_CLOSEOUT §종결에 숫자로 있다.
    본 적 없다. 편집기 도크의 챕터 생성기(`ChapterSceneCreator`)가 상속 형태를 쓰는 것도 코드로만 확인.
 8. **`spiritTint`가 파일에서 온다(K7b).** 값 동일 probe만. 영혼 상태 색을 화면에서 본 적 없다.
 9. **Godot .NET 바인딩 레이스, 간헐.** 위 검증 절 참조.
+10. **LICENSE 없음.** 저장소가 public이 됐는데 라이선스 파일이 없다(폰트는 OFL). 사람이 고른다.
 
 ## 이번 세션에서 물린 것 — 같은 데서 또 미끄러지지 말 것
 
@@ -92,6 +93,8 @@ PLAN_CLOSEOUT §종결에 숫자로 있다.
 - **에이전트 커밋의 attribution이 다를 수 있다.** K7 에이전트는 하네스가 준 `Claude Opus 5` 줄을 썼다(브리프의 `Fable 5.1`과
   다름). 사실이라 두었다.
 - **`.uid`가 빠진 `.cs`가 있었다(3개).** `--headless --import` 한 번이 만든다. 새 스크립트를 커밋할 때 `.uid`도 같이.
+- **읽기 전용 에이전트의 셸이 stdin 대기로 걸린 채 1h44m 남아 있었다** — 파일명이 잘린 `sed`. 에이전트는 보고를 마쳤는데 자식 셸만 살아 있었다. 세션 끝에 `ListAgents`/`/tasks`를 보고 남은 것은 `TaskStop`.
+- Orca는 원격을 등록 시점에만 읽는다. `git remote add` 뒤 Orca를 껐다 켜야 `gitRemoteIdentity`가 찬다.
 - 6차에서 물린 것(재직렬화 금지, `GameSave|PlayerPrefs` grep, pathspec 없는 commit, 경고는 측정 뒤, worktree `.godot` 복사,
   풀 스위트 11분)은 그대로 유효하다.
 
