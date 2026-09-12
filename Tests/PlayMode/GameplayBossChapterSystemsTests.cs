@@ -224,6 +224,11 @@ namespace MyGame.Tests
                 Position = Vector2.Zero,
             };
 
+            // Required since K5b: EnemyStateMachine has no initialisers for the eight shared
+            // numbers and refuses to run unconfigured. Before the tree, which is where the spawner
+            // does it.
+            EnemyFixture.ConfigureFromDesign(_boss);
+
             _boss.AddComponent<Health>();
 
             FixtureRoot.AddChild(_boss);

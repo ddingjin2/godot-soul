@@ -516,6 +516,13 @@ namespace MyGame.Enemy
             }
         }
 
+        /// <summary>
+        /// This archetype's reach, this encounter's <c>detectionRange</c>. Never reached through the base
+        /// <c>DetectPlayer</c> - the override below is what runs - but the base declares it abstract so
+        /// that no archetype can inherit a detection radius written in code (PLAN_CLOSEOUT K5b item 4).
+        /// </summary>
+        protected override float GetDetectionRange() => DetectionRange;
+
         protected override void DetectPlayer()
         {
             if (_player != null)

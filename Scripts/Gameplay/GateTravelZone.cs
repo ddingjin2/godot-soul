@@ -358,7 +358,14 @@ namespace MyGame.Gameplay
 
             Sprite2D disc = marker.GetNode<Sprite2D>("Disc");
             disc.SetSpriteSize(new Vector2(radius * 2f, radius * 2f));
-            disc.Modulate = readability.ArenaGateColor;
+
+            // Null when either readability file is missing, which the loader has already named. The disc
+            // keeps the scene's own tint rather than being painted a colour from nowhere - the same
+            // answer CheckpointZone.EnsureMarker gives (PLAN_CLOSEOUT D1/K5b item 5).
+            if (readability == null)
+                GD.PushError("GateTravelZone: Art/Readability.json or Design/ReadabilityLayout.json is missing; the gate marker keeps no designer colour.");
+            else
+                disc.Modulate = readability.ArenaGateColor;
 
             if (!authored)
                 AddChild(marker);

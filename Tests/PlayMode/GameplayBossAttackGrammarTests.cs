@@ -256,6 +256,11 @@ namespace MyGame.Tests
                 CollisionMask = 0,
             };
 
+            // Required since K5b: EnemyStateMachine has no initialisers for the eight shared
+            // numbers and refuses to run unconfigured. Before the tree, which is where the spawner
+            // does it.
+            EnemyFixture.ConfigureFromDesign(_boss);
+
             var collider = _boss.AddComponent<CollisionShape2D>("Collider");
             collider.Shape = new CapsuleShape2D { Radius = World.U(0.8f), Height = World.U(2.3f) };
             _boss.AddComponent<Health>();

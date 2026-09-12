@@ -311,6 +311,11 @@ namespace MyGame.Tests
             // below is about attack bookkeeping rather than position.
             _boss = new RainbowChapterBossBehaviour { Name = "ChainCapFixture" };
 
+            // Required since K5b: EnemyStateMachine has no initialisers for the eight shared
+            // numbers and refuses to run unconfigured. Before the tree, which is where the spawner
+            // does it.
+            EnemyFixture.ConfigureFromDesign(_boss);
+
             // Before it enters the tree: the behaviour's _Ready reads the health it is about to resize,
             // and a child is always ready before its parent.
             _boss.AddComponent<Health>();

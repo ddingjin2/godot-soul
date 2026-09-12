@@ -261,6 +261,11 @@ namespace MyGame.Tests
                 Position = World.V(new Vector2(20f, 0f)),
             };
 
+            // Required since K5b: EnemyStateMachine has no initialisers for the eight shared
+            // numbers and refuses to run unconfigured. Before the tree, which is where the spawner
+            // does it.
+            EnemyFixture.ConfigureFromDesign(_boss);
+
             // Unity added a Kinematic Rigidbody2D; the ported boss is the body itself.
             _boss.AddComponent<Health>();
 

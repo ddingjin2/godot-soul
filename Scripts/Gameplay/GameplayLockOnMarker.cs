@@ -91,6 +91,16 @@ namespace MyGame.Gameplay
                 return;
 
             GameplayReadabilityDefaults readability = GameplayReadabilityDefaults.Create();
+
+            // Null when either readability file is missing, which the loader has already named. No
+            // marker at all rather than one hovering at zero in a colour from nowhere - the same answer
+            // CheckpointZone.EnsureMarker gives (PLAN_CLOSEOUT D1/K5b item 5).
+            if (readability == null)
+            {
+                GD.PushError("GameplayLockOnMarker: Art/Readability.json or Design/ReadabilityLayout.json is missing; the lock-on marker is not built.");
+                return;
+            }
+
             _markerOffset = readability.LockOnMarkerOffset;
 
             // Not parented to the player either: the player's own transform is flipped by facing, and

@@ -357,6 +357,7 @@ namespace MyGame.Tests
         public void EnemyStateMachineEntersTerminalDeadState()
         {
             var enemy = new TestEnemyStateMachine { Name = "StateMachineEnemy" };
+            ConfigureFromDesign(enemy);
             // Rigidbody2D is gone: the enemy IS a CharacterBody2D. INTEGRATION_NOTES, MyGame.Enemy.
             AddBoxShape(enemy);
             var health = new Health { Name = nameof(Health) };
@@ -384,6 +385,7 @@ namespace MyGame.Tests
         public async Task EnemyDeathCleanupNeutralizesDeadEnemy()
         {
             var enemy = new TestEnemyStateMachine { Name = "DeadEnemy" };
+            ConfigureFromDesign(enemy);
             CollisionShape2D shape = AddBoxShape(enemy);
             var health = new Health { Name = nameof(Health) };
             enemy.AddChild(health);

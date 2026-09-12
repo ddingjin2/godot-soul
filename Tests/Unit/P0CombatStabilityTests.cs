@@ -526,38 +526,12 @@ namespace MyGame.Tests
         }
 
         /// <summary>
-        /// What <c>GameplayEnemySpawner.ConfigureSharedBehaviour</c> does to every enemy it builds, for
-        /// the ones this suite builds by hand instead.
-        ///
-        /// Needed since K5: <see cref="EnemyStateMachine"/>'s four state-transition numbers no longer
-        /// carry initialisers, so an enemy nobody configured leashes at zero and flips state the frame
-        /// it enters one. The same shape as K1's <c>SetTuningData(XData.Load())</c> - the fixture reads
-        /// the shipped file rather than a number written here.
+        /// Kept as a local name because five call sites in this suite read better for it;
+        /// <see cref="EnemyFixture.ConfigureFromDesign"/> is the shared one the PlayMode boss fixtures
+        /// use as well.
         /// </summary>
-        /// <remarks>
-        /// UNITS: every distance is already pixels - <c>WorldTuningData.Load</c> ran
-        /// <c>ScaleToPixels</c> on the authored metres on the way in.
-        /// </remarks>
         private static T ConfigureFromDesign<T>(T machine) where T : EnemyStateMachine
-        {
-            MyGame.Gameplay.WorldTuningData world = MyGame.Gameplay.WorldTuningData.Load();
-            Assert.NotNull(world, "Resources/Design/WorldTuning.json has to load; every enemy's leash and gravity is in it.");
-
-            PlayerCombatData combat = PlayerCombatData.Load();
-            Assert.NotNull(combat, "Resources/Design/PlayerCombat.json has to load; the perfect-parry stun multiplier is in it.");
-
-            machine.Configure(
-                world.enemyGravity,
-                world.enemyDisengageDistance,
-                world.enemyIdleToPatrolTime,
-                world.enemyInvestigateDuration,
-                world.enemyRecoveryDuration,
-                world.enemyLedgeProbeForward,
-                world.enemyLedgeProbeDepth,
-                combat.perfectParryStunMultiplier);
-
-            return machine;
-        }
+            => EnemyFixture.ConfigureFromDesign(machine);
 
         // ---------------------------------------------------------------------------------------
         // Reflection helpers - ported verbatim in intent from the Unity runner
@@ -660,6 +634,13 @@ namespace MyGame.Tests
     /// </summary>
     public partial class TestEnemyStateMachine : EnemyStateMachine
     {
+        /// <summary>
+        /// Nothing to detect: the two tests that use this double put no player in the tree, and both
+        /// drive the transitions they measure by hand. Zero rather than a number copied from an
+        /// archetype's design file, which this double is not one of.
+        /// </summary>
+        protected override float GetDetectionRange() => 0f;
+
         public void TryTransitionForTest(EnemyState state)
         {
             TransitionTo(state);
