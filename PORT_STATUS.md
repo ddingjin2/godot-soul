@@ -685,3 +685,41 @@ on whether pixel frames exist for the actor, a runtime branch rather than a fall
 `CutsceneRigMove` (per shot), `GameplayDebugSceneJump` (above the scene, desktop only),
 `PlayerController2D`'s deferred `PlayerActionController` (beside the hitbox trap `CLAUDE.md` names),
 `AudioFeedback`'s player guard, and the physics-query shape in `Phys2D`.
+
+### Second phase K7b - the component initialisers the audit never counted
+
+K5b's agent noticed that the audit had counted `[Export]` initialisers on the `*Data` classes (A1) and
+on seven `Scripts/Gameplay` components (A7) but never on the Combat and Player components themselves.
+Measured on the K7 tree: 107 across 20 files - 13 that read `CombatTuningData.Shared` (compliant,
+untouched), 78 the spawner overwrites on every spawn, 5 nothing overwrote, 11 that are not numbers.
+The 78 and three of the five are deleted; every one equalled the value its design file already
+carried. Probe over the booted player's eleven components and all eight enemies' `Health` and `Poise`:
+identical before and after, except `DamageHitbox2D.damage` (10 to 0), a field the spawn path never
+wrote and every swing does. `spiritTint`, the one colour with no source of record, is in
+`Art/Readability.json` at its current value. The two diagnostic intervals on the test driver stay by
+decision D2.
+
+What changed for a build with a component nobody configured: it says so once, at the end of its first
+frame, and stops ticking. Not at `_Ready` - both spawners parent the actor first and tune it
+afterwards (the player rig because every component's `_Ready` looks for its siblings, the chapter
+boss because `SetBossData` runs after `PlaceInWorld`), so a ready-time check would fire on every actor
+the game ships. The deferred check is the shape K5 gave the chapter boss; `Scripts/Core/TuningGuard.cs`
+is the one shared report. Eight smoke boots: zero reports.
+
+Discoveries. Twelve test classes built these components by hand and ran them on the initialisers;
+`Tests/Framework/PlayerFixture.cs` configures them from the shipped files now, in the spawner's order.
+`UnityTestAgentPlayModeSmokeTests` had been building a hitbox with `hitLayers = 0` (a field that never
+had an initialiser) - a hitbox that could hit nothing, and the tests passed; it hits `Enemy` now, still
+green, which says those tests never checked a hit. A `PlayerController2D` that finds no
+`PlayerActionController` still builds one, deferred; only fixtures reach that branch, because
+`Player.tscn` always carries one, and three fixtures now build and configure their own.
+
+### One K7 effect the suite showed and the tests did not
+
+The shell authors `CutsceneDirector` at the front of `GameplayRoot`, where the bootstrap used to add it
+last. Children leave the tree last-child-first, so on scene teardown the director's `_ExitTree` now
+runs after the HUD and the actors are gone. Its `Restore` completes whatever shot was playing; for the
+victory shot that showed the victory panel and called `GrabFocus` on a button already out of the tree
+- an engine error line, twice per full suite, no test failing. `GameplayHud.ShowVictory` grabs focus
+only while the button is in the tree. Anything else the director's teardown triggers has to tolerate
+nodes that have already left.

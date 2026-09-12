@@ -31,14 +31,25 @@ TDD GREEN 단계의 하드코딩 허용 — 보다 이 규칙이 우선한다.
 
 ### 현재 준수 상태 — 숨기지 않고 기록한다
 
-이식이 Unity의 런타임 생성 구조를 그대로 옮겼으므로 **규칙 2·3을 대규모로 위반한다.**
-`Scripts/UI/`의 두 파일과 `Scripts/Gameplay/`의 빌더·스포너가 화면과 세계를 코드로 만든다.
-감사와 단계별 전환 계획은 [docs/migrations/scene-data/](docs/migrations/scene-data/)에 있다.
+**2026-09-12 기준 네 규칙을 준수한다.** 이식이 옮겨 온 Unity의 런타임 생성 구조는 1차
+([PLAN.md](docs/migrations/scene-data/PLAN.md))와 2차
+([PLAN_CLOSEOUT.md](docs/migrations/scene-data/PLAN_CLOSEOUT.md), K0~K8) 전환으로 걷혔다. 남은 것은
+전부 결정으로 남긴 것이고 그 문서의 §종결에 숫자와 이름이 있다:
 
-- **신규 구현과 변경하는 기능에는 규칙을 지금부터 적용한다.** 새 UI를 기존 파일 옆에
-  코드로 더 만들지 않는다.
-- 기존 미준수를 발견했다고 전체 리팩터링을 시작하지 않는다. 전환은 계획 문서의 단계를 따르고
-  각 단계는 스위트 green으로 착지한다.
+- 규칙 1: 코드에 남은 숫자는 정렬 순서 20(D2), `CombatTuningData.Shared`를 읽는 초기화값 13(데이터 소스),
+  테스트 드라이버의 진단 주기 2(D2). 디자인 파일이 빠지면 부팅이 멈추고 오류가 파일을 지명한다(D1).
+  설정 없이 트리에 들어간 컴포넌트는 첫 프레임 끝에 오류를 내고 멈춘다(`Scripts/Core/TuningGuard.cs`).
+- 규칙 2·3: 런타임 노드 생성은 면제 8곳뿐(콘텐츠 분기 3, `CutsceneRigMove`, `GameplayDebugSceneJump`,
+  `PlayerController2D`의 deferred add, `AudioFeedback` 가드, `Phys2D` 쿼리 모양). `GameplayBuildShim`은
+  조회 5멤버. 챕터 셸 8개는 `Scenes/World/GameplayShell.tscn`을 상속한다.
+- 규칙 4: 영구 테스트 추가는 D6 완전성 1개. 임시 probe는 단계마다 커밋 전에 지웠다.
+
+- **신규 구현과 변경하는 기능에도 같은 규칙.** 숫자는 JSON 필드부터, 재사용은 씬부터, UI는 `.tscn`부터.
+  새 컴포넌트의 숫자 필드는 초기화값 없이 두고 `ApplyTuning`/`Configure`로 받으며 `_Ready`에서
+  `TuningGuard`를 지연 호출한다(`StaminaSystem`이 본보기). 테스트가 맨손으로 만들면
+  `Tests/Framework/PlayerFixture.cs`·`EnemyFixture.cs`로 채운다.
+- 계획 밖 발견은 고치기 전에 [PLAN_CLOSEOUT.md](docs/migrations/scene-data/PLAN_CLOSEOUT.md) 검토
+  이력에 적고 결정을 받는다. 씬 S9(아레나를 셸에 authoring)는 기획자 데이터의 소유권 결정이라 열려 있다.
 
 ## 단위와 축 — 틀리면 조용히 망가진다
 

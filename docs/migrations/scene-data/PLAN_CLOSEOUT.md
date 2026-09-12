@@ -111,8 +111,8 @@ keep-in-code 목록, `GameplayVisualFactory`, `DebugVisualization`. 이들은 "�
 | **K6** | **완료.** 액터 씬 7개에서 스포너가 매 스폰 쓰는 속성 60줄 + 빈 override 블록 8 삭제; 스폰 결과 493값 전후 동일(probe). `GameplaySceneDefaultsAsset` 초기화값 4 → 0. 발견: `Scenes/World/AttackReadout.tscn`·`WorldHealthBar.tscn`·`Checkpoint.tscn`이 같은 거울 패턴(K6 범위 밖) | tscn 7 + 1 | 낮음 | 완료 |
 | **K5b** | **완료.** SinState 색 7 → `MenuTheme.tres` `sin_*` 7(기존 파일에 같은 색 없음 확인); 시작 자원 상수 2 + 삼항 3 삭제, `PlayerResources.json` null이면 스폰 중단; 씬 거울 8값 삭제(`WorldHealthBar.tscn` 4·`AttackReadout.tscn` 3·`Checkpoint.tscn` 1), 465값 probe 동일; `EnemyStateMachine` 초기화값 4 삭제 + `_configured` 가드, `GetDetectionRange` abstract(죽은 본체); `Create()` null 가드 2. 발견: 맨손 enemy fixture 6곳이 `Configure`를 안 불러 초기화값으로 돌고 있었음 → `Tests/Framework/EnemyFixture.cs`. 기대값 변화 0. 계획 밖 발견: Combat·Player 컴포넌트 `[Export]` 초기화값 84가 A1~A8 어디에도 없었음 — 검토 이력 | 9 + tscn 3 + 테스트 8 | 완료 | 완료 |
 | **K7** | **완료.** `Scenes/World/GameplayShell.tscn` 1개를 챕터 8개가 상속(각 1줄); 카메라 리그·카메라·셰이크·히트스톱·디렉터·트리거·리스포너 7노드 authoring, 부트스트래퍼는 찾기만(`Find*`, 없으면 `PushError`); `EnsureComponent` 20 → `RequireComponent`(실제 추가하던 4는 `Player.tscn`에 노드 4 추가); 존 fallback 4 + `ZoneRadius` 삭제; `SceneryPiece.tscn`; 아키타입 가드 7 → K2 모양; shim 5멤버(`RequireComponent` 추가), `NodeBuild.cs`로 29곳 이동(호출부 편집 0). P0 테스트 2 출하 계약으로 재설계. 스모크 8셸 0오류, 트리 probe 동일 | 셸 8 + 신규 tscn 2 + `Player.tscn` + 스크립트 14 + shim + 테스트 12 | 완료 | 완료 |
-| **K7b** | **승인 (a) 2026-09-12, 명세는 아래 §K7b.** Combat·Player 컴포넌트 `[Export]` 초기화값 — 측정 107/20파일: 데이터 소스 14(준수), 스폰이 덮어쓰는 숫자·색 78, 진짜 공백 5(`spiritTint` → `Readability.json` 키 1, `currentResonance`·`damage` 삭제, 테스트 드라이버 2는 D2 면제), 비숫자 10. 플레이어 쪽은 `AddChild` 뒤에 튜닝하므로 `_Ready` 가드 불가 → K5 챕터 보스 방식(지연 검사). `Tests/Framework/PlayerFixture.cs` | 스크립트 13 + json 1 + 테스트 12 | 중간 — fixture 12클래스 | 단독, K7 뒤 |
-| **K8** | D6 완전성 테스트 1개. 문서: `AGENTS.md` "현재 준수 상태"를 "준수"로, `PLAN.md`·`PORTING_GUIDE.md` 종결 표기, `PORT_STATUS`·`INTEGRATION_NOTES`(시그니처 다수), 인수인계 | 문서 | 낮음 | 단독 |
+| **K7b** | **완료.** 측정 107/20파일 확인(데이터 소스 13 — 명세 14는 1 과다, 비숫자 11). 삭제 81 = 덮어쓰는 78 + `currentResonance`·`damage`·`spiritTint`; `spiritTint`는 `Art/Readability.json` 키 1 추가. 11컴포넌트 전부 지연 검사 (`Scripts/Core/TuningGuard.cs` 공유 보고), `_Ready` 가드 0. probe 전 필드 동일(`damage` 10→0만, 스폰이 안 쓰는 필드). `Tests/Framework/PlayerFixture.cs` 오버로드 11, fixture 9파일. 스모크 8셸 가드 보고 0. 발견: `UnityTestAgentPlayModeSmokeTests`의 히트박스가 `hitLayers = 0`으로 통과하고 있었음 | 스크립트 13 + `TuningGuard.cs` + json 1 + 테스트 10 | 완료 | 완료 |
+| **K8** | **완료 2026-09-12.** `AGENTS.md` 준수 상태 → 준수(면제 목록 포함), `CLAUDE.md` 지도·함정·마무리, `README.md`, `PLAN.md` 빚·2차 표기, `PORTING_GUIDE.md` 대체 블록, `AUDIT_NUMBERS.md:297`, `Tests/README.md` 34/212, `PORT_STATUS`·`INTEGRATION_NOTES` 단계별 절, 인수인계. 잔여 숫자는 아래 §종결 | 문서 11 | 완료 | 완료 |
 
 **순서:** K0 → K1 → (K2 ∥ K3 ∥ K4) → (K5 ∥ K6) → K5b → K7 → K7b → K8. 병렬은 파일 서로소일 때만, 담당별 소유 파일
 목록 명시, `run-tests.ps1`은 한 명만, 풀 스위트는 착지마다 코디네이터가 한 번(11분).
@@ -412,6 +412,23 @@ keep-in-code 목록, `GameplayVisualFactory`, `DebugVisualization`. 이들은 "�
 `grep -rnE '\[Export\][^=]*= *(new Color|World\.|[0-9])' Scripts` = `MyGameRuntimeAgentDriver` 2 + `RainbowChapterBossData.attacks` 0(`Array.Empty`는 숫자 아님)
 → 숫자·색 리터럴 초기화값 **2, 둘 다 D2 면제**. (a) 14는 데이터 소스라 남는다. K8이 숫자로 남긴다.
 
+## 종결 — 2026-09-12 측정
+
+K0~K8 전부 착지. 마지막 풀 스위트는 인수인계서에. `refactor/godot-scene-data`에서 잰 잔여 — 전부 결정으로 남긴 것이다.
+
+| 무엇 | 개수 | 근거 |
+|---|---|---|
+| `?? (new Color\|World.U\|숫자)` — 튜닝 fallback | **0** (grep 5는 `GameplayHud`의 옵셔널 컴포넌트 `?? 0` null 가드, 숫자 아님) | K5 core |
+| `[Export]` 숫자·색 초기화값 | **2** — `MyGameRuntimeAgentDriver` 진단 주기 | D2(K7b) |
+| `[Export]` 데이터 소스 초기화값(`CombatTuningData.Shared.x`) | 13 | 준수 — 파일을 읽는다 |
+| 정렬 순서 리터럴 | 20 | D2 |
+| 코드가 만드는 노드(`Scripts/`, `Scripts/Testing` 제외) | 8 — `ActorAnimationDriver`·`ActorIdleBob`·`SpriteFrameAnimator`(콘텐츠 분기), `CutsceneRigMove`(샷별), `GameplayDebugSceneJump`(씬 위), `PlayerController2D:135`(함정 옆, fixture만 도달), `AudioFeedback:69`(fixture만 도달), `Phys2D`(쿼리 모양) | K7 면제 |
+| `GameplayBuildShim` | 5멤버, 전부 조회 | K7 |
+| 씬 거울(스포너가 매번 덮어쓰는 씬 값) | 0 | K6·K5b |
+| 누락 시 처리 | 디자인 파일 누락 = `PushError` + 아레나 미생성; 미설정 컴포넌트 = 첫 프레임 끝 `PushError` + 정지; 셸·액터 씬에 노드 누락 = `RequireComponent`/`Find*` `PushError` | D1 |
+
+열려 있는 것은 이 계획 밖이다: 씬 S9(아레나를 셸에 authoring — 기획자 데이터 소유권), `master` 병합, 사람 눈 검증 전부.
+
 ## 이 계획으로 바뀌는 행동
 
 - **출하 경로: 없음.** 모든 파일이 존재하므로 fallback은 한 번도 실행되지 않았다. 유일한 예외는 K3a가
@@ -456,3 +473,4 @@ keep-in-code 목록, `GameplayVisualFactory`, `DebugVisualization`. 이들은 "�
 - 2026-09-12: K5b 착지(에이전트 1, 커밋 3, 필터 68/0/0, 풀 스위트는 코디네이터). 계획 밖 발견 — **Combat·Player 컴포넌트의 `[Export]` 초기화값 84개**(`PlayerActionController` 31, `SinResonanceController` 9, `StaminaSystem` 8, `PlayerMotor2D` 8, `HumanityController` 6, `DeathStateController` 5, `Poise` 5, `DamageHitbox2D` 4, `PlayerLockOn` 2, `GameplayFallDeath` 2, `Health` 1, `ShortcutGate` 1, `MyGameRuntimeAgentDriver` 2)가 감사 A1~A8에 없다. A1은 `*Data.cs`만, A7은 `Scripts/Gameplay` 7파일만 셌다. 전부 스폰 때 `ApplyTuning`/`Configure`가 덮어쓰는, K5b가 `EnemyStateMachine`에서 지운 것과 같은 종류. "착지 후 코드 fallback 0" 목표는 이 84 때문에 현재 미달. **결정 대기: (a) 신규 단계로 제거(K5b 방식 — 초기화값 삭제 + 미호출 가드 + 맨손 fixture 보강; Combat·Player 층이라 fixture 파급이 K5b보다 큼) / (b) D2 면제로 명시("스폰이 덮어쓰는 컴포넌트 초기화값"). 추천 (a), K8 문서 종결 전.** 같이 남긴 것: `GateTravelZone.cs:34` `ZoneRadius = 1.4f` 상수는 K7이 fallback을 지울 때 함께; 낡은 주석 3(`CheckpointZone.cs:237`, `Player.tscn:157`, `MeleeGrunt.tscn:39`)은 K7이.
 - 2026-09-12: 위 84개 — **(a) 제거로 승인.** 새 단계 **K7b**(K7 뒤, K8 전, 에이전트 1): 초기화값 삭제 + 미설정 시 `PushError` + 정지 + 맨손 fixture는 설계 파일로 채움(K5b `EnemyFixture` 모양). 읽기 전용 측정을 먼저 돌려 §K7b 명세를 쓴다 — 84 재검증, 출하 경로에서 덮어쓰지 않는 초기화값(진짜 공백)과 `_Ready` 뒤에 덮어쓰는 것(가드가 출하 경로에서 울리는 경우) 분리.
 - 2026-09-12: K7 착지(에이전트 1, 커밋 4 — 세트로만 빌드됨, cherry-pick 순서대로). 명세와 다른 점 3: `Ensure*` 세 메서드는 만들지 않으니 `Find*`로 개명; shim은 4가 아니라 5멤버(`RequireComponent`가 20곳의 인라인 가드를 대신); 테스트 `AddComponent<` 29(28 아님). 명세에 없던 red 1: `WorldHealthBarBuildsAndPaintsItsFrame`이 `Build`의 생성 분기에 기대고 있었음 → authored 바를 먼저 붙이는 재사용 분기로(테스트 메시지가 지키겠다던 쪽). 에이전트 커밋의 attribution은 하네스가 준 `Claude Opus 5` 줄 — 코디네이터 커밋의 `Fable 5.1`과 다르나 사실이라 두었다.
+- 2026-09-12: K7b 착지(에이전트 1, 커밋 2 — 세트로만 green). 분류 정정 2: 데이터 소스 13(14 아님), 비숫자 11(10 아님, `attacks` 포함 여부). `GameplayFallDeath.respawnLockout`은 명세 안에서 표와 항목 2가 충돌 — 초기화값 삭제 + 가드 면제로 해석(자기 `_Ready`가 파일을 읽으므로 값 동일). K8 착지 — 문서 11. **계획 종결.** 남은 것: S9, `master` 병합, 사람 검증.

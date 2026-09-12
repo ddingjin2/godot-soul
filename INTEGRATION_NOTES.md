@@ -427,3 +427,24 @@ identical. `GameplaySceneDefaultsAsset` keeps its four `[Export]`s without initi
 - `GameplayEnvironmentBuilder.CreateSceneryPiece` instances `Scenes/World/SceneryPiece.tscn`; callers
   unchanged.
 - `GameplayWorldHealthBar.Build` requires an authored `HealthBar`; it no longer instances one.
+
+### The components carry no numbers, and an unconfigured one stops (K7b)
+
+- Every Combat and Player component field a design file owns has no `[Export]` initialiser:
+  `PlayerActionController` 31, `SinResonanceController` 9, `StaminaSystem` 8, `PlayerMotor2D` 8,
+  `HumanityController` 6, `Poise` 5, `DeathStateController` 5, `DamageHitbox2D` 3, `PlayerLockOn` 2,
+  `GameplayFallDeath` 2, `Health` 1, `ShortcutGate` 1. Read before its `ApplyTuning` / `Configure` /
+  `SetMaxHealth` / `Initialize`, a field reads zero.
+- A component that enters the tree and reaches the end of its first frame unconfigured logs one error
+  naming the type, the node and the missing call (`MyGame.Core.TuningGuard.Check`) and stops processing.
+  The spawners configure within the same frame as `AddChild`. Hand-built nodes call
+  `MyGame.Tests.PlayerFixture.Configure(x)` (an overload per component, plus `Configure(Health, float)`)
+  or `EnemyFixture.ConfigureFromDesign` before advancing a frame - including fixtures that never enter
+  the tree, which the guard cannot reach.
+- `DeathStateController.ApplyTuning(PlayerResourceData)` -> `ApplyTuning(PlayerResourceData, Color spiritTintColor)`.
+  `GameplayReadabilityDefaults.SpiritTint` and `GameplayReadabilityThemeData.spiritTint` are new;
+  `Art/Readability.json` carries the key.
+- `GameplayFallDeath.respawnLockout` reads `WorldTuning.json` in its own `_Ready`; `ShortcutGate.openAlpha`
+  is authored in `ShortcutGate.tscn`. Neither is guarded.
+- `GameplayHud.ShowVictory` no longer grabs focus when the restart button is out of the tree (K7 exit
+  order, see PORT_STATUS).

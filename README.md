@@ -83,9 +83,11 @@ tools/run-tests.ps1 -Filter X  # 클래스 또는 메서드 이름 부분 일치
   (재사용 단위는 씬)는 제품 코드에서 완결됐습니다 — 런타임 UI 조립이 남아 있지 않고, 씬 22개와
   Theme 1개가 약 1,000줄의 생성 코드를 대신합니다. 규칙 1(수치 데이터화)도 완결됐습니다 — 디자인
   파일 27개, 키 190개가 코드 리터럴을 대신하며 값은 출하 당시 그대로입니다. 그 뒤 완료 기준의 나머지
-  절반(코드 fallback 사본 제거, 중복 보관 제거)을 닫는 2차 전환이
-  [docs/migrations/scene-data/PLAN_CLOSEOUT.md](docs/migrations/scene-data/PLAN_CLOSEOUT.md)에 승인돼
-  있고 K0~K6까지 착지했습니다. 다음 시작점은 `SESSION_HANDOFF.md`입니다.
+  절반(코드 fallback 사본 제거, 중복 보관 제거, 누락 시 처리)을 닫는 2차 전환
+  [docs/migrations/scene-data/PLAN_CLOSEOUT.md](docs/migrations/scene-data/PLAN_CLOSEOUT.md)도 K0~K8 전부
+  착지했습니다(2026-09-12). 코드에 남은 숫자는 결정으로 남긴 면제뿐이고, 디자인 파일이 빠지면 부팅이 멈추며,
+  설정 없이 켜진 컴포넌트는 스스로 오류를 냅니다. 챕터 셸 8개는 `Scenes/World/GameplayShell.tscn` 하나를
+  상속합니다. 다음 시작점은 `SESSION_HANDOFF.md`입니다.
 - **전환이 실제 결함 6건을 찾아냈습니다.** 넉백이 400px 대신 3px로 나가던 것, 챕터 보스 처치
   보상이 0 소울이던 것 등. 전부 컴파일러도 기존 스위트도 잡지 못하던 것들이며 내역은
   [PORT_STATUS.md](PORT_STATUS.md)에 있습니다.
