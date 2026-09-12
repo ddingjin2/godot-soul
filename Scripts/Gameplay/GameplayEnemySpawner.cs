@@ -52,6 +52,9 @@ namespace MyGame.Gameplay
         private const string WrathMiniBossScenePath = "res://Scenes/Actors/WrathMiniBoss.tscn";
         private const string ChapterBossScenePath = "res://Scenes/Actors/ChapterBoss.tscn";
 
+        /// <summary>Who the <see cref="GameplayBuildShim.RequireComponent{T}"/> error lines name.</summary>
+        private const string Owner = nameof(GameplayEnemySpawner);
+
         public static GameplayEnemyContext Spawn(
             GameplaySceneDefaults scene,
             GameplayReadabilityDefaults readability,
@@ -338,12 +341,12 @@ namespace MyGame.Gameplay
 
             // Without these a chapter boss cannot be poise-broken and pays nothing for dying - it looks
             // like a boss and behaves like scenery with health.
-            // Ensure, not Add: EnemyBase.tscn already carries both, and a second SoulsWallet would be
-            // the one written while GetComponent<SoulsWallet>() kept answering with the empty first -
-            // the boss's kill silently worth nothing.
-            Poise poise = go.EnsureComponent<Poise>();
+            // Found, never added: EnemyBase.tscn carries both, and a second SoulsWallet would be the one
+            // written while GetComponent<SoulsWallet>() kept answering with the empty first - the boss's
+            // kill silently worth nothing. A scene that has lost either gets an error (PLAN_CLOSEOUT K7).
+            Poise poise = go.RequireComponent<Poise>(Owner);
             poise.Configure(data.MaxPoise, data.PoiseHeavyMultiplier, data.PoiseRegenDelay, data.PoiseRegenRate);
-            go.EnsureComponent<SoulsWallet>().SetSouls(data.SoulReward);
+            go.RequireComponent<SoulsWallet>(Owner).SetSouls(data.SoulReward);
 
             PlaceInWorld(go, position);
 
@@ -528,11 +531,11 @@ namespace MyGame.Gameplay
         /// </remarks>
         private static Health EnsureEnemyHealthRig(Node2D go, bool destroyOnDeath)
         {
-            Health health = go.EnsureComponent<Health>();
+            Health health = go.RequireComponent<Health>(Owner);
 
             EnsureDamageReceiver(go, health);
 
-            CombatFeedback feedback = go.EnsureComponent<CombatFeedback>();
+            CombatFeedback feedback = go.RequireComponent<CombatFeedback>(Owner);
             EnsureCombatResultBridge(go);
 
             var sr = go.GetComponent<Sprite2D>();
@@ -540,7 +543,7 @@ namespace MyGame.Gameplay
                 feedback.SetOriginalColor(sr.Modulate);
 
             if (destroyOnDeath)
-                go.EnsureComponent<EnemyDeathCleanup>();
+                go.RequireComponent<EnemyDeathCleanup>(Owner);
 
             return health;
         }
@@ -555,29 +558,29 @@ namespace MyGame.Gameplay
             if (tuning == null)
                 return;
 
-            Poise poise = go.EnsureComponent<Poise>();
+            Poise poise = go.RequireComponent<Poise>(Owner);
             poise.Configure(tuning.maxPoise, tuning.poiseHeavyMultiplier, tuning.poiseRegenDelay, tuning.poiseRegenRate);
 
-            SoulsWallet wallet = go.EnsureComponent<SoulsWallet>();
+            SoulsWallet wallet = go.RequireComponent<SoulsWallet>(Owner);
             wallet.SetSouls(tuning.soulReward);
         }
 
         private static void AddHealthBar(Node target, Health health, Vector2 size, Vector2 offset, Color color)
         {
-            GameplayWorldHealthBar bar = target.EnsureComponent<GameplayWorldHealthBar>();
+            GameplayWorldHealthBar bar = target.RequireComponent<GameplayWorldHealthBar>(Owner);
             bar.Initialize(health, size, offset, color);
         }
 
         private static DamageReceiver EnsureDamageReceiver(Node target, Health health)
         {
-            DamageReceiver receiver = target.EnsureComponent<DamageReceiver>();
+            DamageReceiver receiver = target.RequireComponent<DamageReceiver>(Owner);
             receiver.Initialize(health);
             return receiver;
         }
 
         private static void EnsureCombatResultBridge(Node target)
         {
-            target.EnsureComponent<CombatResultBroadcaster>();
+            target.RequireComponent<CombatResultBroadcaster>(Owner);
         }
 
         /// <summary>

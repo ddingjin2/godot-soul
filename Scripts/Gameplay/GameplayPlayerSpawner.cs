@@ -75,6 +75,9 @@ namespace MyGame.Gameplay
         /// </summary>
         private const string PlayerScenePath = "res://Scenes/Actors/Player.tscn";
 
+        /// <summary>Who the <see cref="GameplayBuildShim.RequireComponent{T}"/> error lines name.</summary>
+        private const string Owner = nameof(GameplayPlayerSpawner);
+
         public static GameplayPlayerContext Spawn(
             GameplaySceneDefaults scene,
             GameplayReadabilityDefaults readability,
@@ -162,12 +165,12 @@ namespace MyGame.Gameplay
 
             AddHealthBar(go, health, readability.PlayerHealthBarSize, readability.PlayerHealthBarOffset, readability.PlayerHealthBarColor);
 
-            DeathStateController deathController = go.EnsureComponent<DeathStateController>();
+            DeathStateController deathController = go.RequireComponent<DeathStateController>(Owner);
             deathController.ApplyTuning(resources);
             deathController.Initialize(health, humanity, checkpoint, spiritPlatform);
             player.SetDeathStateController(deathController);
 
-            DebugVisualization debugVisualization = go.EnsureComponent<DebugVisualization>();
+            DebugVisualization debugVisualization = go.RequireComponent<DebugVisualization>(Owner);
             debugVisualization.Initialize(player, checkpoint, spiritPlatform);
 
             Poise poise = EnsurePoise(go, resources);
@@ -182,7 +185,7 @@ namespace MyGame.Gameplay
             // moving this line.
             PlayerProgression.EnsureOn(go);
 
-            GameplaySoulDrop soulDrop = go.EnsureComponent<GameplaySoulDrop>();
+            GameplaySoulDrop soulDrop = go.RequireComponent<GameplaySoulDrop>(Owner);
             if (resources == null)
                 GD.PushError("GameplayPlayerSpawner: Design/PlayerResources.json is missing; the soul stain is not wired and nothing is dropped on death.");
             else
@@ -196,13 +199,14 @@ namespace MyGame.Gameplay
         }
 
         /// <summary>
-        /// Added here rather than in the seed hierarchy so lock-on arrives on any player the spawner is
-        /// handed, the same way Poise and the souls wallet did.
+        /// Binds the two reaches onto the lock-on pair <c>Scenes/Actors/Player.tscn</c> authors. Both
+        /// nodes used to be added here, which was the last thing the spawner built rather than found;
+        /// K7 moved them into the scene and left the binding.
         /// </summary>
         private static void EnsureLockOn(Node target, WorldTuningData world)
         {
-            PlayerLockOn lockOn = target.EnsureComponent<PlayerLockOn>();
-            target.EnsureComponent<GameplayLockOnMarker>();
+            PlayerLockOn lockOn = target.RequireComponent<PlayerLockOn>(Owner);
+            target.RequireComponent<GameplayLockOnMarker>(Owner);
 
             // Both reaches are WorldTuning.json's, already in pixels. No constant behind them: a build
             // with no design file gets a lock-on that grabs nothing and an error saying why, rather than
@@ -218,7 +222,7 @@ namespace MyGame.Gameplay
 
         private static Poise EnsurePoise(Node target, PlayerResourceData resources)
         {
-            Poise poise = target.EnsureComponent<Poise>();
+            Poise poise = target.RequireComponent<Poise>(Owner);
 
             if (resources != null)
                 poise.Configure(resources.maxPoise, resources.poiseHeavyMultiplier, resources.poiseRegenDelay, resources.poiseRegenRate);
@@ -229,7 +233,7 @@ namespace MyGame.Gameplay
         /// <summary>The player's wallet starts empty; it fills from kills and empties on death.</summary>
         private static SoulsWallet EnsureSoulsWallet(Node target)
         {
-            SoulsWallet wallet = target.EnsureComponent<SoulsWallet>();
+            SoulsWallet wallet = target.RequireComponent<SoulsWallet>(Owner);
             wallet.SetSouls(0);
             return wallet;
         }
@@ -313,20 +317,20 @@ namespace MyGame.Gameplay
 
         private static void AddHealthBar(Node target, Health health, Vector2 size, Vector2 offset, Color color)
         {
-            GameplayWorldHealthBar bar = target.EnsureComponent<GameplayWorldHealthBar>();
+            GameplayWorldHealthBar bar = target.RequireComponent<GameplayWorldHealthBar>(Owner);
             bar.Initialize(health, size, offset, color);
         }
 
         private static DamageReceiver EnsureDamageReceiver(Node target, Health health)
         {
-            DamageReceiver receiver = target.EnsureComponent<DamageReceiver>();
+            DamageReceiver receiver = target.RequireComponent<DamageReceiver>(Owner);
             receiver.Initialize(health);
             return receiver;
         }
 
         private static void EnsureCombatResultBridge(Node target)
         {
-            target.EnsureComponent<CombatResultBroadcaster>();
+            target.RequireComponent<CombatResultBroadcaster>(Owner);
         }
     }
 }

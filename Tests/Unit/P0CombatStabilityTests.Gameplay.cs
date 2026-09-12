@@ -26,47 +26,42 @@ namespace MyGame.Tests
     /// </summary>
     public partial class P0CombatStabilityTests
     {
+        /// <summary>
+        /// "Both actors can take a hit and report the result" - read off the shipped scenes rather than
+        /// off the spawners' private helpers.
+        /// </summary>
+        /// <remarks>
+        /// PORT CHANGE (K7): this used to build a bare <see cref="Node2D"/> and invoke
+        /// <c>EnsureDamageReceiver</c> / <c>EnsureCombatResultBridge</c> by name through reflection, so
+        /// what it actually proved was that the spawner would <i>add</i> the two components. The spawners
+        /// stopped adding anything when the actor scenes started authoring it - the player was the last
+        /// holdout and gained its four nodes in K7 - so the add branch no longer exists to assert. The
+        /// property under test is unchanged; the evidence moved from a fixture to the shipping files.
+        /// Same kind of replacement as K4's <c>CheckpointRunPlatform</c>.
+        /// </remarks>
         [Test]
         public void GameplayActorsAttachDamageReceivers()
         {
-            var player = new Node2D { Name = "PlayerRoot" };
-            var playerHealth = new Health { Name = nameof(Health) };
-            player.AddChild(playerHealth);
-            Spawn(player);
-            playerHealth.SetHealth(100f);
+            AssertActorSceneCarriesDamageRig("res://Scenes/Actors/Player.tscn");
+            AssertActorSceneCarriesDamageRig("res://Scenes/Actors/EnemyBase.tscn");
+        }
 
-            // Still reflection, still by name: these are private statics and a rename has to break the
-            // test rather than the build. The Unity signature took a GameObject; it takes the actor Node
-            // here, because a Unity component is a child node in this port.
-            Type playerSpawner = ResolveType("MyGame.Gameplay.GameplayPlayerSpawner");
-            Assert.NotNull(playerSpawner, "GameplayPlayerSpawner should exist.");
-            MethodInfo ensurePlayerReceiver = playerSpawner.GetMethod("EnsureDamageReceiver", BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.NotNull(ensurePlayerReceiver, "GameplayPlayerSpawner should expose private EnsureDamageReceiver helper.");
-            ensurePlayerReceiver.Invoke(null, new object[] { player, playerHealth });
-            Assert.NotNull(player.GetComponent<DamageReceiver>(), "Gameplay player root should receive a DamageReceiver.");
+        private void AssertActorSceneCarriesDamageRig(string scenePath)
+        {
+            var scene = GD.Load<PackedScene>(scenePath);
+            Assert.NotNull(scene, scenePath + " should load; it is the actor the spawner instances.");
 
-            MethodInfo ensurePlayerBridge = playerSpawner.GetMethod("EnsureCombatResultBridge", BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.NotNull(ensurePlayerBridge, "GameplayPlayerSpawner should expose private EnsureCombatResultBridge helper.");
-            ensurePlayerBridge.Invoke(null, new object[] { player });
-            Assert.NotNull(player.GetComponent<CombatResultBroadcaster>(), "Gameplay player bridge should attach the combat result broadcaster.");
+            // Detached on purpose: the question is what the file authors, and an actor added to the tree
+            // would run a dozen _Ready methods that expect a spawner to have bound them first.
+            var actor = scene.Instantiate<Node2D>();
+            _spawned.Add(actor);
 
-            var enemy = new Node2D { Name = "EnemyRoot" };
-            var enemyHealth = new Health { Name = nameof(Health) };
-            enemy.AddChild(enemyHealth);
-            Spawn(enemy);
-            enemyHealth.SetHealth(100f);
-
-            Type enemySpawner = ResolveType("MyGame.Gameplay.GameplayEnemySpawner");
-            Assert.NotNull(enemySpawner, "GameplayEnemySpawner should exist.");
-            MethodInfo ensureEnemyReceiver = enemySpawner.GetMethod("EnsureDamageReceiver", BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.NotNull(ensureEnemyReceiver, "GameplayEnemySpawner should expose private EnsureDamageReceiver helper.");
-            ensureEnemyReceiver.Invoke(null, new object[] { enemy, enemyHealth });
-            Assert.NotNull(enemy.GetComponent<DamageReceiver>(), "Gameplay enemy root should receive a DamageReceiver.");
-
-            MethodInfo ensureEnemyBridge = enemySpawner.GetMethod("EnsureCombatResultBridge", BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.NotNull(ensureEnemyBridge, "GameplayEnemySpawner should expose private EnsureCombatResultBridge helper.");
-            ensureEnemyBridge.Invoke(null, new object[] { enemy });
-            Assert.NotNull(enemy.GetComponent<CombatResultBroadcaster>(), "Gameplay enemy bridge should attach the combat result broadcaster.");
+            Assert.NotNull(actor.GetComponent<DamageReceiver>(),
+                scenePath + " should author a DamageReceiver: nothing adds one at runtime any more, so an " +
+                "actor without it takes no damage at all.");
+            Assert.NotNull(actor.GetComponent<CombatResultBroadcaster>(),
+                scenePath + " should author a CombatResultBroadcaster: it is what turns a landed hit into " +
+                "the shake, the hit stop and the feedback flash.");
         }
 
         [Test]
@@ -307,21 +302,28 @@ namespace MyGame.Tests
         /// <summary>
         /// The Unity test compared the frame <c>GameplayWorldHealthBar.Build</c> paints against the one
         /// every actor prefab already carried, because Build reuses an existing <c>HealthBar/Frame</c>
-        /// instead of recolouring it. With prefabs gone, Build is always the one that creates the frame -
-        /// so what survives is that it does create it, and paints it with this file's own frame colour.
+        /// instead of recolouring it. That reuse is the whole shipping path now: every actor scene
+        /// authors the bar, and K7 deleted the instance-if-missing branch, so Build only ever finds one.
+        /// The property under test is unchanged - the frame ends up wearing this file's frame colour -
+        /// and the fixture hands Build the authored bar instead of a bare node.
         /// </summary>
         [Test]
         public void WorldHealthBarBuildsAndPaintsItsFrame()
         {
             var bar = new GameplayWorldHealthBar { Name = "HealthBarFrameProbe" };
+
+            // What Player.tscn and EnemyBase.tscn author under this component. Parented before the
+            // component enters the tree, which is the order the actor scenes give it.
+            var authored = GD.Load<PackedScene>("res://Scenes/World/WorldHealthBar.tscn").Instantiate<Node2D>();
+            bar.AddChild(authored);
             Spawn(bar);
             InvokeNonPublic(bar, "Build");
 
             Node2D barRoot = bar.GetNodeOrNull<Node2D>("HealthBar");
-            Assert.NotNull(barRoot, "GameplayWorldHealthBar.Build should create a HealthBar child.");
+            Assert.NotNull(barRoot, "GameplayWorldHealthBar.Build should keep the authored HealthBar child.");
 
             Sprite2D builtFrame = barRoot.GetNodeOrNull<Sprite2D>("Frame");
-            Assert.NotNull(builtFrame, "GameplayWorldHealthBar.Build should create a HealthBar/Frame child.");
+            Assert.NotNull(builtFrame, "Scenes/World/WorldHealthBar.tscn should author a Frame child.");
 
             FieldInfo frameColor = typeof(GameplayWorldHealthBar)
                 .GetField("FrameColor", BindingFlags.NonPublic | BindingFlags.Static);

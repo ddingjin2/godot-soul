@@ -35,7 +35,7 @@
 ; an unscaled white body on a 10 x 20 capsule, with the health bar on the origin.
 ;
 ; UNITS: 1 Unity metre = 100 px (World.Ppu), +Y down.
-[gd_scene load_steps=21 format=3]
+[gd_scene load_steps=29 format=3]
 
 [ext_resource type="Script" path="res://Scripts/Player/PlayerMotor2D.cs" id="1"]
 [ext_resource type="Texture2D" path="res://Resources/Art/ActorPlayer.png" id="2"]
@@ -60,6 +60,10 @@
 [ext_resource type="Script" path="res://Scripts/Player/DeathStateController.cs" id="21"]
 [ext_resource type="Script" path="res://Scripts/Gameplay/DebugVisualization.cs" id="22"]
 [ext_resource type="Script" path="res://Scripts/Gameplay/GameplaySoulDrop.cs" id="23"]
+[ext_resource type="Script" path="res://Scripts/Combat/DamageReceiver.cs" id="24"]
+[ext_resource type="Script" path="res://Scripts/Combat/CombatResultBroadcaster.cs" id="25"]
+[ext_resource type="Script" path="res://Scripts/Player/PlayerLockOn.cs" id="26"]
+[ext_resource type="Script" path="res://Scripts/Gameplay/GameplayLockOnMarker.cs" id="27"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_body"]
 ; Local to the scene, so a second player - a test fixture, a spirit-form double - cannot resize the
@@ -154,10 +158,10 @@ script = ExtResource("11")
 ; this needs later. The `animator` export stays unset - the spawner hands this node over explicitly.
 [node name="AnimationPlayer" type="AnimationPlayer" parent="HitboxAnchor/ReadableSword/PlayerAttackAnimator2D"]
 
-; The player's swing arc - the same scene every enemy danger disc uses. AttackReadout.tscn already
-; ships AttackArcSize, PlayerAttackReadoutColor and PlayerReadoutSortingOrder, and
-; AttackArcLocalPosition is Vector2.Zero, so this instance overrides nothing. The spawner rebinds the
-; colour anyway, because it is designer-owned.
+; The player's swing arc - the same scene every enemy danger disc uses. Nothing is overridden here:
+; AttackReadout.tscn authors no size, colour or sorting order of its own since K5b, and
+; AttackArcLocalPosition is Vector2.Zero, so DressSprite writing all three on every spawn from
+; ReadabilityLayout.json / Art/Readability.json is the only place those numbers live.
 [node name="AttackArc" parent="HitboxAnchor" instance=ExtResource("12")]
 
 [node name="PlayerActionController" type="Node2D" parent="."]
@@ -198,3 +202,27 @@ script = ExtResource("22")
 
 [node name="GameplaySoulDrop" type="Node2D" parent="."]
 script = ExtResource("23")
+
+; The last four the spawner used to add with EnsureComponent, authored here since K7 (rule 2: the
+; actor scene is the actor, and shipping code finds rather than assembles). Kept in the order the
+; spawner added them so the child list is unchanged; the two lookups that can be ambiguous read
+; Sprite2D and CollisionShape2D, neither of which is here.
+;
+; EnemyBase.tscn:79,85 is the precedent for the first two - the enemy half of this pair has authored
+; them since the actor scenes landed, and the player was the half still being assembled.
+[node name="DamageReceiver" type="Node" parent="."]
+script = ExtResource("24")
+
+[node name="CombatResultBroadcaster" type="Node" parent="."]
+script = ExtResource("25")
+
+; Reach and break reach come from WorldTuning.json on every spawn (GameplayPlayerSpawner.EnsureLockOn),
+; so there is nothing to author but the node.
+[node name="PlayerLockOn" type="Node2D" parent="."]
+script = ExtResource("26")
+
+; The marker DISC is not here: GameplayLockOnMarker.BuildMarker instances Scenes/World/LockOnMarker.tscn
+; into the scene root rather than under the player, because a marker parented to the target would
+; inherit its flip and its hit-reaction scale punch and be freed with it. Only the driver is authored.
+[node name="GameplayLockOnMarker" type="Node2D" parent="."]
+script = ExtResource("27")

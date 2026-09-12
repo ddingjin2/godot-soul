@@ -110,11 +110,11 @@ namespace MyGame.Gameplay
         }
 
         /// <summary>
-        /// Lookup first, instance second - and it never builds a node itself any more. An actor whose
-        /// bar is already authored under it keeps that one; anything else gets
-        /// <c>Scenes/World/WorldHealthBar.tscn</c>, whose root <i>is</i> the <c>HealthBar</c> node,
-        /// because the component this method sits on is added by
-        /// <c>GameplayBuildShim.AddComponent</c> rather than instanced.
+        /// Lookup only. Every actor scene authors this component with a <c>Scenes/World/WorldHealthBar.tscn</c>
+        /// instance named <c>HealthBar</c> under it (<c>Player.tscn</c>, <c>EnemyBase.tscn</c>), so a bar
+        /// that is missing is a scene that lost a node rather than something to put back at runtime
+        /// (PLAN_CLOSEOUT D1/K7). The instance fallback that stood here was only ever reachable while the
+        /// spawners added this component with <c>EnsureComponent</c>, which they no longer do.
         /// </summary>
         private void Build()
         {
@@ -139,13 +139,13 @@ namespace MyGame.Gameplay
                 LowHealthTint = readability.HealthBarLowHealthTint;
             }
 
-            // Reused when the actor was built with the bar already under it; _barRoot is not exported
-            // and is null on every fresh instance.
+            // _barRoot is not exported and is null on every fresh instance, so this is the first read of
+            // the authored bar rather than a cache check.
             _barRoot = GetNodeOrNull<Node2D>("HealthBar");
             if (_barRoot == null)
             {
-                _barRoot = GD.Load<PackedScene>(ScenePath).Instantiate<Node2D>();
-                AddChild(_barRoot);
+                GD.PushError($"GameplayWorldHealthBar: '{Name}' has no 'HealthBar' child; the actor scene should carry a {ScenePath} instance under it. This actor shows no health.");
+                return;
             }
 
             _frameRenderer = _barRoot.GetNodeOrNull<Sprite2D>("Frame");
