@@ -321,6 +321,12 @@ namespace MyGame.Tests
             DamageReceiver receiver = _player.AddComponent<DamageReceiver>();
             PlayerController2D controller = _player.AddComponent<PlayerController2D>();
 
+            // Built here rather than left to PlayerController2D._Ready, which adds one deferred and
+            // hands it no tuning - and required since K7b, where an unconfigured component reports
+            // itself and stops. Both are the shape Scenes/Actors/Player.tscn already ships.
+            PlayerFixture.Configure(_player.AddComponent<PlayerActionController>());
+            PlayerFixture.Configure(_player);
+
             FixtureRoot.AddChild(_player);
 
             // After entering the tree: Health._Ready resets current to max. Health is unscaled.

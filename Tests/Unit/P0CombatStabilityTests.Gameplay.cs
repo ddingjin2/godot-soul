@@ -129,6 +129,8 @@ namespace MyGame.Tests
                 playerBody.AddChild(humanity);
                 var sin = new SinResonanceController { Name = nameof(SinResonanceController) };
                 playerBody.AddChild(sin);
+                PlayerFixture.Configure(humanity);
+                PlayerFixture.Configure(sin);
                 var input = new PlayerInputReceiver { Name = nameof(PlayerInputReceiver) };
                 playerBody.AddChild(input);
                 sin.Initialize(humanity);
@@ -154,7 +156,7 @@ namespace MyGame.Tests
                 var bossHealth = new Health { Name = nameof(Health) };
                 boss.AddChild(bossHealth);
                 Spawn(boss);
-                bossHealth.SetHealth(100f);
+                PlayerFixture.Configure(bossHealth, 100f);
 
                 GameplayHud hud = GameplayHudSpawner.Spawn(
                     playerContext,
@@ -558,7 +560,7 @@ namespace MyGame.Tests
             var bossHealth = new Health { Name = nameof(Health) };
             boss.AddChild(bossHealth);
             Spawn(boss);
-            bossHealth.SetHealth(100f);
+            PlayerFixture.Configure(bossHealth, 100f);
 
             // Y FLIP: Unity's (3, 1) is a metre *up*, which is -Y here. This port's EnemyProjectile moves
             // its own transform instead of riding a rigidbody, so there is no linearVelocity to author -

@@ -239,7 +239,7 @@ namespace MyGame.Tests
             _target.AddComponent<DamageReceiver>().Initialize(health);
 
             if (withSins)
-                _target.AddComponent<SinResonanceController>();
+                PlayerFixture.Configure(_target.AddComponent<SinResonanceController>());
 
             return health;
         }

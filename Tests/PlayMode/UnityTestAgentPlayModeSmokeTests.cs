@@ -276,7 +276,11 @@ namespace MyGame.Tests
             collider.Shape = new CapsuleShape2D { Radius = World.U(0.25f), Height = World.U(1f) };
 
             AddHealth(body, 100f);
-            body.AddComponent<StaminaSystem>().SetStamina(100f);
+
+            // The shipped numbers, from the shipped files - required since K7b, where a player
+            // component that reaches the tree unconfigured reports itself and stops.
+            PlayerFixture.Configure(body);
+            PlayerFixture.Configure(body.AddComponent<StaminaSystem>());
 
             // One node, not two: DamageHitbox2D is an Area2D and is its own anchor here.
             var hitbox = new DamageHitbox2D
@@ -287,8 +291,9 @@ namespace MyGame.Tests
                 CollisionMask = World.Layer.Enemy,
             };
             body.AddChild(hitbox);
+            PlayerFixture.Configure(hitbox);
 
-            body.AddComponent<PlayerActionController>();
+            PlayerFixture.Configure(body.AddComponent<PlayerActionController>());
             // PlayerStateMachine is plain logic in this port, not a node - PlayerController2D owns one
             // directly, so there is nothing to add for it here.
             PlayerController2D player = body.AddComponent<PlayerController2D>();

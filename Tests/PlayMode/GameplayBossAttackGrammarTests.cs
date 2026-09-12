@@ -304,8 +304,12 @@ namespace MyGame.Tests
             // add outright ("Parent node is busy setting up children"), so the controller would be left
             // holding an orphaned action controller and the parry guard would never see a parry.
             // Scripts/Player/PlayerController2D.cs:136.
-            _player.AddComponent<PlayerActionController>();
+            PlayerFixture.Configure(_player.AddComponent<PlayerActionController>());
             _player.AddComponent<PlayerController2D>();
+
+            // Required since K7b, for the same reason as EnemyFixture above: the player components
+            // carry no initialisers either, and the motor's own tuning is PlayerMovement.json's.
+            PlayerFixture.Configure(_player);
 
             TestContext.Tree.Root.AddChild(_player);
 

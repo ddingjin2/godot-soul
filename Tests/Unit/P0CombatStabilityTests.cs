@@ -372,8 +372,13 @@ namespace MyGame.Tests
             motor.Initialize();
             actions.Initialize(motor, stamina, hitbox);
 
+            PlayerFixture.Configure(motor);
+            PlayerFixture.Configure(stamina);
+            PlayerFixture.Configure(hitbox);
+            PlayerFixture.Configure(actions);
+
             Spawn(motor);
-            stamina.SetStamina(100f);
+            stamina.SetStamina(stamina.MaxStamina);
 
             Assert.Zero(
                 ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle(),
@@ -414,10 +419,17 @@ namespace MyGame.Tests
             hitbox.Initialize(motor);
             actions.Initialize(motor, stamina, hitbox);
 
+            // The shipped numbers, from the shipped files - the components carry none of their own
+            // since K7b, and one that reaches the tree unconfigured reports itself and stops.
+            PlayerFixture.Configure(motor);
+            PlayerFixture.Configure(stamina);
+            PlayerFixture.Configure(hitbox);
+            PlayerFixture.Configure(actions);
+
             Spawn(motor);
 
             // StaminaSystem._Ready refills to max, so the authored value has to land after tree entry.
-            stamina.SetStamina(100f);
+            stamina.SetStamina(stamina.MaxStamina);
 
             root = motor;
             return actions;
@@ -457,13 +469,17 @@ namespace MyGame.Tests
             motor.Initialize();
             actions.Initialize(motor, stamina, hitbox);
 
+            PlayerFixture.Configure(motor);
+            PlayerFixture.Configure(hitbox);
+            PlayerFixture.Configure(actions);
+
             Spawn(motor);
 
             // Health._Ready and StaminaSystem._Ready both refill to max, so the authored values land
             // after the node is in the tree rather than before it, as they did in Unity's edit mode.
-            health.SetMaxHealth(100f);
-            health.SetHealth(100f);
-            stamina.SetStamina(100f);
+            // PlayerResources.json is where the 100 / 100 used to be written by hand (K7b).
+            PlayerFixture.Configure(health);
+            PlayerFixture.Configure(stamina);
 
             return motor;
         }

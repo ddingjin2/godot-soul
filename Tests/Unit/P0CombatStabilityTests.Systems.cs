@@ -90,6 +90,8 @@ namespace MyGame.Tests
             player.AddChild(humanity);
             var resonance = new SinResonanceController { Name = nameof(SinResonanceController) };
             player.AddChild(resonance);
+            PlayerFixture.Configure(humanity);
+            PlayerFixture.Configure(resonance);
             var playerBroadcaster = new CombatResultBroadcaster { Name = nameof(CombatResultBroadcaster) };
             player.AddChild(playerBroadcaster);
             var attackerAnchor = new Node2D { Name = "PlayerAttackAnchor" };
@@ -197,6 +199,7 @@ namespace MyGame.Tests
             // The table has no None row on purpose, and an idle controller has to read neutral - that is
             // what the old `if (_activeSin == SinState.Pride)` branch returned for everything else.
             var idle = new SinResonanceController { Name = "SinTableIdle" };
+            PlayerFixture.Configure(idle);
             Spawn(idle);
             Assert.IsTrue(
                 Mathf.IsEqualApprox(idle.GetDamageTakenMultiplier(), 1f),
@@ -232,6 +235,10 @@ namespace MyGame.Tests
             float damageTaken, bool disableHeal, bool perfectParry, SinModifiers[] table = null)
         {
             var resonance = new SinResonanceController { Name = $"SinTable{sin}" };
+
+            // SinTuning.json's rows, which are the shipped table - the same one DefaultSinModifiers
+            // rebuilds when a file has none. The per-case override below still replaces it.
+            PlayerFixture.Configure(resonance);
             Spawn(resonance);
 
             if (table != null)
@@ -286,6 +293,8 @@ namespace MyGame.Tests
             player.AddChild(humanity);
             var deathState = new DeathStateController { Name = nameof(DeathStateController) };
             player.AddChild(deathState);
+            PlayerFixture.Configure(humanity);
+            PlayerFixture.Configure(deathState);
             Spawn(player);
 
             health.SetMaxHealth(100f);
@@ -434,6 +443,9 @@ namespace MyGame.Tests
             ConfigureFromDesign(leaper);
             AddBoxShape(leaper);
             var health = new Health { Name = nameof(Health) };
+            // The archetype's own ceiling: MeleeGrunt and friends only ever call SetHealth, so a
+            // hand-built one has to take the max from the same file the spawner reads (K7b).
+            health.SetMaxHealth(LeapingAttackerData.Load().maxHealth);
             leaper.AddChild(health);
             Spawn(leaper);
             health.SetHealth(30f);
@@ -541,7 +553,7 @@ namespace MyGame.Tests
             AddBoxShape(boss);
             var health = new Health { Name = nameof(Health) };
             boss.AddChild(health);
-            SetPrivateField(health, "maxHealth", tuning.maxHealthBoss);
+            health.SetMaxHealth(tuning.maxHealthBoss);
             boss.SetTuningData(tuning);
 
             // Both before Spawn: _Ready refuses to run the fight without either of them.
@@ -579,7 +591,7 @@ namespace MyGame.Tests
             var feedback = new CombatFeedback { Name = nameof(CombatFeedback) };
             target.AddChild(feedback);
             Spawn(target);
-            health.SetHealth(100f);
+            PlayerFixture.Configure(health, 100f);
 
             bool invoked = false;
             feedback.OnHitFeedback += () => invoked = true;
@@ -689,14 +701,21 @@ namespace MyGame.Tests
         public void PlayerSpiritTintMatchesShippedValue()
         {
             var deathState = new DeathStateController { Name = "SpiritTintProbe" };
+            PlayerFixture.Configure(deathState);
             Spawn(deathState);
 
-            var fromCode = (Color)GetPrivateField(deathState, "spiritTint");
-            var shipped = new Color(0.4862745f, 0.50980395f, 0.5647059f, 0.55f);
+            // The yardstick is the artist's file, not a second copy of the colour in this test. Until
+            // K7b the component carried the literal and this compared code against code; the tint now
+            // lives in Readability.json beside spiritPlatformColor and the component is handed it on
+            // spawn, so what is worth asserting is that the handover still happens.
+            GameplayReadabilityThemeData theme = GameplayReadabilityThemeData.Load();
+            Assert.NotNull(theme, "Resources/Art/Readability.json has to load; the spirit tint is in it.");
+
+            var fromComponent = (Color)GetPrivateField(deathState, "spiritTint");
 
             Assert.IsTrue(
-                fromCode.IsEqualApprox(shipped),
-                $"DeathStateController spiritTint {fromCode} is no longer the shipped spirit-form look {shipped}; the player's whole spirit tint changes with it.");
+                fromComponent.IsEqualApprox(theme.spiritTint),
+                $"DeathStateController spiritTint {fromComponent} is no longer Readability.json's spiritTint {theme.spiritTint}; the player's whole spirit-form look changes with it.");
         }
     }
 }
