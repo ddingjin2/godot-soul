@@ -180,9 +180,13 @@ namespace MyGame.Tests
             TestContext.Tree.Root.AddChild(pauseHost);
             pauseHost.Initialize(null, null, null, default);
 
-            var portal = new GateTravelZone { Name = "GatePortalFixture" };
-            _portal = portal;
-            TestContext.Tree.Root.AddChild(portal);
+            // The shipped portal, not a bare GateTravelZone: since K7 the zone no longer builds its own
+            // trigger shape when it finds none, so a hand-made one reports a missing collider on _Ready.
+            var portalRoot = GD.Load<PackedScene>("res://Scenes/World/GatePortal.tscn").Instantiate<Node2D>();
+            portalRoot.Name = "GatePortalFixture";
+            _portal = portalRoot;
+            TestContext.Tree.Root.AddChild(portalRoot);
+            GateTravelZone portal = portalRoot.GetNode<GateTravelZone>("GateTravelZone");
 
             pauseHost.SetPaused(true);
             Assert.AreEqual(0f, GameClock.TimeScale, 0.0001f, "Fixture guard: the pause menu owns the freeze first.");

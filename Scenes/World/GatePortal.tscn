@@ -10,8 +10,10 @@
 ; WHAT IS BOUND PER INSTANCE: the root's position (the builder, GatePortalOffsetX beside the
 ; checkpoint) and the marker's colour and size (Readability.json via GateTravelZone.EnsureMarker,
 ; bound while the instance is detached because GameplayTelegraphPulse caches the colour at _Ready).
-; The trigger radius is GateTravelZone's own constant rather than designer data, so it is authored
-; below and nothing rewrites it.
+; THE TRIGGER RADIUS IS AUTHORED HERE AND NOWHERE ELSE. Unlike the bonfire's, which WorldTuning.json
+; owns through checkpointZoneRadius, there is no design key for the gate's reach - so this scene
+; property is the single source, which rule 1 allows as a data asset. K7 deleted the 1.4 m constant
+; that used to sit beside it in GateTravelZone; EnsureMarker now sizes the disc FROM this number.
 ;
 ; UNITS: 1 Unity metre = 100 px (World.Ppu).
 [gd_scene load_steps=4 format=3]
@@ -21,8 +23,8 @@
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_trigger"]
 resource_local_to_scene = true
-; GateTravelZone.ZoneRadius = 1.4 m -> World.U -> 140 px. Smaller than the bonfire's 1.5 m so the two
-; can share a corner of the arena without both answering the same Interact.
+; 1.4 m -> World.U -> 140 px. Smaller than the bonfire's 1.5 m so the two can share a corner of the
+; arena without both answering the same Interact.
 radius = 140.0
 
 [node name="GatePortal" type="Node2D"]

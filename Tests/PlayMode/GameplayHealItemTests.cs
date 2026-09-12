@@ -64,8 +64,9 @@ namespace MyGame.Tests
             GameSave.LoadOnNextGameplayStart = false;
             GameSave.Clear();
 
+            // The whole Checkpoint.tscn instance, not just the zone inside it.
             if (GodotObject.IsInstanceValid(_zone))
-                _zone.QueueFree();
+                (_zone.GetParent() ?? _zone).QueueFree();
 
             _zone = null;
         }
@@ -411,24 +412,27 @@ namespace MyGame.Tests
         }
 
         /// <remarks>
-        /// PORT CHANGE: the zone *is* the node here - <see cref="CheckpointZone"/> is an
-        /// <see cref="Area2D"/> - so there is no GameObject plus AddComponent, just one object positioned
-        /// before it enters the tree (a shape that appears at the origin and is then moved sweeps across
-        /// the arena on the way in). Unity's Rigidbody2D.WakeUp is gone with the Rigidbody2D: a Godot
-        /// Area2D re-evaluates its overlaps on the next physics step whether or not anything moved.
+        /// PORT CHANGE: Unity's Rigidbody2D.WakeUp is gone with the Rigidbody2D - a Godot Area2D
+        /// re-evaluates its overlaps on the next physics step whether or not anything moved.
+        /// <para>
+        /// K7: the shipped bonfire - <c>Scenes/World/Checkpoint.tscn</c> - rather than a bare
+        /// <see cref="CheckpointZone"/>, because the zone no longer builds its own trigger shape or
+        /// marker when it finds none. Positioned before it enters the tree; a shape that appears at the
+        /// origin and is then moved sweeps across the arena on the way in.
+        /// </para>
         /// </remarks>
         private async Task PlaceZoneOnPlayer(PlayerController2D player)
         {
             var respawner = SceneQuery.FindFirst<GameplayEnemyRespawner>();
             Assert.NotNull(respawner, "Gameplay scene should own an enemy respawner.");
 
-            _zone = new CheckpointZone
-            {
-                Name = "TestCheckpointZone",
-                Position = PlayerBody(player).GlobalPosition,
-            };
-            TestContext.CurrentScene.AddChild(_zone);
+            var bonfire = GD.Load<PackedScene>("res://Scenes/World/Checkpoint.tscn").Instantiate<Node2D>();
+            bonfire.Name = "TestCheckpoint";
+            bonfire.Position = PlayerBody(player).GlobalPosition;
+            TestContext.CurrentScene.AddChild(bonfire);
 
+            // The zone sits at the bonfire root's origin, so its GlobalPosition is the one written above.
+            _zone = bonfire.GetNode<CheckpointZone>("CheckpointZone");
             _zone.Initialize(ContextFor(player), respawner);
 
             // Trigger callbacks land on the physics step, not the frame the area appeared on.

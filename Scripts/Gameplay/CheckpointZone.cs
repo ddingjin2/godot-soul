@@ -232,10 +232,8 @@ namespace MyGame.Gameplay
 
         /// <summary>
         /// Binds the designer's reach onto the trigger <c>Scenes/World/Checkpoint.tscn</c> authors. The
-        /// shape is still built here when there is none, because a zone with no trigger never fires and
-        /// gives no sign why - and the test fixtures build a bare <see cref="CheckpointZone"/> by hand.
-        /// The radius is rewritten either way: the scene carries the shipped 1.5 m so it is valid on its
-        /// own, but <c>WorldTuning.json</c> is what owns the number.
+        /// radius is <c>WorldTuning.json</c>'s and is rewritten on every bind; the scene carries an
+        /// empty <c>CircleShape2D</c> so the number has exactly one home (K5b item 3).
         /// Unity had to warn about an authored *solid* collider it must not convert; an
         /// <see cref="Area2D"/> cannot be solid, so that branch has nothing left to guard and is gone.
         /// </summary>
@@ -248,8 +246,8 @@ namespace MyGame.Gameplay
             CollisionShape2D trigger = this.GetComponent<CollisionShape2D>();
             if (trigger == null)
             {
-                trigger = new CollisionShape2D { Name = "Trigger", Shape = new CircleShape2D() };
-                AddChild(trigger);
+                GD.PushError($"CheckpointZone: '{Name}' has no CollisionShape2D; Scenes/World/Checkpoint.tscn authors one named 'Trigger'. This bonfire can never be rested at.");
+                return;
             }
 
             // The scene marks its CircleShape2D resource_local_to_scene, so this is this bonfire's reach
@@ -266,20 +264,18 @@ namespace MyGame.Gameplay
         /// designer-owned colour are bound here.
         /// </summary>
         /// <remarks>
-        /// A checkpoint from <c>Scenes/World/Checkpoint.tscn</c> already carries the marker, so this
-        /// binds the authored one; a zone built by hand - which is every fixture - gets one instanced.
-        /// Either way the disc is sized and tinted before the marker is in the tree, and that order is
-        /// load-bearing for the same reason it was in Unity: the pulse caches the colour it finds when
-        /// it is readied and writes it back every frame after that.
+        /// Every checkpoint comes from <c>Scenes/World/Checkpoint.tscn</c>, which carries the marker, so
+        /// this only binds. The disc is sized and tinted while the instance is still detached, and that
+        /// order is load-bearing for the same reason it was in Unity: the pulse caches the colour it
+        /// finds when it is readied and writes it back every frame after that.
         /// </remarks>
         private void EnsureMarker()
         {
             var marker = GetNodeOrNull<GameplayTelegraphPulse>(MarkerObjectName);
-            bool authored = marker != null;
-            if (!authored)
+            if (marker == null)
             {
-                marker = GD.Load<PackedScene>(MarkerScenePath).Instantiate<GameplayTelegraphPulse>();
-                marker.Name = MarkerObjectName;
+                GD.PushError($"CheckpointZone: '{Name}' has no '{MarkerObjectName}'; Scenes/World/Checkpoint.tscn authors a {MarkerScenePath} instance under that name. This bonfire is invisible.");
+                return;
             }
 
             var shape = this.GetComponent<CollisionShape2D>()?.Shape as CircleShape2D;
@@ -295,9 +291,6 @@ namespace MyGame.Gameplay
                 GD.PushError("CheckpointZone: Art/Readability.json or Design/ReadabilityLayout.json is missing; the bonfire marker keeps no designer colour.");
             else
                 disc.Modulate = readability.CheckpointLabelColor;
-
-            if (!authored)
-                AddChild(marker);
         }
     }
 }

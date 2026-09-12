@@ -32,15 +32,14 @@ namespace MyGame.Gameplay
     ///
     /// Solid geometry is an instance of <c>Scenes/World/SolidBox.tscn</c> - a
     /// <see cref="StaticBody2D"/> on <see cref="World.Layer.Ground"/> carrying a
-    /// <see cref="CollisionShape2D"/> and a <see cref="Sprite2D"/> - and decoration is a bare Sprite2D
-    /// still built here, which is exactly the split Unity had between "collider plus renderer" and
-    /// "renderer only". A one-node scene whose only content is a Sprite2D would be a file and a load
-    /// for no structure, so <see cref="CreateSceneryPiece"/> stays code on purpose.
+    /// <see cref="CollisionShape2D"/> and a <see cref="Sprite2D"/> - and decoration is an instance of
+    /// <c>Scenes/World/SceneryPiece.tscn</c>, a bare <see cref="Sprite2D"/>. That is exactly the split
+    /// Unity had between "collider plus renderer" and "renderer only" (decision D8).
     ///
-    /// This file no longer builds nodes for the pieces that have a scene: it loads them, binds the
-    /// designer-owned numbers, and places them. The names it writes are the ones the rest of the
-    /// project reaches for - a platform takes the layout's own <c>platform.Name</c>, not the scene
-    /// root's - so the instance is renamed before it enters the tree.
+    /// This file builds no nodes at all: it loads scenes, binds the designer-owned numbers, and places
+    /// them. The names it writes are the ones the rest of the project reaches for - a platform takes
+    /// the layout's own <c>platform.Name</c>, not the scene root's - so the instance is renamed before
+    /// it enters the tree.
     /// </summary>
     public static class GameplayEnvironmentBuilder
     {
@@ -55,6 +54,9 @@ namespace MyGame.Gameplay
 
         private const string CheckpointScenePath = "res://Scenes/World/Checkpoint.tscn";
         private const string GatePortalScenePath = "res://Scenes/World/GatePortal.tscn";
+
+        /// <summary>Decoration: one Sprite2D, no collider, no body. Six placements read this (decision D8).</summary>
+        private const string SceneryPieceScenePath = "res://Scenes/World/SceneryPiece.tscn";
 
         /// <summary>The two children <c>SolidBox.tscn</c> authors. Reached by name, as the scene guarantees them.</summary>
         private const string SolidBoxShapeName = "Shape";
@@ -427,13 +429,22 @@ namespace MyGame.Gameplay
             CreateSceneryPiece(name, position, texture, size, color, sortingOrder, new Vector2(0.5f, 0.5f));
         }
 
-        /// <summary>Decoration: a sprite and nothing else, exactly as in Unity - no collider, no body.</summary>
+        /// <summary>
+        /// Decoration: a sprite and nothing else, exactly as in Unity - no collider, no body. An instance
+        /// of <c>Scenes/World/SceneryPiece.tscn</c>, named and positioned <i>before</i> it enters the
+        /// tree, as <c>GameplayBuildShim.NewObject</c> did.
+        /// </summary>
         private static void CreateSceneryPiece(string name, Vector2 position, Texture2D texture, Vector2 size, Color color, int sortingOrder, Vector2 pivot)
         {
-            Sprite2D sprite = GameplayBuildShim.NewObject<Sprite2D>(name, position);
+            var sprite = GD.Load<PackedScene>(SceneryPieceScenePath).Instantiate<Sprite2D>();
+            sprite.Name = name;
+            sprite.Position = position;
+
             GameplayVisualFactory.Dress(sprite, texture, size, pivot);
             sprite.Modulate = color;
             sprite.ZIndex = sortingOrder;
+
+            GameplayBuildShim.SceneRoot?.AddChild(sprite);
         }
 
         private static Color GetSceneryColor(string name, GameplayReadabilityDefaults readability)
