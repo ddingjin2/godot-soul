@@ -19,7 +19,7 @@ PLAN_CLOSEOUT §종결에 숫자로 있다.
 
 ## 브랜치
 
-`master`가 이식 본체, `refactor/godot-scene-data`가 전환 브랜치. **병합하지 않았고 push한 적도 없다.** 원격 없음.
+`master`가 이식 본체, `refactor/godot-scene-data`가 전환 브랜치. **병합하지 않았다.** 원격은 2026-09-12부터 `origin` = https://github.com/ddingjin2/godot-soul (public, 기본 브랜치 `master`), 두 브랜치 모두 push됨.
 이번 세션(09-12) 커밋 17개: K5b 3, K7 4, K7b 2, 수정 1, 문서·잡무 7. 풀 스위트 3회(K5b, K7, K7b 각 착지 뒤),
 전부 210 / 1 / 1.
 
