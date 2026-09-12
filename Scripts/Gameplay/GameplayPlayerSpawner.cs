@@ -75,9 +75,6 @@ namespace MyGame.Gameplay
         /// </summary>
         private const string PlayerScenePath = "res://Scenes/Actors/Player.tscn";
 
-        private const float StartingHealth = 100f;
-        private const float StartingHumanity = 100f;
-
         public static GameplayPlayerContext Spawn(
             GameplaySceneDefaults scene,
             GameplayReadabilityDefaults readability,
@@ -86,9 +83,20 @@ namespace MyGame.Gameplay
         {
             GameplayTuningCatalog tuning = GameplayTuningCatalog.Load();
             PlayerResourceData resources = tuning?.PlayerResources;
-            float maxHealth = resources != null ? resources.maxHealth : StartingHealth;
-            float startingHealth = resources != null ? resources.startingHealth : StartingHealth;
-            float startingHumanity = resources != null ? resources.startingHumanity : StartingHumanity;
+
+            // No copy of the shipped 100 / 100 / 100 lives here any more: a player with no resource file
+            // would start on numbers from nowhere, which is a different game rather than a broken build
+            // (PLAN_CLOSEOUT D1). GameplayBootstrap already refuses to build the arena when the catalog
+            // is short a file, so nothing shipped reaches this return.
+            if (resources == null)
+            {
+                GD.PushError("GameplayPlayerSpawner: Design/PlayerResources.json is missing; no player is spawned.");
+                return default;
+            }
+
+            float maxHealth = resources.maxHealth;
+            float startingHealth = resources.startingHealth;
+            float startingHumanity = resources.startingHumanity;
 
             // Built detached and parented last. Every component's _Ready looks for its siblings, and a
             // node that entered the tree before they existed would find none of them - so the whole

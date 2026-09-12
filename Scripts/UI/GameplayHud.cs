@@ -918,19 +918,13 @@ namespace MyGame.UI
         {
             return sin switch
             {
-                SinState.Wrath => new Color(0.54901963f, 0.20392157f, 0.15686275f), // #8C3428
-                SinState.Sloth => new Color(0.24705882f, 0.29019609f, 0.3882353f),  // #3F4A63
-                SinState.Pride => new Color(0.47843137f, 0.41568628f, 0.23529412f), // #7A6A3C
-
-                // The four the table filled in on 2026-08-10. Desaturated the same way the first three
-                // are, and leaning on the chapter each sin is named for (CombatTypes: Gluttony is the
-                // orange chapter, Greed yellow, Envy green) - except Lust, which takes rose rather than
-                // its chapter's blue, because blue is already Sloth and two sins that read the same
-                // colour is worse than one that does not match its chapter.
-                SinState.Gluttony => new Color(0.54901963f, 0.35294119f, 0.15686275f), // #8C5A28
-                SinState.Greed => new Color(0.54901963f, 0.47843137f, 0.15686275f),    // #8C7A28
-                SinState.Envy => new Color(0.24705882f, 0.3882353f, 0.27843137f),      // #3F6347
-                SinState.Lust => new Color(0.47843137f, 0.24705882f, 0.36078432f),     // #7A3F5C
+                SinState.Wrath => Hue("sin_wrath"),
+                SinState.Sloth => Hue("sin_sloth"),
+                SinState.Pride => Hue("sin_pride"),
+                SinState.Gluttony => Hue("sin_gluttony"),
+                SinState.Greed => Hue("sin_greed"),
+                SinState.Envy => Hue("sin_envy"),
+                SinState.Lust => Hue("sin_lust"),
                 _ => Bone300
             };
         }
