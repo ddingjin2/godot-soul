@@ -17,3 +17,17 @@ obj/
 *.bak
 *~
 docs/work/
+
+# Editors and OS
+.vs/
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Claude Code agent worktrees - local to one machine, never source
+.claude/worktrees/
+
+# Godot .NET crash dumps
+mono_crash.*
