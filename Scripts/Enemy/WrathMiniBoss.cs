@@ -193,9 +193,13 @@ namespace MyGame.Enemy
                 introTriggerZone.Visible = true;
             }
 
+            // Authored on Scenes/Actors/EnemyBase.tscn, which WrathMiniBoss.tscn inherits, so this used
+            // to be an add no shipped boss ever reached (PLAN_CLOSEOUT D1/K7).
             if (this.FindComponent<CombatFeedback>() == null)
             {
-                AddChild(new CombatFeedback { Name = "CombatFeedback" });
+                GD.PushError($"{GetType().Name} '{Name}' has no CombatFeedback; Scenes/Actors/EnemyBase.tscn authors one and nothing adds it at runtime. It does not run.");
+                SetProcess(false);
+                SetPhysicsProcess(false);
             }
         }
 

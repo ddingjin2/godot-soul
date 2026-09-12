@@ -36,12 +36,12 @@ position = Vector2(60, 0)
 
 ; The disc that telegraphs where the swing lands. No numbers, by decision D4: DressAttackReadout
 ; writes the position, the size, the colour and the sorting order from ReadabilityLayout.json /
-; Readability.json on every spawn. In the editor it shows AttackReadout.tscn's own shipped arc
-; values, sitting on the grunt's origin.
+; Readability.json on every spawn. AttackReadout.tscn authors none of them either since K5b, so in
+; the editor this opens at Godot's own Sprite2D defaults, sitting on the grunt's origin.
 [node name="SlashDanger" parent="." instance=ExtResource("4")]
 
-; Authored rather than left to GameplayEnemySpawner.EnsureEnemyHealthRig's EnsureComponent: a grunt
-; is one of the three archetypes that despawn on death. Neither boss scene carries this, which is
-; what the destroyOnDeath flag decided before.
+; Authored here because a grunt is one of the three archetypes that despawn on death. Neither boss
+; scene carries this, which is what the destroyOnDeath flag decided before; since K7
+; GameplayEnemySpawner.EnsureEnemyHealthRig only looks the node up under that flag and never adds it.
 [node name="EnemyDeathCleanup" type="Node" parent="."]
 script = ExtResource("5")

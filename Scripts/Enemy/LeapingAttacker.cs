@@ -90,15 +90,14 @@ namespace MyGame.Enemy
                 _sr.Modulate = tuningData.enemyColor;
             }
 
-            // Unity's Start.
-            if (this.FindComponent<EnemyGroupCombat>() == null)
+            // Unity's Start. Both nodes are authored on Scenes/Actors/EnemyBase.tscn, which every
+            // archetype scene inherits, so this used to be an add no shipped leaper ever reached
+            // (PLAN_CLOSEOUT D1/K7).
+            if (this.FindComponent<EnemyGroupCombat>() == null || this.FindComponent<CombatFeedback>() == null)
             {
-                AddChild(new EnemyGroupCombat { Name = "EnemyGroupCombat" });
-            }
-
-            if (this.FindComponent<CombatFeedback>() == null)
-            {
-                AddChild(new CombatFeedback { Name = "CombatFeedback" });
+                GD.PushError($"{GetType().Name} '{Name}' has no EnemyGroupCombat or no CombatFeedback; Scenes/Actors/EnemyBase.tscn authors both and nothing adds them at runtime. It does not run.");
+                SetProcess(false);
+                SetPhysicsProcess(false);
             }
         }
 

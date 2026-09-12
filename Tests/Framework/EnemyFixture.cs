@@ -1,3 +1,5 @@
+using MyGame.Combat;
+using MyGame.Core;
 using MyGame.Enemy;
 using MyGame.Player;
 
@@ -24,6 +26,14 @@ namespace MyGame.Tests
         /// </summary>
         public static T ConfigureFromDesign<T>(T machine) where T : EnemyStateMachine
         {
+            // What Scenes/Actors/EnemyBase.tscn authors on every shipped actor. Needed since K7: the
+            // archetypes stopped adding these two for themselves and now refuse to run without them, so
+            // a hand-built enemy has to arrive with the same rig the scene would have given it.
+            if (machine.FindComponent<CombatFeedback>() == null)
+                machine.AddComponent<CombatFeedback>();
+            if (machine.FindComponent<EnemyGroupCombat>() == null)
+                machine.AddComponent<EnemyGroupCombat>();
+
             MyGame.Gameplay.WorldTuningData world = MyGame.Gameplay.WorldTuningData.Load();
             Assert.NotNull(world, "Resources/Design/WorldTuning.json has to load; every enemy's leash and gravity is in it.");
 

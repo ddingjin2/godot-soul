@@ -87,15 +87,14 @@ namespace MyGame.Enemy
             _startPos = GlobalPosition;
             _patrolTarget = _startPos + (Vector2.Right * tuningData.patrolDistance);
 
-            // Unity's Start. Godot has one entry point, so the two run back to back.
-            if (this.FindComponent<CombatFeedback>() == null)
+            // Unity's Start. Godot has one entry point, so the two run back to back. Both nodes are
+            // authored on Scenes/Actors/EnemyBase.tscn, which every archetype scene inherits, so this
+            // used to be an add that no shipped grunt ever reached (PLAN_CLOSEOUT D1/K7).
+            if (this.FindComponent<CombatFeedback>() == null || this.FindComponent<EnemyGroupCombat>() == null)
             {
-                AddChild(new CombatFeedback { Name = "CombatFeedback" });
-            }
-
-            if (this.FindComponent<EnemyGroupCombat>() == null)
-            {
-                AddChild(new EnemyGroupCombat { Name = "EnemyGroupCombat" });
+                GD.PushError($"{GetType().Name} '{Name}' has no CombatFeedback or no EnemyGroupCombat; Scenes/Actors/EnemyBase.tscn authors both and nothing adds them at runtime. It does not run.");
+                SetProcess(false);
+                SetPhysicsProcess(false);
             }
         }
 
