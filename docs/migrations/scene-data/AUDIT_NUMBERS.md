@@ -294,7 +294,7 @@ strafe-flip chance (frame-rate dependent) · `:423` `GD.RandRange(1.2f, 2f)` s r
 | `Scripts/Enemy/RangedCaster.cs:377` | `World.U(3f)` projectile knockback | `RangedCaster.json.attackKnockback = 3.0` — speed and damage on the two lines above *are* read from tuning |
 | `Scripts/Enemy/WrathMiniBoss.cs:766` | `World.U(6f)` slash knockback | `WrathMiniBoss.json.attackKnockback = 5.0` — unconditional literal, tuning never consulted |
 | `Scripts/Enemy/WrathMiniBoss.cs:903` | `World.U(5f)` rush knockback | same |
-| `Scripts/Enemy/RainbowChapterBossBehaviour.cs:164` | `DefaultStunDuration = 1f` | **`RainbowChapterBossData` has no `stunDuration` field at all** — verified. Every authored chapter boss is stunned for exactly 1 s regardless of its JSON |
+| `Scripts/Enemy/RainbowChapterBossBehaviour.cs:164` | `DefaultStunDuration = 1f` | **`RainbowChapterBossData` has no `stunDuration` field at all** — verified. Every authored chapter boss is stunned for exactly 1 s regardless of its JSON. **Resolved since:** S7 (`aaee446`) added `stunDuration` to `RainbowChapterBossData`, K3 named it in all eight chapter files at `1.0`, and K5 (`13c3258`) deleted `DefaultStunDuration` - `RainbowChapterBossBehaviour` reads `bossData.stunDuration` and nothing else |
 
 ### 2.4j Projectile flight (5)
 

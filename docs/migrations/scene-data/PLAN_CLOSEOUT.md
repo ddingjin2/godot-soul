@@ -111,9 +111,10 @@ keep-in-code 목록, `GameplayVisualFactory`, `DebugVisualization`. 이들은 "�
 | **K6** | **완료.** 액터 씬 7개에서 스포너가 매 스폰 쓰는 속성 60줄 + 빈 override 블록 8 삭제; 스폰 결과 493값 전후 동일(probe). `GameplaySceneDefaultsAsset` 초기화값 4 → 0. 발견: `Scenes/World/AttackReadout.tscn`·`WorldHealthBar.tscn`·`Checkpoint.tscn`이 같은 거울 패턴(K6 범위 밖) | tscn 7 + 1 | 낮음 | 완료 |
 | **K5b** | **완료.** SinState 색 7 → `MenuTheme.tres` `sin_*` 7(기존 파일에 같은 색 없음 확인); 시작 자원 상수 2 + 삼항 3 삭제, `PlayerResources.json` null이면 스폰 중단; 씬 거울 8값 삭제(`WorldHealthBar.tscn` 4·`AttackReadout.tscn` 3·`Checkpoint.tscn` 1), 465값 probe 동일; `EnemyStateMachine` 초기화값 4 삭제 + `_configured` 가드, `GetDetectionRange` abstract(죽은 본체); `Create()` null 가드 2. 발견: 맨손 enemy fixture 6곳이 `Configure`를 안 불러 초기화값으로 돌고 있었음 → `Tests/Framework/EnemyFixture.cs`. 기대값 변화 0. 계획 밖 발견: Combat·Player 컴포넌트 `[Export]` 초기화값 84가 A1~A8 어디에도 없었음 — 검토 이력 | 9 + tscn 3 + 테스트 8 | 완료 | 완료 |
 | **K7** | **명세는 아래 §K7.** 측정(2026-09-12)이 계획과 다른 점: 카메라를 authoring한 씬이 없어 C2는 삭제가 아니라 신규 authoring; 셸 8개가 바이트 동일이라 `Scenes/GameplayShell.tscn` 하나를 8개가 상속(규칙 2); `EnsureComponent` 20곳 중 4곳은 출하 경로에서 실제 추가(`Player.tscn` 노드 4 필요); P0 테스트 1개 출하 계약으로 재설계; `GameplayBuildShim.Root` 존속(4멤버); 미명명 노드 생성 2(`EnemyRespawner`·`CutsceneTriggers`) + 아키타입 `CombatFeedback`/`EnemyGroupCombat` 가드 7 편입 | 셸 8 + 신규 tscn 2 + `Player.tscn` + 스크립트 약 14 + shim + 테스트 12 | 높음 | 단독, K5b 뒤 |
+| **K7b** | **승인 (a) 2026-09-12, 명세는 아래 §K7b.** Combat·Player 컴포넌트 `[Export]` 초기화값 — 측정 107/20파일: 데이터 소스 14(준수), 스폰이 덮어쓰는 숫자·색 78, 진짜 공백 5(`spiritTint` → `Readability.json` 키 1, `currentResonance`·`damage` 삭제, 테스트 드라이버 2는 D2 면제), 비숫자 10. 플레이어 쪽은 `AddChild` 뒤에 튜닝하므로 `_Ready` 가드 불가 → K5 챕터 보스 방식(지연 검사). `Tests/Framework/PlayerFixture.cs` | 스크립트 13 + json 1 + 테스트 12 | 중간 — fixture 12클래스 | 단독, K7 뒤 |
 | **K8** | D6 완전성 테스트 1개. 문서: `AGENTS.md` "현재 준수 상태"를 "준수"로, `PLAN.md`·`PORTING_GUIDE.md` 종결 표기, `PORT_STATUS`·`INTEGRATION_NOTES`(시그니처 다수), 인수인계 | 문서 | 낮음 | 단독 |
 
-**순서:** K0 → K1 → (K2 ∥ K3 ∥ K4) → (K5 ∥ K6) → K5b → K7 → K8. 병렬은 파일 서로소일 때만, 담당별 소유 파일
+**순서:** K0 → K1 → (K2 ∥ K3 ∥ K4) → (K5 ∥ K6) → K5b → K7 → K7b → K8. 병렬은 파일 서로소일 때만, 담당별 소유 파일
 목록 명시, `run-tests.ps1`은 한 명만, 풀 스위트는 착지마다 코디네이터가 한 번(11분).
 
 **K1이 문이다.** K1 없이 K2~K4를 하면 스위트의 맨손 액터가 전부 `PushError`로 죽는다. K1은 스위트가 정본
@@ -320,6 +321,97 @@ keep-in-code 목록, `GameplayVisualFactory`, `DebugVisualization`. 이들은 "�
 `Scripts/`에서 `new <Node>` / `AddChild(new` 로 노드를 만드는 곳은 위 면제 목록뿐이어야 한다. `GameplayBuildShim`은 4멤버.
 `grep -rn "EnsureComponent\|NewObject\|AddComponent" Scripts` 0건(주석 제외). K8이 숫자로 남긴다.
 
+## K7b — 컴포넌트 `[Export]` 초기화값 명세 (2026-09-12 승인 (a), K7 뒤 시작)
+
+목적: 감사 A1~A8이 세지 않은 마지막 코드 사본 — Combat·Player 컴포넌트의 `[Export]` 초기화값 — 을 K5b와 같은 방식으로
+닫는다. 한 명, `isolation: worktree`, `model: opus`, **K7이 착지한 트리에서 시작**(테스트 fixture 파일이 K7과 겹친다:
+`P0CombatStabilityTests.Gameplay.cs`, `UnityTestAgentPlayModeSmokeTests`, 보스 fixture 4). 착지 = 풀 스위트 210 / 1 / 1 유지,
+`DesignFileCompletenessTests` green, 값 동일 probe. 측정치는 `9dae190` 기준(읽기 전용 에이전트) — 다시 잰다.
+
+### 측정 — 브리프의 "84"는 83
+
+`Scripts/`의 `[Export]` 초기화값 전체(`*Data.cs`·`EnemyStateMachine` 제외) **107개 / 20파일**:
+(a) 데이터 소스 14(`CombatTuningData.Shared.x` — 준수, 건드리지 않음), (b) 출하 경로에서 스폰이 덮어쓰는 숫자·색 **78**,
+(c) 덮어쓰지 않는 것 **5**, (d) 비숫자 10(범위 밖). "84"의 하나 `DamageHitbox2D.knockbackForce:34`는 `DefaultKnockbackForce`
+= `CombatTuningData.Shared.knockbackLight` — (a)였다.
+
+**(b) 78 — 파일·작성자·정본 키**
+
+| 파일 | 개수 | 덮어쓰는 호출 (`GameplayPlayerSpawner.cs` 줄) | 정본 |
+|---|---|---|---|
+| `Player/PlayerActionController.cs:24-71` | 31 | `ApplyTuning`(`:129`) 28 + `ApplyResourceTuning`(`:130`) 3 | `PlayerCombat.json` 28키, `PlayerResources.json` `healAmount`·`maxHealCharges`·`healWindup` |
+| `Player/StaminaSystem.cs:12-24` | 8 | `ApplyTuning`(`:116`) | `PlayerResources.json` 8키 |
+| `Player/PlayerMotor2D.cs:20-29` | 8 | `ApplyTuning`(`:127`) | `PlayerMovement.json` 8키 |
+| `Combat/SinResonanceController.cs:10-27` | 8 | `ApplyTuning`(`:157`) | `SinTuning.json` 8키 |
+| `Combat/HumanityController.cs:8-13` | 6 | `Configure`(`:150`) 5 + `SetHumanity`(`:153`) 1 | `PlayerResources.json` |
+| `Combat/Poise.cs:16-20` | 5 | `Configure`(플레이어 `:224`, 적 `GameplayEnemySpawner:559`, 보스 `:345`) | `PlayerResources.json` / 아키타입·챕터 json |
+| `Player/DeathStateController.cs:14-21` | 4 | `ApplyTuning`(`:166`) | `PlayerResources.json` 4키 |
+| `Combat/DamageHitbox2D.cs:18-19` | 2 | `Configure`(`:125`) | `ReadabilityLayout.json` |
+| `Player/PlayerLockOn.cs:24,27` | 2 | `Configure`(`:216`) | `WorldTuning.json` `lockOnRange`·`lockOnBreakRange` |
+| `Gameplay/GameplayFallDeath.cs:15,23` | 2 | `deathY` ← `Initialize`(`:161`); `respawnLockout` ← **자기 `_Ready`가 `WorldTuning.json`을 직접 읽음**(`:41-43`) | `SceneLayout*.json` / `WorldTuning.json` |
+| `Combat/Health.cs:12` | 1 | `SetMaxHealth`(플레이어 `:111`, 적 `GameplayEnemySpawner:510`, 챕터 보스 `RainbowChapterBossBehaviour:394`) | 각 json `maxHealth` |
+| `Gameplay/ShortcutGate.cs:47` | 1 | **씬** `Scenes/World/ShortcutGate.tscn:44` `openAlpha = 0.25` | 씬 속성(허용 에셋) |
+
+**(c) 5 — 진짜 공백**
+
+| 파일 | 필드 | 처리 |
+|---|---|---|
+| `Combat/SinResonanceController.cs:9` | `currentResonance = 0f` | §4 identity 면제 — 초기화값만 삭제 |
+| `Player/DeathStateController.cs:15` | `spiritTint = Color(0.486,0.510,0.565,0.55)` | **정본 없음.** `Resources/Art/Readability.json`에 `spiritTint` 키 추가(현재 값, 형제 `spiritPlatformColor` 옆), `GameplayReadabilityDefaults`에 속성, 스포너가 넘김. `PlayerSpiritTintMatchesShippedValue`(`P0…Systems.cs:689-700`)는 코드 리터럴을 코드와 비교하는 동어반복 — 파일 값과 비교하도록 재지향 |
+| `Combat/DamageHitbox2D.cs:20` | `damage = 10f` | 스폰 때 안 씀, `PlayerActionController:583` `SetDamage`가 매 스윙 씀. 초기화값 삭제(0) |
+| `Testing/MyGameRuntimeAgentDriver.cs:31,33` | `targetSearchInterval 0.5f`, `statusLogInterval 1f` | **D2 면제(K8 기록)** — 테스트 발판(`UnityTestAgentRuntimeDriverTests:46`만 만든다), 진단 주기(§3.13과 같은 성질). 손대지 않는다 |
+
+### 소유 파일
+
+- `Scripts/Player/PlayerActionController.cs`, `StaminaSystem.cs`, `PlayerMotor2D.cs`, `DeathStateController.cs`, `PlayerLockOn.cs`
+- `Scripts/Combat/SinResonanceController.cs`, `HumanityController.cs`, `Poise.cs`, `DamageHitbox2D.cs`, `Health.cs`
+- `Scripts/Gameplay/GameplayFallDeath.cs`, `ShortcutGate.cs`, `GameplayReadabilityDefaults.cs`(+ `GameplayReadabilityThemeData` 등 `Readability.json`을 읽는 타입), `GameplayPlayerSpawner.cs`(spiritTint 전달 1줄)
+- `Resources/Art/Readability.json`(키 1 추가, 텍스트 줄 삽입 — 재직렬화 금지)
+- 테스트: 신규 `Tests/Framework/PlayerFixture.cs`; `P0CombatStabilityTests` 3파일; `GameplayBossAttackGrammarTests`, `GameplayChapterBossTests`,
+  `GameplayHazardStripRegressionTests`, `GameplayDifficultyAndGateTravelTests`, `GameplaySinTuningTests`, `UnityTestAgentPlayModeSmokeTests`;
+  조건부(`Health`만) `GameplayBossChapterSystemsTests`, `GameplayChapterProgressionRegressionTests`, `GameplayDifficultySaveMergeRegressionTests`,
+  `GameplayLockOnTests`, `GameplaySoulSinkRegressionTests`; `DesignFileCompletenessTests`(타입 표에 새 필드가 잡히는지). 문서는 코디네이터.
+
+### 항목
+
+1. **초기화값 삭제 — (b) 78 + (c) 중 3(`currentResonance`·`damage`·`openAlpha`) = 81.** 값이 정본에 있는지 파일별로 확인 후 삭제
+   (K5b처럼 "이미 있다"가 답이어야 한다 — 키 추가는 `spiritTint` 1개뿐).
+2. **미설정 감지 — `_Ready` 가드는 쓰지 않는다.** 플레이어 스포너는 리그 전체를 `AddChild`(`:106`)한 **뒤** 튜닝한다(`:101-103` 주석: 각
+   `_Ready`가 형제를 찾기 때문). 챕터 보스도 `PlaceInWorld`(`GameplayEnemySpawner:348`) 뒤 `SetBossData`(`:356`)로 체력을 쓴다. 따라서
+   `_Ready` 가드는 출하 경로에서 울린다. 대신 **K5 챕터 보스가 쓴 모양**: `_configured` 플래그를 `ApplyTuning`/`Configure`/`SetMaxHealth`가
+   세우고, `_Ready`에서 `CallDeferred(nameof(CheckConfigured))` — 지연 호출은 프레임 끝에 돌고 스포너의 튜닝은 `AddChild` 직후 같은 호출
+   스택에서 끝나므로 출하 경로는 통과, 맨손 fixture가 프레임을 진행하면 `PushError`(컴포넌트·노드 이름) + `SetProcess(false)` +
+   `SetPhysicsProcess(false)`. `Health`처럼 process 루프가 없는 컴포넌트도 같은 모양(정지는 no-op, 오류는 남는다). 트리에 안 들어가는
+   fixture(`GameplaySinTuningTests.BuildController:147`)는 가드가 안 울리므로 3번으로 반드시 채운다.
+   `GameplayFallDeath.respawnLockout`은 자기 `_Ready`가 파일을 읽으니 가드 대상 아님; `ShortcutGate.openAlpha`는 씬이 쓰니 가드 없음.
+3. **`Tests/Framework/PlayerFixture.cs`** — `EnemyFixture.ConfigureFromDesign`과 같은 모양(출하 파일 로드, `Assert.NotNull`, 트리 진입 전
+   호출 계약). 스포너 순서(`GameplayPlayerSpawner.cs:111-224`)를 그대로 거울로: `Health`(`SetMaxHealth`+`SetHealth`), `StaminaSystem`
+   (`ApplyTuning`+`SetStamina(Max)`), `DamageHitbox2D`(`Configure`, `ReadabilityLayout`), `PlayerMotor2D`, `PlayerActionController`
+   (`ApplyTuning`+`ApplyResourceTuning`), `HumanityController`(`Configure`+`SetHumanity`), `SinResonanceController`, `Poise`,
+   `DeathStateController`, `PlayerLockOn`. 오버로드 하나씩, 컴포넌트를 돌려준다. 맨손 fixture 표(§2 측정)의 사이트가 전부 이걸 부른다.
+   적 `Health`는 아키타입이 `SetHealth`만 부르고(`MeleeGrunt:81` 등) `SetMaxHealth`는 스포너(`:510`)뿐 — 맨손 아키타입 fixture
+   (`P0…Systems.cs:436,542`)는 `tuningData.maxHealth`로 `SetMaxHealth`. `P0CombatStabilityTests.CreatePlayerTarget`(`:437-469`)의
+   리터럴 패치(`:464-466`)는 fixture 호출로 대체 — `:462-463` 주석의 순서 함정(`Health._Ready`·`StaminaSystem._Ready`가 max로 채움)은
+   `_Ready` 뒤에 부르면 그대로 성립.
+4. **`_Ready` 본체가 초기화값을 읽는 4곳**(`PlayerActionController:153` `_healCharges = maxHealCharges`, `StaminaSystem:43`, `Health:38`,
+   `Poise:36`)은 0으로 돌고 configure가 다시 채운다 — 유지하되 그 불변식을 주석 한 줄로.
+5. **`spiritTint`**: `Readability.json` 키 추가 → `GameplayReadabilityDefaults.SpiritTint` → 스포너 `:166` 근처에서 `DeathStateController`에
+   전달(`ApplyTuning` 인자 추가 또는 `SetSpiritTint`). `DesignFileCompletenessTests`가 새 필드를 요구하는지 확인.
+
+### 검증
+
+- `tools/build.ps1`; 스모크 GameplayScene + 챕터 2~8 오류 0(알려진 경고 제외) — **가드가 출하 경로에서 한 번도 안 울리는 것**이 핵심 증명.
+- 값 동일 probe: 부팅된 GameplayScene의 플레이어 컴포넌트 11개 + 적 8마리 `Health`/`Poise` 필드 전부 전후 dump 동일. 임시, `Tests/` 밖, 커밋 전 제거.
+- 필터: 위 12클래스 전부 + `DesignFileCompleteness` + `GameplayCheckpointZoneTests`·`GameplayHealItemTests`(플레이어 자원 소비자). 유일한
+  실행자이므로 저장 접촉 클래스도 가능; 풀 스위트는 코디네이터.
+- 어서션 약화 금지. `PlayerSpiritTintMatchesShippedValue` 재지향은 성질 유지·기준 교체(K4 방식)로 보고.
+- 커밋: 경로 명시, attribution 2줄, `--editor` 금지, 새 `.cs`의 `.uid`만 커밋.
+
+### 착지 후 남는 것
+
+`grep -rnE '\[Export\][^=]*= *(new Color|World\.|[0-9])' Scripts` = `MyGameRuntimeAgentDriver` 2 + `RainbowChapterBossData.attacks` 0(`Array.Empty`는 숫자 아님)
+→ 숫자·색 리터럴 초기화값 **2, 둘 다 D2 면제**. (a) 14는 데이터 소스라 남는다. K8이 숫자로 남긴다.
+
 ## 이 계획으로 바뀌는 행동
 
 - **출하 경로: 없음.** 모든 파일이 존재하므로 fallback은 한 번도 실행되지 않았다. 유일한 예외는 K3a가
@@ -340,6 +432,7 @@ keep-in-code 목록, `GameplayVisualFactory`, `DebugVisualization`. 이들은 "�
 | K5 | 약 10파일 + `UiTuning.json` + `MenuTheme.tres` |
 | K6 | tscn 8 |
 | K7 | 약 8파일 + tscn 9 + shim + 테스트 이동 |
+| K7b | 스크립트 13 + `Readability.json` 키 1 + 테스트 12클래스 + `PlayerFixture.cs` |
 | K8 | 문서 6 |
 
 풀 스위트 착지 최소 8회 = 약 90분의 순수 대기. 병렬 3자리를 써도 검증은 직렬이다.
@@ -361,3 +454,4 @@ keep-in-code 목록, `GameplayVisualFactory`, `DebugVisualization`. 이들은 "�
 - 2026-09-12: K5(core·boss)·K6 착지. 남은 발견, 전부 작고 서로소 — 제안: **K5b** 한 명, K7 전에. (1) `GameplayHud.GetSinColor` SinState 색 7 → Theme(§4 면제 아님). (2) `GameplayPlayerSpawner` `StartingHealth`/`StartingHumanity` 상수 2, 사이트 3 → `PlayerResources.json` 값. (3) `GameplayWorldHealthBar` `_size`/`_offset`/`_fillColor` 초기화값 3 + `Scenes/World/WorldHealthBar.tscn` 같은 값 3, `Scenes/World/AttackReadout.tscn` scale/modulate/z_index 3, `Scenes/World/Checkpoint.tscn` `radius = 150` — 스포너/코드가 매번 덮어쓰는 거울(B1 잔여). (4) `EnemyStateMachine` 죽은 사본 4(`gravity`, `_ledgeProbeAhead`, `_ledgeProbeDepth`, `perfectParryStunMultiplier`) + `GetDetectionRange() => World.U(5f)`(전 아키타입이 override, 죽은 코드). (5) `GameplayReadabilityDefaults.Create()` null 미체크 소비자 3(`GameplayLockOnMarker`, `GateTravelZone.TitleFor`, `GameplayCutsceneTriggers.MoveRigToBoss`). (6) `AUDIT_NUMBERS.md:297` `stunDuration` 문장 낡음(K8). **같은 날 승인 — 명세는 §K5b, 다음 세션이 시작한다.**
 - 2026-09-12: K7 범위를 코드로 다시 쟀다(읽기 전용 에이전트). 계획과 다른 사실 7개 — 카메라 authoring 씬 0, 셸 8, `EnsureComponent` 20/4, P0 어서션 1, `Root` 필수, 미명명 생성 2, 테스트 `AddComponent<` 28 — 를 §K7 명세에 반영. 계획 행에 없던 편입 1: 아키타입 가드 7(합성 액터용 fallback, C3와 같은 종류; fixture 수정이 번지면 하지 않고 보고). 면제 후보 6(cosmetic attach-if-absent 3, `CutsceneRigMove`, `GameplayDebugSceneJump`, `PlayerController2D` deferred add, `AudioFeedback` 가드)은 K8이 D2 목록에 기록. **코디네이터 결정, 사용자 검토 대기 — 편입·면제 어느 쪽이든 되돌릴 수 있게 §K7에 근거를 남겼다.**
 - 2026-09-12: K5b 착지(에이전트 1, 커밋 3, 필터 68/0/0, 풀 스위트는 코디네이터). 계획 밖 발견 — **Combat·Player 컴포넌트의 `[Export]` 초기화값 84개**(`PlayerActionController` 31, `SinResonanceController` 9, `StaminaSystem` 8, `PlayerMotor2D` 8, `HumanityController` 6, `DeathStateController` 5, `Poise` 5, `DamageHitbox2D` 4, `PlayerLockOn` 2, `GameplayFallDeath` 2, `Health` 1, `ShortcutGate` 1, `MyGameRuntimeAgentDriver` 2)가 감사 A1~A8에 없다. A1은 `*Data.cs`만, A7은 `Scripts/Gameplay` 7파일만 셌다. 전부 스폰 때 `ApplyTuning`/`Configure`가 덮어쓰는, K5b가 `EnemyStateMachine`에서 지운 것과 같은 종류. "착지 후 코드 fallback 0" 목표는 이 84 때문에 현재 미달. **결정 대기: (a) 신규 단계로 제거(K5b 방식 — 초기화값 삭제 + 미호출 가드 + 맨손 fixture 보강; Combat·Player 층이라 fixture 파급이 K5b보다 큼) / (b) D2 면제로 명시("스폰이 덮어쓰는 컴포넌트 초기화값"). 추천 (a), K8 문서 종결 전.** 같이 남긴 것: `GateTravelZone.cs:34` `ZoneRadius = 1.4f` 상수는 K7이 fallback을 지울 때 함께; 낡은 주석 3(`CheckpointZone.cs:237`, `Player.tscn:157`, `MeleeGrunt.tscn:39`)은 K7이.
+- 2026-09-12: 위 84개 — **(a) 제거로 승인.** 새 단계 **K7b**(K7 뒤, K8 전, 에이전트 1): 초기화값 삭제 + 미설정 시 `PushError` + 정지 + 맨손 fixture는 설계 파일로 채움(K5b `EnemyFixture` 모양). 읽기 전용 측정을 먼저 돌려 §K7b 명세를 쓴다 — 84 재검증, 출하 경로에서 덮어쓰지 않는 초기화값(진짜 공백)과 `_Ready` 뒤에 덮어쓰는 것(가드가 출하 경로에서 울리는 경우) 분리.
