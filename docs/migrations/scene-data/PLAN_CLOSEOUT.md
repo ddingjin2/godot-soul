@@ -110,7 +110,7 @@ keep-in-code 목록, `GameplayVisualFactory`, `DebugVisualization`. 이들은 "�
 | **K5** | **완료(두 명).** core: A7 24곳 중 19 제거(5는 옵셔널 컴포넌트 null 가드, 숫자 아님), HUD 팔레트 5 + alpha 4 → `MenuTheme.tres` `Palette` 항목 9, 타이밍 3 → `UiTuning.json`(카탈로그 등록, D6 표 추가), B3 색 2 → `Art/Readability.json`, `GameplayTuningDefaults` 삭제. boss: encounter 상수 12 + 패턴 메서드 + 필드 → `encounterData` 필수(`WrathMiniBoss` `_Ready`, 챕터 보스 `_Process` 첫 프레임 가드), `BossAttackProfile` 초기화값 24 → 0, `EnemyStateMachine` 4 → 0 — 값은 이미 `WorldTuning.json`에 한 번 있어 `Configure`로만 들어옴(브리프의 "12파일에 복사"는 중복이라 하지 않음). JSON 추가 0. 기대값 변화 0. 발견은 검토 이력 | core 23 + boss 13 | 중간 | 완료 |
 | **K6** | **완료.** 액터 씬 7개에서 스포너가 매 스폰 쓰는 속성 60줄 + 빈 override 블록 8 삭제; 스폰 결과 493값 전후 동일(probe). `GameplaySceneDefaultsAsset` 초기화값 4 → 0. 발견: `Scenes/World/AttackReadout.tscn`·`WorldHealthBar.tscn`·`Checkpoint.tscn`이 같은 거울 패턴(K6 범위 밖) | tscn 7 + 1 | 낮음 | 완료 |
 | **K5b** | **승인, 명세는 아래 §K5b.** K5·K6 잔여: SinState 색 7 → Theme, 플레이어 시작 자원 상수 2, `Scenes/World` 거울 3파일(WorldHealthBar·AttackReadout·Checkpoint), `EnemyStateMachine` 죽은 사본 4 + 도달 불가 메서드 1, `Create()` null 미처리 소비자 2. 기록만 1 | 약 9 + tscn 3 | 낮음 | 단독, K7 전 |
-| **K7** | 규칙 2·3 잔여: `CheckpointZone`·`GateTravelZone`·`Camera2D` fallback 생성 삭제(씬이 authoring, 테스트는 K1에서 씬 인스턴스로); `EnsureComponent` → `GetComponent` + null이면 `PushError`; `SceneryPiece.tscn`(D8); `CutsceneDirector`를 `GameplayScene.tscn`과 챕터 셸 8개에 authoring; `GameplayBuildShim`은 `SceneRoot`·`ActiveSceneName`·`SetActive`만 남기고 `NewObject`/`AddComponent`/`EnsureComponent` 삭제 — 테스트가 쓰는 건 `Tests/Framework/NodeBuild.cs`로 이동 | 약 8 + tscn 9 + shim + 테스트 | 높음 — 씬 셸 8개 동시 편집 | 단독, 마지막 |
+| **K7** | **명세는 아래 §K7.** 측정(2026-09-12)이 계획과 다른 점: 카메라를 authoring한 씬이 없어 C2는 삭제가 아니라 신규 authoring; 셸 8개가 바이트 동일이라 `Scenes/GameplayShell.tscn` 하나를 8개가 상속(규칙 2); `EnsureComponent` 20곳 중 4곳은 출하 경로에서 실제 추가(`Player.tscn` 노드 4 필요); P0 테스트 1개 출하 계약으로 재설계; `GameplayBuildShim.Root` 존속(4멤버); 미명명 노드 생성 2(`EnemyRespawner`·`CutsceneTriggers`) + 아키타입 `CombatFeedback`/`EnemyGroupCombat` 가드 7 편입 | 셸 8 + 신규 tscn 2 + `Player.tscn` + 스크립트 약 14 + shim + 테스트 12 | 높음 | 단독, K5b 뒤 |
 | **K8** | D6 완전성 테스트 1개. 문서: `AGENTS.md` "현재 준수 상태"를 "준수"로, `PLAN.md`·`PORTING_GUIDE.md` 종결 표기, `PORT_STATUS`·`INTEGRATION_NOTES`(시그니처 다수), 인수인계 | 문서 | 낮음 | 단독 |
 
 **순서:** K0 → K1 → (K2 ∥ K3 ∥ K4) → (K5 ∥ K6) → K5b → K7 → K8. 병렬은 파일 서로소일 때만, 담당별 소유 파일
@@ -190,6 +190,136 @@ keep-in-code 목록, `GameplayVisualFactory`, `DebugVisualization`. 이들은 "�
 0이어야 한다. `grep -rnE '\?\? (new Color|World\.U|[0-9])' Scripts`와 `[Export]` 초기화값 grep으로 재측정해 K8 문서에
 숫자로 남긴다. 남는 것은 면제(D2)뿐: 정렬 순서 20, §3.13~3.17, §4.
 
+## K7 — 규칙 2·3 잔여 명세 (2026-09-12, K5b 착지 뒤 시작)
+
+목적: 코드가 노드를 만드는 마지막 경로를 닫는다 — 씬이 authoring해야 할 것을 런타임 fallback으로 만드는 곳,
+그리고 그 fallback을 위해 존재하는 `GameplayBuildShim`의 조립 API. 한 명, `isolation: worktree`, `model: opus`.
+착지 = 풀 스위트 210 / 1 / 1 유지, `DesignFileCompletenessTests` green, 부팅 트리 구조 probe 동일.
+측정치는 전부 `e95fa43` 기준(K5b 착지 전) — 에이전트가 다시 잰다. **K5b가 먼저 착지한 트리에서 시작한다**:
+`CheckpointZone.cs`·`GateTravelZone.cs`·`Scenes/World/Checkpoint.tscn`을 두 단계가 같이 만진다.
+
+### 측정이 계획과 달랐던 것 — 명세는 이 사실 위에 선다
+
+- **카메라를 authoring한 씬은 없다.** `grep -rn Camera2D Scenes/` 0건. `GameplaySystemBootstrapper.EnsureCamera`
+  (`:26-27` `new Camera2D`, `:39` `CameraShake`, `:66` `GameplayCameraFollow2D` + 부모 바꿔치기, `:94` `HitStopManager`)가
+  매 부팅 카메라 스택을 만드는 **유일한** 경로다. C2는 삭제가 아니라 신규 authoring이며 K7에서 가장 큰 항목.
+- **게임플레이 셸은 8개**(`GameplayScene` = 챕터 1, `Chapter02_Orange` … `Chapter08_White`). 아홉 번째 `TitleScene.tscn`은
+  `Scenes/UI/TitleScreen.tscn`을 상속하는 타이틀이고 `ChapterRoute.Scenes()`가 제외한다. 8개는 바이트 동일 6줄
+  (`GameplayRoot` : `Node2D` + `GameplayBootstrap.cs`, 자식 0).
+- **`EnsureComponent`는 호출 20곳**(21은 선언 줄 포함), 테스트 호출 0. 그중 **4곳은 출하 경로에서 실제로 추가한다** —
+  `Player.tscn`이 `DamageReceiver`·`CombatResultBroadcaster`·`PlayerLockOn`·`GameplayLockOnMarker`를 authoring하지 않는다
+  (`GameplayPlayerSpawner.cs:196,197,314,321`). 나머지 16곳은 씬이 이미 authoring(`EnemyBase.tscn`, `Player.tscn`,
+  아키타입 씬 3의 `EnemyDeathCleanup`).
+- **P0 테스트 1개가 add 분기를 어서션한다.** `P0CombatStabilityTests.Gameplay.cs:30-70`
+  `GameplayActorsAttachDamageReceivers`가 private `Ensure*` 4개를 이름 문자열로 리플렉션 호출해 맨 `Node2D`에 컴포넌트가
+  생기는지 본다. `GetComponent` + `PushError`가 되는 순간 red.
+- **`GameplayBuildShim.Root`는 살아야 한다.** `SceneRoot`를 돌리는 setter이고 `P0CombatStabilityTests.Gameplay.cs:84,85,103,127,128,183`이
+  유일한 소비자. 남기는 멤버는 셋이 아니라 넷: `Root`·`SceneRoot`·`ActiveSceneName`·`SetActive`.
+- **테스트의 `AddComponent<`는 28곳**(30 중 2는 주석), 8파일 11메서드, 전부 fixture 빌더.
+- **계획이 이름 붙이지 않은 출하 경로 노드 생성 2곳**: `GameplayBootstrap.cs:133` `GameplayEnemyRespawner`, `:186`
+  `GameplayCutsceneTriggers`(director의 자식). 같은 셸을 만지므로 같은 편집.
+- **`addons/mygame_tools/ChapterSceneCreator.cs:87`이 셸 텍스트를 문자열로 생성한다.** 셸 모양이 바뀌면 여기도 바뀐다.
+
+### 소유 파일
+
+- 씬: `Scenes/GameplayScene.tscn`, `Scenes/Chapter02_Orange.tscn` … `Scenes/Chapter08_White.tscn`, 신규 `Scenes/GameplayShell.tscn`,
+  신규 `Scenes/World/SceneryPiece.tscn`, `Scenes/Actors/Player.tscn`
+- `Scripts/Gameplay/GameplaySystemBootstrapper.cs`, `GameplayBootstrap.cs`, `CutsceneDirector.cs`, `GameplayEnvironmentBuilder.cs`,
+  `GameplayPlayerSpawner.cs`, `GameplayEnemySpawner.cs`, `GameplayWorldHealthBar.cs`, `CheckpointZone.cs`, `GateTravelZone.cs`
+- `Scripts/Enemy/MeleeGrunt.cs`, `LeapingAttacker.cs`, `RangedCaster.cs`, `WrathMiniBoss.cs` (항목 7만)
+- `Scripts/Core/GameplayBuildShim.cs`, `addons/mygame_tools/ChapterSceneCreator.cs`
+- 테스트: 신규 `Tests/Framework/NodeBuild.cs`, `Tests/Unit/P0CombatStabilityTests.Gameplay.cs`, `AddComponent<` 8파일,
+  zone fixture 3파일(`GameplayCheckpointZoneTests`, `GameplayHealItemTests`, `GameplayDifficultySaveMergeRegressionTests`).
+  문서는 코디네이터.
+
+### 항목
+
+1. **셸 하나로 합치고 8개가 상속한다(규칙 2).** 8개 셸이 바이트 동일한데 각각에 같은 노드 트리를 넣는 것은 규칙 2가 금하는
+   "노드 트리 복사"다. `Scenes/GameplayShell.tscn`을 만들어 `GameplayRoot`(`Node2D`, `GameplayBootstrap.cs`)와 아래 항목
+   2·3의 시스템 노드를 거기 authoring하고, 8개 파일은 `TitleScene.tscn`이 `TitleScreen.tscn`을 상속하는 것과 같은 모양으로
+   `[node name="GameplayRoot" instance=ExtResource("1")]` 한 줄이 된다. `ActiveSceneName`은 `CurrentScene.SceneFilePath`의
+   basename이라 상속해도 `Chapter02_Orange`가 나온다 — 부팅 후 `PushError` 없이 `SceneLayout_Chapter02_Orange.json`을 읽는지
+   스모크로 확인. `ChapterSceneCreator.cs:87`의 셸 문자열을 상속 형태로 바꾼다. `GameplayShell.tscn`은 `ChapterRoute.Scenes()`가
+   챕터로 세지 않아야 한다(`Scripts/Combat/ChapterRoute.cs:52` 부근의 제외 규칙에 이름을 추가하거나 `Scenes/World/`에 둔다 —
+   어느 쪽이 덜 건드리는지 보고 정하고 보고).
+2. **카메라 스택 authoring(C2).** 셸에 `CameraRig`(`Node2D`, `GameplayCameraFollow2D.cs`) → 자식 `Main Camera`(`Camera2D`) →
+   자식 `CameraShake`, 그리고 `HitStopManager`(이름 `GameplayBootstrap.HitStopManagerObjectName`). `EnsureCamera`·`EnsureCameraRig`·
+   `EnsureHitStopManager`는 찾기만 하고 없으면 `PushError` + null(D1); `MakeCurrent()`와 `SetDefaultClearColor`는 그대로.
+   부모 바꿔치기 코드(`:66-84`)는 삭제. 테스트 계약(`GameplayCutsceneTests:97,102,110-112,437,487`): 리그 이름 `CameraRig`,
+   카메라는 리그의 **자식**, 현재 카메라, `cam.GetComponent<CameraShake>()` non-null. 싱글턴(`CameraShake.Instance`,
+   `HitStopManager.Instance`)이 authored 노드의 `_Ready`에서 잡히는지 확인 — 자식이 부모보다 먼저 ready이므로
+   `GameplayBootstrap._Ready`가 돌 때는 이미 잡혀 있어야 한다.
+3. **`CutsceneDirector`·`GameplayCutsceneTriggers`·`GameplayEnemyRespawner` authoring(C5 + 미명명 2).** 셸에
+   `CutsceneDirector`(`Node`, `process_mode = 3`) → 자식 `GameplayCutsceneTriggers`, 그리고 `EnemyRespawner`
+   (`GameplayEnemyRespawner`, 이름은 `EnemyRespawnerObjectName`). `CutsceneDirector.Create(overlay)`(`:101-115`)는
+   `NewObject` 대신 셸에서 찾아 `_overlay`를 묶는 `Bind(overlay)`로; `GameplayBootstrap.cs:133-134,174,186-187`이 찾기로 바뀐다.
+   `Instance`는 여전히 `_Ready`에서 잡힌다(`:187`) — authored면 bootstrap `_Ready` **전**에 잡히므로 `Overlay`의 lazy
+   `??=`(`:98`)가 bootstrap이 `_overlay`를 묶기 전에 불리는 경로가 없는지 확인. 블랙아웃 순서 제약(`GameplayBootstrap.cs:189-194`,
+   첫 프레임 전)은 bootstrap `_Ready` 안에 그대로 남으므로 변화 없음. 조회는 static `Instance`·`SkipAll`·
+   `SceneQuery.FindFirst`뿐(경로 `GetNode` 0건)이라 이름만 지키면 안전.
+4. **`EnsureComponent` 20곳 → `GetComponent` + null이면 `PushError`(C3).** 먼저 `Player.tscn`에 `DamageReceiver`·
+   `CombatResultBroadcaster`·`PlayerLockOn`·`GameplayLockOnMarker` 4노드를 추가한다(`EnemyBase.tscn:79,85`가 앞 둘의 선례;
+   `GameplayLockOnMarker.BuildMarker:97-104`가 스프라이트를 `SceneRoot`에 붙이는 것은 그대로). 그다음 20곳 전부 찾기로.
+   `GameplayWorldHealthBar.cs:141-145`의 `WorldHealthBar.tscn` 인스턴스 fallback은 `AddComponent`로 붙을 때만 닿았으므로
+   함께 삭제(없으면 `PushError`). **P0 `GameplayActorsAttachDamageReceivers`는 출하 계약으로 재설계**: private 헬퍼를 리플렉션으로
+   부르는 대신 `Player.tscn`·`EnemyBase.tscn`을 인스턴스해 `DamageReceiver`·`CombatResultBroadcaster`가 authoring돼 있는지
+   본다 — 검증하는 성질("액터는 피해 수신기를 갖는다")은 같고 경로만 fixture에서 출하로 바뀐다. 이것은 K4의
+   `CheckpointRunPlatform` 교체와 같은 종류이며 약화가 아니다. 같은 테스트가 `GameplayEnvironmentBuilder.CreateCheckpoint`
+   이름·1인자 시그니처를 문자열로 고정한다(`:78-80`) — 바꾸지 않는다.
+5. **zone trigger·marker fallback 삭제(C1).** `CheckpointZone.cs:251`(`new CollisionShape2D`)·`:280-282`(marker 인스턴스)와
+   `GateTravelZone.cs:327-331`·`:349-353`. 둘 다 `_Ready`(`:111-113`, `:79-81`)에서 fallback이 돌므로 없으면 `PushError` + return.
+   `Checkpoint.tscn:47,53`·`GatePortal.tscn:36,41`이 둘 다 authoring한다. 맨손 fixture 3곳 —
+   `GameplayCheckpointZoneTests.cs:365-372`·`GameplayHealItemTests.cs:425-432`(`PlaceZoneOnPlayer`)·
+   `GameplayDifficultySaveMergeRegressionTests.cs:183-185` — 는 `Checkpoint.tscn`/`GatePortal.tscn`을 인스턴스하고
+   루트를 배치한 뒤 `GetNode<CheckpointZone>("CheckpointZone")`로 존을 잡는다. `PlayerInside`가 물리 2프레임 뒤에
+   서는 계약(`GameplayCheckpointZoneTests.cs:374-379`)이 그대로 서는지 확인. K5b가 지운 `radius = 150`은 건드리지 않는다.
+6. **`SceneryPiece.tscn`(C4, D8).** `Scenes/World/SceneryPiece.tscn` = 루트 `Sprite2D` 하나, 스크립트 없음, 텍스처 없음
+   (`LockOnMarker.tscn`이 모델; 텍스처는 `GameplayVisualFactory`가 런타임 생성하므로 `ext_resource`를 못 갖는다 —
+   `SolidBox.tscn:17-19`와 같은 주석). `CreateSceneryPiece(:431-437)`가 인스턴스한 뒤 `Position`(트리 진입 **전**)·
+   `Dress`·`Modulate`·`ZIndex`. 호출 6곳(`:143,155,177,178,179,235`)은 그대로. `:33-38`의 "노드 하나짜리 씬" 반론은 D8이
+   기각했으니 주석을 지우고 D8을 가리키는 한 줄로; `:188-193`(아레나 게이트는 벽이 아니라 장식)은 여전히 유효 — 남긴다.
+7. **아키타입의 `CombatFeedback`·`EnemyGroupCombat` 가드 7곳.** `MeleeGrunt.cs:93,98`, `LeapingAttacker.cs:96,101`,
+   `RangedCaster.cs:108,113`, `WrathMiniBoss.cs:198` — `FindComponent<T>() == null`이면 `AddChild(new T)`.
+   `EnemyBase.tscn:82,97`이 둘 다 authoring하므로 출하 경로에서 닿지 않고 맨손 `new MeleeGrunt` fixture만 닿는다
+   (`P0CombatStabilityTests.Gameplay.cs:543` 등, K1이 `SetTuningData`를 붙인 맨손 아키타입 5곳). 계획 행에는 없지만 C3와
+   같은 종류의 합성 액터용 fallback이라 K7에 넣는다: 가드를 K2 모양(`PushError` + `SetProcess(false)`)으로 바꾸고 맨손
+   fixture가 두 노드를 `NodeBuild`로 붙인다. **fixture 쪽 수정이 빌더 한 곳에 두 줄 추가 이상으로 번지면 이 항목은 하지 말고
+   측정치만 보고한다.**
+8. **`GameplayBuildShim` 축소.** 남기는 것: `Root`·`SceneRoot`·`ActiveSceneName`·`SetActive`(+ private `Tree`·
+   `SetCollisionEnabled`). 삭제: `NewObject` 2·`AddComponent`·`EnsureComponent`. 테스트 28곳이 쓰는
+   `AddComponent<T>(this Node, string)`는 같은 시그니처로 `Tests/Framework/NodeBuild.cs`(`MyGame.Tests`, `TestBoot.cs` 옆)로
+   옮긴다 — 호출부는 `using`만 바뀌거나 그대로. P0의 private `Spawn<T>`·`AddBoxShape`·`ConfigureFromDesign<T>`는
+   옮기지 않는다(쓰는 곳이 한 파일). 파일 머리 주석(`:1-23`)의 "왜 남겼나"를 남는 네 멤버 기준으로 고쳐 쓴다.
+
+### 면제로 기록할 것 — 이번에 지우지 않는다(K8 문서)
+
+- `ActorAnimationDriver.cs:69`·`ActorIdleBob.cs:69`·`SpriteFrameAnimator.cs:68`의 attach-if-absent: 어느 것이 붙는지가
+  액터 키에 픽셀 프레임이 있는지로 갈리는 **런타임 분기**이지 fallback이 아니다.
+- `CutsceneRigMove.cs:45`: 샷이 리그를 움직일 때만 붙는 동적 노드. 항목 2로 리그가 authored되면 옮길 수 있으나 K7 밖.
+- `GameplayDebugSceneJump.cs:57`: 씬 위(`tree.Root`)에 붙는 데스크톱 전용, Unity `DontDestroyOnLoad` — 셸에 못 넣는다.
+- `PlayerController2D.cs:135` `new PlayerActionController` deferred add: `CLAUDE.md`의 히트박스 함정 옆 — 손대지 않는다.
+- `AudioFeedback.cs:69` `AudioStreamPlayer` 가드: Combat 층, `Player.tscn:116`이 authoring, 맨손 fixture만 닿는다. 작아서 남긴다.
+- `Phys2D.cs:33` `new CircleShape2D`(물리 쿼리 모양), `addons/` 도크의 `VBoxContainer`/`Label`/`Button`(에디터 툴).
+
+### 검증
+
+- `tools/build.ps1` BUILD OK; 헤드리스 스모크 **GameplayScene + 챕터 2~8 전부**(셸이 바뀌었다) 오류 0(알려진
+  `SpriteFrameAnimator` 경고 제외), 각 부팅에서 `SceneLayout_<Name>.json`을 제 이름으로 읽는지.
+- 구조 probe: 부팅 직후 `GameplayRoot` 아래 트리(이름·타입·부모)와 스폰된 플레이어의 자식 컴포넌트 목록을 전후 dump —
+  authored/built 차이 말고 동일. 임시 `GD.Print`, `Tests/` 밖, 커밋 전 제거.
+- 필터 테스트(이 에이전트가 이 기계의 유일한 테스트 실행자이므로 저장 접촉 클래스도 돌려도 된다 — 단 풀 스위트는
+  코디네이터 1회): `GameplayCutsceneTests`, `P0CombatStability`, `GameplayCheckpointZoneTests`, `GameplayHealItemTests`,
+  `GameplayDifficultySaveMergeRegressionTests`, `GameplayLayoutIntegrityTests`, `GameplayInteractAndResumeTests`,
+  `GameplayLockOnTests`, `AddComponent<` 8파일의 클래스 전부, `DesignFileCompleteness`.
+- 어서션 약화 금지. 항목 4의 P0 재설계는 위에 적은 대로 성질 유지·경로 교체이며 old → new를 보고한다.
+- 커밋은 worktree 브랜치에 경로 명시(`git commit -F msg -- <paths>`), 본문 끝 attribution 2줄. `--editor` 부팅 금지,
+  커밋 전 `git status`.
+
+### 착지 후 남는 것
+
+`Scripts/`에서 `new <Node>` / `AddChild(new` 로 노드를 만드는 곳은 위 면제 목록뿐이어야 한다. `GameplayBuildShim`은 4멤버.
+`grep -rn "EnsureComponent\|NewObject\|AddComponent" Scripts` 0건(주석 제외). K8이 숫자로 남긴다.
+
 ## 이 계획으로 바뀌는 행동
 
 - **출하 경로: 없음.** 모든 파일이 존재하므로 fallback은 한 번도 실행되지 않았다. 유일한 예외는 K3a가
@@ -229,3 +359,4 @@ keep-in-code 목록, `GameplayVisualFactory`, `DebugVisualization`. 이들은 "�
 - 2026-09-12: K2·K3·K4 착지(병렬, worktree 3개, cherry-pick). 계획 밖 발견 3건 — (a) `encounterData == null` 뒤의 `Default*` 상수 13개 + `DefaultPhaseTwoPattern()` + `_postAttackRecoveryTime`, 그리고 `bossData` 숫자 fallback 2곳; (b) `BossAttackProfile` `[Export]` 초기화값 24; (c) `EnemyStateMachine` 기본 클래스 `[Export]` 초기화값(A7 범위). 제안: (a)(b)를 K5에 편입, (c)는 이미 K5. **승인 대기.**
 - 2026-09-12: 위 (a)(b) K5 편입 **승인**. K5는 두 명이 나눠 든다 — core(컴포넌트·HUD·상수 4·`UiTuning.json`)와 boss(encounter 상수·`BossAttackProfile`·`EnemyStateMachine`). K6 병렬. 에이전트는 opus.
 - 2026-09-12: K5(core·boss)·K6 착지. 남은 발견, 전부 작고 서로소 — 제안: **K5b** 한 명, K7 전에. (1) `GameplayHud.GetSinColor` SinState 색 7 → Theme(§4 면제 아님). (2) `GameplayPlayerSpawner` `StartingHealth`/`StartingHumanity` 상수 2, 사이트 3 → `PlayerResources.json` 값. (3) `GameplayWorldHealthBar` `_size`/`_offset`/`_fillColor` 초기화값 3 + `Scenes/World/WorldHealthBar.tscn` 같은 값 3, `Scenes/World/AttackReadout.tscn` scale/modulate/z_index 3, `Scenes/World/Checkpoint.tscn` `radius = 150` — 스포너/코드가 매번 덮어쓰는 거울(B1 잔여). (4) `EnemyStateMachine` 죽은 사본 4(`gravity`, `_ledgeProbeAhead`, `_ledgeProbeDepth`, `perfectParryStunMultiplier`) + `GetDetectionRange() => World.U(5f)`(전 아키타입이 override, 죽은 코드). (5) `GameplayReadabilityDefaults.Create()` null 미체크 소비자 3(`GameplayLockOnMarker`, `GateTravelZone.TitleFor`, `GameplayCutsceneTriggers.MoveRigToBoss`). (6) `AUDIT_NUMBERS.md:297` `stunDuration` 문장 낡음(K8). **같은 날 승인 — 명세는 §K5b, 다음 세션이 시작한다.**
+- 2026-09-12: K7 범위를 코드로 다시 쟀다(읽기 전용 에이전트). 계획과 다른 사실 7개 — 카메라 authoring 씬 0, 셸 8, `EnsureComponent` 20/4, P0 어서션 1, `Root` 필수, 미명명 생성 2, 테스트 `AddComponent<` 28 — 를 §K7 명세에 반영. 계획 행에 없던 편입 1: 아키타입 가드 7(합성 액터용 fallback, C3와 같은 종류; fixture 수정이 번지면 하지 않고 보고). 면제 후보 6(cosmetic attach-if-absent 3, `CutsceneRigMove`, `GameplayDebugSceneJump`, `PlayerController2D` deferred add, `AudioFeedback` 가드)은 K8이 D2 목록에 기록. **코디네이터 결정, 사용자 검토 대기 — 편입·면제 어느 쪽이든 되돌릴 수 있게 §K7에 근거를 남겼다.**
