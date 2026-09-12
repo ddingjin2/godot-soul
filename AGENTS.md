@@ -62,7 +62,7 @@ TDD GREEN 단계의 하드코딩 허용 — 보다 이 규칙이 우선한다.
 
 ## 작업과 검증
 
-- 개발 기준 branch는 `master`, 전환 작업은 `refactor/godot-scene-data`. 작업 시작 시 실제
+- 개발 기준 branch는 `master`(전환 브랜치 `refactor/godot-scene-data`는 2026-09-12 병합됨). 작업 시작 시 실제
   branch/HEAD/변경을 조회한다. **요청 없이 commit/push/branch 병합을 하지 않는다.**
 - 변경 전 범위를 백업하고, 실제 사용자 저장 파일(`user://playerprefs.cfg`)을 테스트로
   덮어쓰지 않는다. 저장을 건드리는 스위트는 `[SetUp]`에서 지운다.

@@ -19,7 +19,7 @@ PLAN_CLOSEOUT §종결에 숫자로 있다.
 
 ## 브랜치
 
-`master`가 이식 본체, `refactor/godot-scene-data`가 전환 브랜치. **병합하지 않았다.** 원격은 2026-09-12부터 `origin` = https://github.com/ddingjin2/godot-soul (public, 기본 브랜치 `master`), 두 브랜치 모두 push됨.
+`refactor/godot-scene-data`는 2026-09-12 `524f8be`로 `master`에 병합됐다(`--no-ff`, 이력 보존). **이제 작업 브랜치는 `master`.** 원격은 2026-09-12부터 `origin` = https://github.com/ddingjin2/godot-soul (public, 기본 브랜치 `master`), 두 브랜치 모두 push됨.
 이번 세션(09-12) 커밋 17개: K5b 3, K7 4, K7b 2, 수정 1, 문서·잡무 7. 풀 스위트 3회(K5b, K7, K7b 각 착지 뒤),
 전부 210 / 1 / 1.
 
@@ -54,7 +54,7 @@ PLAN_CLOSEOUT §종결에 숫자로 있다.
 
 1. **씬 S9 — 아레나를 챕터 셸에 배치.** 기획자 소유 데이터의 소유권 이동이라 **물어본 뒤에** 한다. 셸이 하나가 됐으니 이제는
    상속 씬 8개 각각에 아레나를 authoring하는 모양이 된다.
-2. **`master`로의 병합 여부.** 커밋 71개가 전환 브랜치에만 있다.
+2. ~~`master`로의 병합 여부.~~ 2026-09-12 병합 완료.
 3. (작은 것) `PlayerController2D:135`의 deferred `PlayerActionController` 생성은 fixture만 도달한다 — 면제로 남겼다. 지우려면
    fixture 3곳이 이미 직접 만들고 있으니 한 줄 삭제 + 필터 3개.
 
