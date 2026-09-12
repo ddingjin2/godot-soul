@@ -30,8 +30,12 @@ namespace MyGame.EditorTools
     {
         public const string SceneFolder = "res://Scenes";
 
-        /// <summary>The script the shell hangs off - the same one <c>GameplayScene.tscn</c> uses.</summary>
-        public const string BootstrapScript = "res://Scripts/Gameplay/GameplayBootstrap.cs";
+        /// <summary>
+        /// The scene every chapter inherits - the bootstrap script and the system nodes on one file.
+        /// Under <c>Scenes/World/</c> so <c>ChapterRoute.Scenes()</c>, which reads only the files
+        /// directly in <c>Scenes/</c>, does not play it as a ninth chapter.
+        /// </summary>
+        public const string ShellScene = "res://Scenes/World/GameplayShell.tscn";
 
         /// <summary>
         /// Scene names a chapter layout expects, without folder or extension. A name here has to match
@@ -76,16 +80,20 @@ namespace MyGame.EditorTools
         }
 
         /// <summary>
-        /// The shell, hand-written rather than built through <c>PackedScene</c>: attaching a C# script
-        /// to a node needs that script's type to be loadable, and this addon deliberately does not
-        /// depend on <c>MyGame.Gameplay</c> being compiled yet.
+        /// The shell, hand-written rather than built through <c>PackedScene</c>: this addon deliberately
+        /// does not depend on <c>MyGame.Gameplay</c> being compiled yet.
+        ///
+        /// Since K7 a chapter is an inherited scene rather than a copy of the bootstrap node - the
+        /// bootstrap script, the camera rig, the hit stop manager, the cutscene director and the enemy
+        /// respawner all live on <c>Scenes/World/GameplayShell.tscn</c>, and this is the one line that
+        /// inherits it. Keep the root's name: <c>GameplayBuildShim.SceneRoot</c> and every test that
+        /// walks the scene read it back.
         /// </summary>
         private static string Shell()
         {
             return "[gd_scene load_steps=2 format=3]\n\n" +
-                   $"[ext_resource type=\"Script\" path=\"{BootstrapScript}\" id=\"1_bootstrap\"]\n\n" +
-                   "[node name=\"GameplayRoot\" type=\"Node2D\"]\n" +
-                   "script = ExtResource(\"1_bootstrap\")\n";
+                   $"[ext_resource type=\"PackedScene\" path=\"{ShellScene}\" id=\"1_shell\"]\n\n" +
+                   "[node name=\"GameplayRoot\" instance=ExtResource(\"1_shell\")]\n";
         }
     }
 }

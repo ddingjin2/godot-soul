@@ -5,95 +5,75 @@ using MyGame.Core;
 namespace MyGame.Gameplay
 {
     /// <summary>
-    /// The pieces every gameplay scene needs whether or not it authored them: a camera on its rig, a hit
-    /// stop manager, and the framing and follow the arena was designed around.
+    /// Finds the pieces <c>Scenes/World/GameplayShell.tscn</c> authors - the camera on its rig and the
+    /// hit stop manager - and applies the framing and follow the arena was designed around.
     /// </summary>
+    /// <remarks>
+    /// Until K7 this class <i>built</i> the camera stack on every boot, because no scene authored one.
+    /// The shell does now, so what is left here is lookup and binding: a scene that has lost a system
+    /// node gets an error naming it rather than a silently rebuilt one (PLAN_CLOSEOUT D1, rule 2).
+    /// </remarks>
     public static class GameplaySystemBootstrapper
     {
         public const string CameraRigObjectName = "CameraRig";
 
         /// <summary>
-        /// <paramref name="backgroundColor"/> was Unity's per-camera clear colour. Godot's Camera2D has
-        /// none, so it becomes the renderer's default clear colour - the one thing that paints behind
-        /// everything in a 2D scene.
+        /// The shell's <c>Main Camera</c>, made current. <paramref name="backgroundColor"/> was Unity's
+        /// per-camera clear colour. Godot's Camera2D has none, so it becomes the renderer's default
+        /// clear colour - the one thing that paints behind everything in a 2D scene.
         /// </summary>
-        public static Camera2D EnsureCamera(Color backgroundColor)
+        public static Camera2D FindCamera(Color backgroundColor)
         {
             Camera2D cam = SceneQuery.FindFirst<Camera2D>();
 
             if (cam == null)
             {
-                cam = new Camera2D { Name = "Main Camera" };
-                GameplayBuildShim.SceneRoot?.AddChild(cam);
+                GD.PushError("GameplaySystemBootstrapper: the scene authors no Camera2D; Scenes/World/GameplayShell.tscn carries 'CameraRig/Main Camera'. The arena has no camera.");
+                return null;
             }
 
             cam.MakeCurrent();
             RenderingServer.SetDefaultClearColor(backgroundColor);
 
             // Unity's orthographic flag and its AudioListener are both gone: a Camera2D is always
-            // orthographic, and Godot's default 2D audio listener is the current camera.
-
-            // CameraShake drives the current camera's own offset now and no longer has to be parented to
-            // it - but there must be exactly one, and it is a singleton, so the instance is the test.
-            if (CameraShake.Instance == null)
-                cam.AddChild(new CameraShake { Name = nameof(CameraShake) });
-
-            EnsureCameraRig(cam);
+            // orthographic, and Godot's default 2D audio listener is the current camera. CameraShake is
+            // the camera's authored child and makes itself the singleton when it readies - which is
+            // before this runs, because a child is ready before its parent's parent.
             return cam;
         }
 
         /// <summary>
-        /// Splits the camera into a rig parent, and returns it. Follow and the cutscene director write
-        /// the rig's world position; <see cref="CameraShake"/> writes the camera's own offset. Before the
-        /// split all three wrote one transform, and the shake's subtract-then-re-add ran against whatever
-        /// the last writer had left there.
+        /// The rig the camera hangs under. Follow and the cutscene director write the rig's world
+        /// position; <see cref="CameraShake"/> writes the camera's own offset. Before that split all
+        /// three wrote one transform, and the shake's subtract-then-re-add ran against whatever the last
+        /// writer had left there.
         /// </summary>
         /// <remarks>
-        /// The camera stays the current one, so <c>GetViewport().GetCamera2D()</c> keeps resolving to it.
+        /// The rig <i>is</i> the follow node. In Unity the follow was a component added to the rig
+        /// GameObject and wrote that transform's position; a Godot child cannot move its parent, so the
+        /// two are one node instead. <c>ConfigureCameraFollow</c> finds it with <c>GetComponent</c>,
+        /// which answers "this node, or a child of it" and therefore answers the rig itself.
         /// </remarks>
-        public static Node2D EnsureCameraRig(Camera2D cam)
+        public static Node2D FindCameraRig(Camera2D cam)
         {
             if (cam == null)
                 return null;
 
-            if (cam.GetParent() is Node2D existing && existing.Name == CameraRigObjectName)
-                return existing;
+            if (cam.GetParent() is Node2D rig && rig.Name == CameraRigObjectName)
+                return rig;
 
-            // The rig *is* the follow node. In Unity the follow was a component added to the rig
-            // GameObject and wrote that transform's position; a Godot child cannot move its parent, so
-            // the two are one node instead. ConfigureCameraFollow finds it with GetComponent, which
-            // answers "this node, or a child of it" and therefore answers the rig itself.
-            var rig = new GameplayCameraFollow2D { Name = CameraRigObjectName };
-            Node parent = cam.GetParent();
-
-            if (parent == null)
-            {
-                // A camera not yet in the tree: build the rig above it and let the caller place the rig.
-                rig.AddChild(cam);
-                GameplayBuildShim.SceneRoot?.AddChild(rig);
-            }
-            else
-            {
-                rig.Position = cam.Position;
-                parent.AddChild(rig);
-                parent.RemoveChild(cam);
-                rig.AddChild(cam);
-            }
-
-            cam.Position = Vector2.Zero;
-            cam.Rotation = 0f;
-            cam.MakeCurrent();
-            return rig;
+            GD.PushError($"GameplaySystemBootstrapper: the camera is not parented to a Node2D named '{CameraRigObjectName}'; Scenes/World/GameplayShell.tscn authors that rig. Nothing frames or follows.");
+            return null;
         }
 
-        public static HitStopManager EnsureHitStopManager(string objectName)
+        /// <summary>The shell's hit stop manager, which made itself the singleton when it readied.</summary>
+        public static HitStopManager FindHitStopManager(string objectName)
         {
             if (HitStopManager.Instance != null)
                 return HitStopManager.Instance;
 
-            var hitStop = new HitStopManager { Name = objectName };
-            GameplayBuildShim.SceneRoot?.AddChild(hitStop);
-            return hitStop;
+            GD.PushError($"GameplaySystemBootstrapper: no HitStopManager in the scene; Scenes/World/GameplayShell.tscn authors one named '{objectName}'. Hits will not freeze the clock.");
+            return null;
         }
 
         public static void FrameCombatRoom(Camera2D cam)
@@ -112,9 +92,13 @@ namespace MyGame.Gameplay
             if (cam == null || scene == null)
                 return;
 
+            Node2D rig = FindCameraRig(cam);
+            if (rig == null)
+                return;
+
             // CameraPosition is already Godot pixels with +Y down - GameplaySceneDefaults is the conversion
             // boundary and nothing downstream converts again.
-            EnsureCameraRig(cam).GlobalPosition = scene.CameraPosition;
+            rig.GlobalPosition = scene.CameraPosition;
 
             float halfHeightPx = World.U(scene.CameraOrthographicSize);
             if (halfHeightPx <= 0f)
@@ -129,12 +113,15 @@ namespace MyGame.Gameplay
             if (cam == null || target == null || scene == null)
                 return;
 
-            Node2D rig = EnsureCameraRig(cam);
+            Node2D rig = FindCameraRig(cam);
+            if (rig == null)
+                return;
+
             var follow = rig.GetComponent<GameplayCameraFollow2D>();
             if (follow == null)
             {
-                // Only reachable for a rig authored by hand as a plain Node2D. A follow child could not
-                // move it, so this is a wiring error rather than something to paper over.
+                // Only reachable for a rig authored as a plain Node2D. A follow child could not move it,
+                // so this is a wiring error rather than something to paper over.
                 GD.PushError($"GameplaySystemBootstrapper: the camera rig '{rig.Name}' is not a GameplayCameraFollow2D; the camera will not follow.");
                 return;
             }

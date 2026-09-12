@@ -98,18 +98,33 @@ namespace MyGame.Gameplay
         /// </summary>
         private CutsceneOverlay Overlay => _overlay ??= CutsceneOverlay.Create();
 
-        public static CutsceneDirector Create(CutsceneOverlay overlay)
+        /// <summary>
+        /// The director <c>Scenes/World/GameplayShell.tscn</c> authors, with the overlay the bootstrap
+        /// just built bound onto it. Was <c>Create</c>, which made the node here; the shell owns the
+        /// node and its <c>process_mode</c> since K7, and this is the binding half that is left.
+        /// </summary>
+        /// <remarks>
+        /// Unity added a PlayableDirector and a SignalReceiver here. Both are gone with Timeline: there
+        /// is no graph to run, and the Signal Tracks that routed through the receiver to reach
+        /// <see cref="CameraShake"/> / <c>HitStopManager</c> were all at t=0.00, which is now the call
+        /// site in <see cref="GameplayCutsceneTriggers"/>.
+        /// <para>
+        /// The director readies before the bootstrap does, so <see cref="Instance"/> is already set when
+        /// this is called. Nothing plays a shot in between, which is what keeps <see cref="Overlay"/>'s
+        /// lazy fallback from building a throwaway overlay ahead of this line.
+        /// </para>
+        /// </remarks>
+        public static CutsceneDirector Bind(CutsceneOverlay overlay)
         {
-            // Unity added a PlayableDirector and a SignalReceiver here. Both are gone with Timeline:
-            // there is no graph to run, and the Signal Tracks that routed through the receiver to reach
-            // CameraShake / HitStopManager were all at t=0.00, which is now the call site in
-            // GameplayCutsceneTriggers.
-            var director = GameplayBuildShim.NewObject<CutsceneDirector>(ObjectName);
-            director._overlay = overlay;
+            CutsceneDirector director = Instance ?? SceneQuery.FindFirst<CutsceneDirector>();
 
-            // The victory shot runs on top of a zero timescale and the pause menu can open over any of
-            // them, so this node has to keep ticking through both.
-            director.ProcessMode = ProcessModeEnum.Always;
+            if (director == null)
+            {
+                GD.PushError($"CutsceneDirector: the scene authors no '{ObjectName}'; Scenes/World/GameplayShell.tscn carries one. No cutscene can play.");
+                return null;
+            }
+
+            director._overlay = overlay;
             return director;
         }
 
