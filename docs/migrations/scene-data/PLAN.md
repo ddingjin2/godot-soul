@@ -144,6 +144,10 @@ S10은 감사가 예고한 `Readability.json` 재생성 대신 `Resources/Design
   않으며 맨 `Node2D`를 스포너에 넘기는 테스트를 위해 존재한다. `SceneRoot`·`ActiveSceneName`·
   `SetActive`는 빌더가 아니라 Godot 관용구다. 남은 것이 빌더가 아니므로 퇴역할 대상이 없다.
   클래스 doc-comment가 이 결정을 스스로 설명한다.
+  **2026-09-12 뒤집힘 — 2차 K7이 퇴역시켰다.** 두 `NewObject` 호출은 각각 셸 authoring(`CutsceneDirector`)과
+  `SceneryPiece.tscn`(D8)이 됐고, `EnsureComponent` 20곳은 `RequireComponent`(찾기 + 없으면 오류)가 됐다.
+  남은 것은 `Root`·`SceneRoot`·`ActiveSceneName`·`SetActive`·`RequireComponent` 다섯이며 전부 조회다. 테스트의
+  `AddComponent<`는 `Tests/Framework/NodeBuild.cs`로 갔다. 자세한 것은 [PLAN_CLOSEOUT.md](PLAN_CLOSEOUT.md) K7.
 
 ## 알려진 마찰
 
@@ -158,7 +162,8 @@ S10은 감사가 예고한 `Readability.json` 재생성 대신 `Resources/Design
 ## 2차 — 완료 기준의 나머지 절반
 
 이 문서의 단계가 끝난 뒤 정본 스킬의 완료 기준에 대조한 잔여(코드 fallback 232+63+179, 씬 거울, 누락 시
-처리 미정의)와 그 계획은 [PLAN_CLOSEOUT.md](PLAN_CLOSEOUT.md)에 있다. 미승인 초안이다.
+처리 미정의)와 그 계획은 [PLAN_CLOSEOUT.md](PLAN_CLOSEOUT.md)에 있다. 2026-09-10 승인, 2026-09-12 K0~K7 착지,
+K7b(감사가 세지 않은 컴포넌트 초기화값)와 K8(문서 종결)은 같은 날 진행 — 현재 상태는 그 문서의 단계 표가 정본이다.
 
 ## 하지 않는 것
 

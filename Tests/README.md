@@ -1,7 +1,8 @@
 # 검증 — 이식 스위트
 
 Unity Test Framework와 NUnit이 없는 자리를 `Tests/Framework/`의 자작 하네스가 대신한다.
-32개 픽스처 208개 테스트가 headless Godot 한 프로세스에서 돈다.
+34개 픽스처 212개 테스트가 headless Godot 한 프로세스에서 돈다 (2026-09-12 기준; 그중 1개는 이식 전부터 red인
+레이아웃 개수 어서션, 1개는 skip).
 
 ## 실행
 
