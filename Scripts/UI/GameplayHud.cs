@@ -614,7 +614,13 @@ namespace MyGame.UI
             Rebind(_titleButton, ref _victoryTitleHandler, titleAction);
 
             _victoryPanel.Visible = true;
-            _restartButton.GrabFocus();
+
+            // The victory shot's completion can arrive from CutsceneDirector._ExitTree while the scene is
+            // being torn down. Since K7 the director is authored at the front of the shell, so it leaves
+            // the tree after the HUD, and a button that has already left cannot take focus (engine error,
+            // not an exception). Nothing else in ShowVictory needs the tree.
+            if (_restartButton.IsInsideTree())
+                _restartButton.GrabFocus();
         }
 
         /// <summary>
