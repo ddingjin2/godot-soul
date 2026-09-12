@@ -15,18 +15,19 @@ namespace MyGame.Player
     /// </summary>
     public partial class PlayerMotor2D : CharacterBody2D
     {
-        // Movement. Authored in Unity metres, stored in pixels - PlayerMovementData.Load does the
-        // scaling for the tuned case, these defaults are pre-scaled for the untuned one.
-        [Export] private float moveSpeed = World.U(6f);
-        [Export] private float acceleration = World.U(30f);
-        [Export] private float deceleration = World.U(25f);
-        [Export] private float gravity = World.U(20f);
-        [Export] private float maxFallSpeed = World.U(15f);
+        // Movement. Pixels, written by ApplyTuning from PlayerMovement.json - PlayerMovementData.Load
+        // scales the authored metres on the way in. No initialisers since K7b: an untuned motor reports
+        // itself and stops rather than running on numbers nobody authored.
+        [Export] private float moveSpeed;
+        [Export] private float acceleration;
+        [Export] private float deceleration;
+        [Export] private float gravity;
+        [Export] private float maxFallSpeed;
 
         // Jump.
-        [Export] private float jumpForce = World.U(12f);
-        [Export] private float coyoteTime = 0.1f;
-        [Export] private float jumpBufferTime = 0.12f;
+        [Export] private float jumpForce;
+        [Export] private float coyoteTime;
+        [Export] private float jumpBufferTime;
 
         /// <summary>Unity <c>UnityEvent OnJump</c>.</summary>
         public event Action OnJump;
@@ -53,6 +54,7 @@ namespace MyGame.Player
         private bool _canMoveAndJump;
         private float _knockbackTimer;
         private Vector2 _knockbackVel;
+        private bool _configured;
 
         /// <summary>
         /// Godot needs no frictionless surface material, which is why the Unity source's
@@ -79,7 +81,10 @@ namespace MyGame.Player
         {
             Initialize();
             AddToGroup(World.Group.Player);
+            CallDeferred(nameof(CheckConfigured));
         }
+
+        private void CheckConfigured() => TuningGuard.Check(this, _configured, "ApplyTuning");
 
         public void SetMoveInput(Vector2 input)
         {
@@ -127,6 +132,7 @@ namespace MyGame.Player
                 return;
             }
 
+            _configured = true;
             moveSpeed = tuning.moveSpeed;
             acceleration = tuning.acceleration;
             deceleration = tuning.deceleration;

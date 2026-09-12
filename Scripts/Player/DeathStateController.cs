@@ -11,30 +11,50 @@ namespace MyGame.Player
     /// </summary>
     public partial class DeathStateController : Node2D
     {
-        [Export] private float spiritStateDuration = 3f;
-        [Export] private Color spiritTint = new Color(0.4862745f, 0.50980395f, 0.5647059f, 0.55f);
-
-        /// <summary>Fraction of max health the player keeps on entering spirit form.</summary>
-        [Export] private float spiritEntryHealthPercent = 0.25f;
-
-        [Export] private float respawnHealthPercent = 0.5f;
-        [Export] private float respawnHumanityPercent = 0.5f;
+        [Export] private float spiritStateDuration;
 
         /// <summary>
-        /// Writes the authored death numbers from <c>PlayerResources.json</c>. Seconds and 0..1
-        /// fractions - none of them is a distance, so nothing is scaled here or in
-        /// <see cref="PlayerResourceData.Load"/>. A null <paramref name="resources"/> (design file
-        /// missing) leaves the shipped defaults above standing.
+        /// The colour the body wears while it walks as a spirit. The artist's, not the designer's, so it
+        /// comes from <c>Resources/Art/Readability.json</c> beside <c>spiritPlatformColor</c> - the
+        /// platform the spirit walks to - rather than from the resource file the four numbers below come
+        /// from. It was the last colour literal in a component (PLAN_CLOSEOUT K7b).
         /// </summary>
-        public void ApplyTuning(PlayerResourceData resources)
+        [Export] private Color spiritTint;
+
+        /// <summary>Fraction of max health the player keeps on entering spirit form.</summary>
+        [Export] private float spiritEntryHealthPercent;
+
+        [Export] private float respawnHealthPercent;
+        [Export] private float respawnHumanityPercent;
+
+        private bool _configured;
+
+        public override void _Ready()
+        {
+            CallDeferred(nameof(CheckConfigured));
+        }
+
+        private void CheckConfigured() => TuningGuard.Check(this, _configured, "ApplyTuning");
+
+        /// <summary>
+        /// Writes the authored death numbers from <c>PlayerResources.json</c>, and the spirit tint from
+        /// <c>Readability.json</c> beside them. Seconds and 0..1 fractions - none of them is a distance,
+        /// so nothing is scaled here or in <see cref="PlayerResourceData.Load"/>. Two files in one call
+        /// because there is one moment on the spawn path where both are in hand and the controller is
+        /// tuned exactly once; a null <paramref name="resources"/> writes neither and the deferred check
+        /// above reports it (PLAN_CLOSEOUT decision D1).
+        /// </summary>
+        public void ApplyTuning(PlayerResourceData resources, Color spiritTintColor)
         {
             if (resources == null)
                 return;
 
+            _configured = true;
             spiritStateDuration = resources.spiritStateDuration;
             spiritEntryHealthPercent = resources.spiritEntryHealthPercent;
             respawnHealthPercent = resources.respawnHealthPercent;
             respawnHumanityPercent = resources.respawnHumanityPercent;
+            spiritTint = spiritTintColor;
         }
 
         public event Action OnDeath;

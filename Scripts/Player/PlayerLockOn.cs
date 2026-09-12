@@ -20,11 +20,11 @@ namespace MyGame.Player
     /// </summary>
     public partial class PlayerLockOn : Node2D
     {
-        /// <summary>How far the player can reach to grab a target, in pixels.</summary>
-        [Export] private float lockOnRange = World.U(8f);
+        /// <summary>How far the player can reach to grab a target, in pixels. Written by <see cref="Configure"/> from <c>WorldTuning.json</c>; no initialiser since K7b.</summary>
+        [Export] private float lockOnRange;
 
         /// <summary>How far a held target may drift before the lock drops. Wider than the grab range so a target sitting on the edge does not flicker.</summary>
-        [Export] private float lockOnBreakRange = World.U(11f);
+        [Export] private float lockOnBreakRange;
 
         /// <summary>Raised on every acquire and every drop, with null meaning "nothing held".</summary>
         public event Action<Node2D> OnTargetChanged;
@@ -37,11 +37,15 @@ namespace MyGame.Player
         private Health _targetHealth;
         private PlayerMotor2D _motor;
         private Health _health;
+        private bool _configured;
 
         public override void _Ready()
         {
             EnsureRefs();
+            CallDeferred(nameof(CheckConfigured));
         }
+
+        private void CheckConfigured() => TuningGuard.Check(this, _configured, "Configure");
 
         /// <summary>
         /// Resolved on demand, not only in _Ready: a test runner drives this component without the scene
@@ -68,6 +72,7 @@ namespace MyGame.Player
 
         public void Configure(float range, float breakRange)
         {
+            _configured = true;
             lockOnRange = range;
             lockOnBreakRange = breakRange;
 

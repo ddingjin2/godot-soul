@@ -44,6 +44,7 @@ namespace MyGame.Gameplay
         public Color ArenaGateColor { get; internal set; }
         public Color PlatformRimColor { get; internal set; }
         public Color SpiritPlatformColor { get; internal set; }
+        public Color SpiritTint { get; internal set; }
         public Color SwordColor { get; internal set; }
         public Color ProjectileColor { get; internal set; }
 

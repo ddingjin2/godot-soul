@@ -27,6 +27,9 @@ namespace MyGame.Gameplay
         [Export] public Color arenaGateColor;
         [Export] public Color spiritPlatformColor;
 
+        /// <summary>The body's colour while it walks as a spirit, beside the platform it walks to. Was the last colour literal in a component, on <c>DeathStateController</c> (K7b).</summary>
+        [Export] public Color spiritTint;
+
         // Backdrop
         [Export] public Color moonColor;
         [Export] public Color distantArchColor;
@@ -93,6 +96,7 @@ namespace MyGame.Gameplay
             defaults.PlatformRimColor = platformRimColor;
             defaults.ArenaGateColor = arenaGateColor;
             defaults.SpiritPlatformColor = spiritPlatformColor;
+            defaults.SpiritTint = spiritTint;
 
             defaults.MoonColor = moonColor;
             defaults.DistantArchColor = distantArchColor;

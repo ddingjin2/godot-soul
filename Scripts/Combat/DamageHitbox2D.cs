@@ -15,9 +15,16 @@ namespace MyGame.Combat
     public partial class DamageHitbox2D : Area2D
     {
         [Export] private uint hitLayers;
-        [Export] private float radius = World.Ppu * 0.5f;
-        [Export] private Vector2 offset = new Vector2(World.Ppu, 0f);
-        [Export] private float damage = 10f;
+
+        // Pixels, written by Configure from ReadabilityLayout.json. No initialisers: a volume that
+        // reached the tree unconfigured reports it rather than swinging at a reach nobody authored
+        // (K7b, PLAN_CLOSEOUT decision D1).
+        [Export] private float radius;
+        [Export] private Vector2 offset;
+
+        // Written per swing by PlayerActionController.SetDamage, never at spawn - so there is no
+        // authored initialiser to carry here, and a zero is what an unfired volume is worth.
+        [Export] private float damage;
 
         /// <summary>
         /// Pixels. Authored in Unity metres as <c>CombatTuning.knockbackLight</c> (4 m, the same number
@@ -46,6 +53,14 @@ namespace MyGame.Combat
         // reference in the set.
         private readonly HashSet<ulong> _hitThisCycle = new();
         private Color _hitFlashColor = Colors.White;
+        private bool _configured;
+
+        public override void _Ready()
+        {
+            CallDeferred(nameof(CheckConfigured));
+        }
+
+        private void CheckConfigured() => TuningGuard.Check(this, _configured, "Configure");
 
         public void Initialize(Node2D owner)
         {
@@ -76,6 +91,7 @@ namespace MyGame.Combat
 
         public void Configure(float newRadius, Vector2 newOffset, uint newHitLayers)
         {
+            _configured = true;
             radius = newRadius;
             offset = newOffset;
             hitLayers = newHitLayers;

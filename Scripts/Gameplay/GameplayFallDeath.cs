@@ -11,19 +11,25 @@ namespace MyGame.Gameplay
     /// </summary>
     public partial class GameplayFallDeath : Node2D
     {
-        /// <summary>The line, in Godot pixels (+Y down). Unity's authored -6 is +600 here.</summary>
-        [Export] private float deathY = World.Ppu * 6f;
+        /// <summary>
+        /// The line, in Godot pixels (+Y down). Written by <see cref="Initialize"/> from the scene
+        /// layout file; no initialiser since K7b, and a plane that never got the call reports itself.
+        /// </summary>
+        [Export] private float deathY;
 
 
         /// <summary>
         /// Seconds the plane refuses to fire again after a pit death. Authored as
         /// <c>WorldTuning.json.fallDeathRespawnLockout</c>; seconds on both sides, so nothing is scaled.
-        /// The initialiser is what a plane running with no design file gets.
+        /// Its own <c>_Ready</c> below reads the file, which is why this one needs no guard the way
+        /// <see cref="deathY"/> does - and no initialiser either (K7b): a build with no
+        /// <c>WorldTuning.json</c> has already been refused by <c>GameplayBootstrap</c>.
         /// </summary>
-        [Export] private float respawnLockout = 1f;
+        [Export] private float respawnLockout;
 
         private Health _health;
         private float _lastFallDeathTime = -999f;
+        private bool _configured;
 
         /// <summary>
         /// <paramref name="deathYValue"/> is already Godot space: <c>GameplaySceneDefaults.FallDeathY</c>
@@ -31,6 +37,7 @@ namespace MyGame.Gameplay
         /// </summary>
         public void Initialize(float deathYValue)
         {
+            _configured = true;
             deathY = deathYValue;
         }
 
@@ -41,7 +48,11 @@ namespace MyGame.Gameplay
             WorldTuningData world = GameplayTuningCatalog.Load()?.WorldTuning;
             if (world != null)
                 respawnLockout = world.fallDeathRespawnLockout;
+
+            CallDeferred(nameof(CheckConfigured));
         }
+
+        private void CheckConfigured() => TuningGuard.Check(this, _configured, "Initialize");
 
         public override void _Process(double delta)
         {

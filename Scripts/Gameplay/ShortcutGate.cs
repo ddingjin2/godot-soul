@@ -43,8 +43,8 @@ namespace MyGame.Gameplay
     {
         private const string TriggerObjectName = "ShortcutGateTrigger";
 
-        /// <summary>How much of the door is left visible once it is open. Not zero: the way through is worth seeing. Authored on the scene.</summary>
-        [Export] private float openAlpha = 0.25f;
+        /// <summary>How much of the door is left visible once it is open. Not zero: the way through is worth seeing. Authored on <c>Scenes/World/ShortcutGate.tscn</c>, which is the only copy of the number - no initialiser here to drift from it (K7b).</summary>
+        [Export] private float openAlpha;
 
         /// <summary>Raised when the door opens, as the seam for a HUD line or a sound.</summary>
         public event Action OnOpened;

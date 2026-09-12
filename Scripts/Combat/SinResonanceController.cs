@@ -1,16 +1,17 @@
 using System;
 using Godot;
+using MyGame.Core;
 
 namespace MyGame.Combat
 {
     public partial class SinResonanceController : Node
     {
         // Resonance
-        [Export] private float currentResonance = 0f;
-        [Export] private float maxResonance = 100f;
-        [Export] private float resonancePerHit = 5f;
-        [Export] private float resonancePerParry = 25f;
-        [Export] private float resonancePerDamage = 3f;
+        [Export] private float currentResonance;
+        [Export] private float maxResonance;
+        [Export] private float resonancePerHit;
+        [Export] private float resonancePerParry;
+        [Export] private float resonancePerDamage;
 
         /// <summary>
         /// One row per sin. A sin with no row, or a row left at its neutral values, changes nothing.
@@ -19,12 +20,12 @@ namespace MyGame.Combat
         private SinModifiers[] sinModifiers = DefaultSinModifiers();
 
         // Activation
-        [Export] private float activeDuration = 5f;
-        [Export] private float cooldownDuration = 10f;
-        [Export] private float resonanceCost = 50f;
+        [Export] private float activeDuration;
+        [Export] private float cooldownDuration;
+        [Export] private float resonanceCost;
 
         // Humanity Cost
-        [Export] private float humanityCostOnActivate = 5f;
+        [Export] private float humanityCostOnActivate;
 
         public event Action<SinState> OnSinActivated;
         public event Action OnSinDeactivated;
@@ -58,6 +59,14 @@ namespace MyGame.Combat
         private float _activeTimer;
         private float _cooldownTimer;
         private HumanityController _humanity;
+        private bool _configured;
+
+        public override void _Ready()
+        {
+            CallDeferred(nameof(CheckConfigured));
+        }
+
+        private void CheckConfigured() => TuningGuard.Check(this, _configured, "ApplyTuning");
 
         /// <summary>
         /// An empty table means the shipped defaults were lost somewhere; refill it rather than run every
@@ -76,15 +85,17 @@ namespace MyGame.Combat
         }
 
         /// <summary>
-        /// Takes the designer-authored numbers over the built-in ones. Null - which is what a scene with
-        /// no design file yields - leaves the shipped defaults in place, so the controller is never worse
-        /// off for the file being absent.
+        /// Takes the designer-authored numbers. There are no built-in ones left to fall back to (K7b):
+        /// null - which is what a scene with no <c>SinTuning.json</c> yields - leaves every number at
+        /// zero and the controller reports it on the next frame rather than running a resonance nobody
+        /// authored (PLAN_CLOSEOUT decision D1).
         /// </summary>
         public void ApplyTuning(SinTuningData tuning)
         {
             if (tuning == null)
                 return;
 
+            _configured = true;
             maxResonance = tuning.maxResonance;
             resonancePerHit = tuning.resonancePerHit;
             resonancePerParry = tuning.resonancePerParry;

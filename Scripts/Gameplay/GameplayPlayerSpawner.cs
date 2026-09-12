@@ -166,7 +166,7 @@ namespace MyGame.Gameplay
             AddHealthBar(go, health, readability.PlayerHealthBarSize, readability.PlayerHealthBarOffset, readability.PlayerHealthBarColor);
 
             DeathStateController deathController = go.RequireComponent<DeathStateController>(Owner);
-            deathController.ApplyTuning(resources);
+            deathController.ApplyTuning(resources, readability.SpiritTint);
             deathController.Initialize(health, humanity, checkpoint, spiritPlatform);
             player.SetDeathStateController(deathController);
 
